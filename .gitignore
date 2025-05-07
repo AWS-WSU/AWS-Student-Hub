@@ -1,0 +1,52 @@
+# DO NOT TOUCH UNLESS YOU KNOW WHAT YOU ARE DOING
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# dotenv environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# logs
+logs/
+*.log
+log/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# build output
+dist/
+build/
+.next/
+out/
+
+# Auth0-related local config
+.auth0*
+
+# MongoDB dump files
+dump/
+
+# IDE/Editor settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Misc
+*.tgz
+*.swp
+*.swo
+*.bak
+
+
