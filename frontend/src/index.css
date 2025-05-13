@@ -1,0 +1,199 @@
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+  @font-face {
+    font-family: 'RJ1';
+    src: url('./assets/fonts/RJ1.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+  }
+
+:root {
+  /* Global variables */
+  --primary-color: #232f3e;
+  --secondary-color: #ff9900;
+  --text-color: #333;
+  --background-color: #f8f8f8;
+  --font-family: 'RJ1', 'Arial', sans-serif;
+  --font-weight: heavy;
+
+  /* Light Theme Colors */
+  --light-bg-primary: #f8f9fa;
+  --light-bg-primary-rgb: 248, 249, 250;
+  --light-bg-secondary: #ffffff;
+  --light-bg-secondary-rgb: 255, 255, 255;
+  --light-text-primary: #212529;
+  --light-text-primary-rgb: 33, 37, 41;
+  --light-text-secondary: #495057;
+  --light-text-secondary-rgb: 73, 80, 87;
+  --light-accent: #ff9900; /* AWS Orange */
+  --light-accent-rgb: 255, 153, 0;
+  --light-accent-secondary: #232f3e; /* AWS Blue */
+  --light-accent-secondary-rgb: 35, 47, 62;
+  --light-card-bg: #ffffff;
+  --light-card-shadow: rgba(0, 0, 0, 0.1);
+  
+  /* Dark Theme Colors */
+  --dark-bg-primary: #121212;
+  --dark-bg-primary-rgb: 18, 18, 18;
+  --dark-bg-secondary: #1e1e1e;
+  --dark-bg-secondary-rgb: 30, 30, 30;
+  --dark-text-primary: #f8f9fa;
+  --dark-text-primary-rgb: 248, 249, 250;
+  --dark-text-secondary: #adb5bd;
+  --dark-text-secondary-rgb: 173, 181, 189;
+  --dark-accent: #ff9900; 
+  --dark-accent-rgb: 255, 153, 0;
+  --dark-accent-secondary: #00a1c9; 
+  --dark-accent-secondary-rgb: 0, 161, 201;
+  --dark-card-bg: #2d2d2d;
+  --dark-card-shadow: rgba(0, 0, 0, 0.5);
+  
+  /* Default to Dark Theme */
+  --bg-primary: var(--dark-bg-primary);
+  --bg-primary-rgb: var(--dark-bg-primary-rgb);
+  --bg-secondary: var(--dark-bg-secondary);
+  --bg-secondary-rgb: var(--dark-bg-secondary-rgb);
+  --text-primary: var(--dark-text-primary);
+  --text-primary-rgb: var(--dark-text-primary-rgb);
+  --text-secondary: var(--dark-text-secondary);
+  --text-secondary-rgb: var(--dark-text-secondary-rgb);
+  --accent: var(--dark-accent);
+  --accent-rgb: var(--dark-accent-rgb);
+  --accent-secondary: var(--dark-accent-secondary);
+  --accent-secondary-rgb: var(--dark-accent-secondary-rgb);
+  --card-bg: var(--dark-card-bg);
+  --card-shadow: var(--dark-card-shadow);
+  --icon-filter: invert(100%); /* For light icons on dark background */
+
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Light Theme Overrides */
+[data-theme="light"] {
+  --bg-primary: var(--light-bg-primary);
+  --bg-primary-rgb: var(--light-bg-primary-rgb);
+  --bg-secondary: var(--light-bg-secondary);
+  --bg-secondary-rgb: var(--light-bg-secondary-rgb);
+  --text-primary: var(--light-text-primary);
+  --text-primary-rgb: var(--light-text-primary-rgb);
+  --text-secondary: var(--light-text-secondary);
+  --text-secondary-rgb: var(--light-text-secondary-rgb);
+  --accent: var(--light-accent);
+  --accent-rgb: var(--light-accent-rgb);
+  --accent-secondary: var(--light-accent-secondary);
+  --accent-secondary-rgb: var(--light-accent-secondary-rgb);
+  --card-bg: var(--light-card-bg);
+  --card-shadow: var(--light-card-shadow);
+  --icon-filter: invert(0%); /* For dark icons on light background */
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 100vw;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+
+  font-family: 'Inter', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+/* Theme transition effect */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-primary);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 9999;
+  transition: opacity 0.3s ease;
+}
+
+body.theme-transition::after {
+  opacity: 0.3;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+/* Global utility classes */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
