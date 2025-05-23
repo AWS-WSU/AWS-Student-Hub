@@ -8,6 +8,10 @@
   <img src="https://github.com/user-attachments/assets/2057d3aa-a3e2-4566-b2f6-b89b0dd165f5" width="300" alt="Student Hub Banner"/>
 </p>
 
+### Project Leads
+- **Natali Chaaban** - _Senior Cloud Architect_ |    nchaaban1@wayne.edu
+- **Akshath Reddy** - _Senior Cloud Architect_ |    akshathreddy@wayne.edu 
+- **Akrm Al-Hakimi** - _President_ |     gv7723@wayne.edu
 
 ## Development Setup
 
