@@ -1,4 +1,4 @@
-import "./styles/SocialSection.css";
+import "./styles/SocialLinks.css";
 import { motion } from "framer-motion";
 
 const socialLinks = [
