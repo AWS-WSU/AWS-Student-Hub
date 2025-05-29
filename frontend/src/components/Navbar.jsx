@@ -4,10 +4,15 @@ import './styles/Navbar.css';
 
 function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  const toggleAccountDropdown = () => {
+    setIsAccountDropdownOpen(!isAccountDropdownOpen);
   };
   
   useEffect(() => {
@@ -34,6 +39,20 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [isMenuOpen]);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.account-dropdown-container')) {
+        setIsAccountDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   return (
     <header className={`landing-header ${scrolled ? 'scrolled' : ''}`}>
@@ -92,6 +111,72 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
       </nav>
       
       <div className="header-controls">
+        <div className="account-dropdown-container">
+          <motion.button 
+            className="account-toggle"
+            onClick={toggleAccountDropdown}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            aria-label="Account options"
+          >
+            <img 
+              src="/account.svg" 
+              alt="Account" 
+              className="account-icon" 
+              style={{ filter: theme === 'dark' ? 'invert(100%)' : 'invert(0%)' }}
+            />
+          </motion.button>
+
+          <AnimatePresence>
+            {isAccountDropdownOpen && (
+              <motion.div 
+                className="account-dropdown"
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{ 
+                  type: "spring", 
+                  stiffness: 300, 
+                  damping: 25,
+                  duration: 0.2 
+                }}
+              >
+                <motion.button 
+                  className="auth-option primary"
+                  onClick={() => {
+                    console.log('Sign Up clicked');
+                    setIsAccountDropdownOpen(false);
+                  }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Sign Up
+                </motion.button>
+                
+                <div className="auth-divider"></div>
+                
+                <motion.button 
+                  className="auth-option secondary"
+                  onClick={() => {
+                    console.log('Login clicked');
+                    setIsAccountDropdownOpen(false);
+                  }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <img 
+                    src="/login.svg" 
+                    alt="Login" 
+                    className="login-icon" 
+                    style={{ filter: theme === 'dark' ? 'invert(100%)' : 'invert(0%)' }}
+                  />
+                  Already have an account?
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
         <motion.button 
           className="theme-toggle"
           onClick={toggleTheme}
