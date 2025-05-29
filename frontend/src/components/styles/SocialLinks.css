@@ -1,0 +1,29 @@
+.social-section {
+    text-align: center;
+    padding: 3rem 1rem;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+  
+  .social-section h2 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .social-section p {
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .social-icons {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  
+  .social-icon img {
+    width: 48px;
+    height: 48px;
+    transition: transform 0.3s ease;
+  }  
