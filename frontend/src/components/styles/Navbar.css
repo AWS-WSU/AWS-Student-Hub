@@ -247,20 +247,149 @@
   cursor: pointer;
 }
 
+/* Account Dropdown Styles */
+.account-dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.account-toggle {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-primary);
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.account-toggle:hover {
+  background-color: rgba(var(--text-primary-rgb), 0.1);
+  transform: rotate(5deg);
+}
+
+.account-icon {
+  width: 24px;
+  height: 24px;
+  transition: filter 0.3s ease;
+}
+
+.account-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 220px;
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px var(--card-shadow);
+  padding: 0.75rem;
+  z-index: 1002;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(var(--text-primary-rgb), 0.1);
+}
+
+.auth-option {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.auth-option.primary {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+  color: #000;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.auth-option.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.3);
+}
+
+.auth-option.secondary {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.auth-option.secondary:hover {
+  background-color: rgba(var(--text-primary-rgb), 0.05);
+  color: var(--text-primary);
+}
+
+.auth-divider {
+  height: 1px;
+  background-color: rgba(var(--text-primary-rgb), 0.1);
+  margin: 0.5rem 0;
+}
+
+.login-icon {
+  width: 16px;
+  height: 16px;
+  transition: filter 0.3s ease;
+  flex-shrink: 0;
+}
+
+/* Mobile Responsive */
 @media (max-width: 768px) {
-  .landing-header {
-    padding: 0.8rem 1.5rem;
+  .account-dropdown {
+    min-width: 200px;
+    right: -0.5rem;
   }
   
-  .aws-logo {
-    height: 40px;
+  .auth-option {
+    padding: 0.8rem 1rem;
+    font-size: 0.9rem;
   }
   
-  .logo-text h1 {
-    font-size: 1.2rem;
+  .auth-option.secondary {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .account-dropdown {
+    min-width: 180px;
+    right: -1rem;
   }
   
-  .accent-text {
-    font-size: 1rem;
+  .account-icon {
+    width: 20px;
+    height: 20px;
   }
+  
+  .login-icon {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* Focus states for accessibility */
+.account-toggle:focus-visible,
+.auth-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Ensure proper stacking */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: relative;
+  z-index: 1001;
 }
