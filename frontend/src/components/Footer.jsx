@@ -28,48 +28,6 @@ function Footer({ theme }) {
             <h3>WSU AWS Cloud Computing Club</h3>
           </div>
           <p>Empowering students with cloud computing skills and connecting them to industry opportunities.</p>
-          <div className="social-links">
-            <motion.a 
-              href="https://discord.gg/6B6BrxUu" 
-              className="social-link"
-              whileHover={{ y: -5 }}
-              transition={{ type: "spring", stiffness: 400 }}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <img src="/discord.svg" alt="Discord" />
-            </motion.a>
-            <motion.a 
-              href="https://www.linkedin.com/company/aws-cloud-club-wayne-state-university/?lipi=urn%3Ali%3Apage%3Ad_flagship3_search_srp_all%3BUWV%2FieHTQLStvCetix7ihA%3D%3D" 
-              className="social-link"
-              whileHover={{ y: -5 }}
-              transition={{ type: "spring", stiffness: 400 }}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <img src="/linkedin.svg" alt="LinkedIn" />
-            </motion.a>
-            <motion.a 
-              href="https://github.com/AWS-WSU" 
-              className="social-link"
-              whileHover={{ y: -5 }}
-              transition={{ type: "spring", stiffness: 400 }}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <img src="/github.svg" alt="GitHub" />
-            </motion.a>
-            <motion.a 
-              href="https://www.instagram.com/awscloudwsu/" 
-              className="social-link"
-              whileHover={{ y: -5 }}
-              transition={{ type: "spring", stiffness: 400 }}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <img src="/instagram.svg" alt="Instagram" />
-            </motion.a>
-          </div>
         </motion.div>
         
         <motion.div 

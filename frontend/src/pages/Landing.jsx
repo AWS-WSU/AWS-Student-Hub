@@ -3,6 +3,7 @@ import './styles/Landing.css';
 import { motion } from 'framer-motion';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import SocialSection from '../components/SocialSection';
 
 function Landing() {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
@@ -352,6 +353,7 @@ function Landing() {
           <button className="join-button pulse-animation">Join the Club</button>
         </motion.div>
       </section>
+      <SocialSection />
 
       <Footer theme={theme} />
     </div>
