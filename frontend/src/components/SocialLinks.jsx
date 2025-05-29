@@ -7,13 +7,19 @@ const socialLinks = [
     url: "https://www.linkedin.com/company/aws-cloud-club-wayne-state-university/",
     icon: "/linkedin.svg",
   },
-  { name: "GitHub", url: "https://github.com/AWS-WSU", icon: "/github.svg" },
+  {
+    name: "GitHub",
+    url: "https://github.com/AWS-WSU", 
+    icon: "/github.svg" },
   {
     name: "Instagram",
     url: "https://www.instagram.com/awscloudwsu/",
     icon: "/instagram.svg",
   },
-  { name: "Discord", url: "https://discord.gg/6B6BrxUu", icon: "/discord.svg" },
+  { 
+    name: "Discord", 
+    url: "https://discord.gg/6B6BrxUu",
+    icon: "/discord.svg" },
 ];
 
 const SocialSection = () => {
