@@ -2,13 +2,11 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    // Check if MongoDB URI is provided
     const mongoURI = process.env.MONGODB_URI;
     
     if (!mongoURI) {
-      console.warn('⚠️  MONGODB_URI not configured');
-      console.warn('📧  Please contact project lead Akrm Al-Hakimi for MongoDB setup');
-      console.warn('🔄  Falling back to in-memory storage for development');
+      console.warn('⚠️  MONGODB_URI not configured - newsletter signup will not work');
+      console.warn('📧  Contact Akrm Al-Hakimi for MongoDB setup');
       return null;
     }
     
@@ -17,8 +15,7 @@ const connectDB = async () => {
     return conn;
   } catch (error) {
     console.error('❌ Database connection error:', error.message);
-    console.warn('📧  Please contact project lead Akrm Al-Hakimi for MongoDB configuration');
-    console.warn('🔄  Falling back to in-memory storage');
+    console.warn('📧  Contact Akrm Al-Hakimi for MongoDB configuration');
     return null;
   }
 };

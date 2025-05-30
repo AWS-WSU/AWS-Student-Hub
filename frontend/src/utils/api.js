@@ -42,18 +42,7 @@ export const newsletterAPI = {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
-  },
-
-  unsubscribe: async (email) => {
-    return apiRequest('/newsletter/unsubscribe', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    });
-  },
-
-  getSubscriptions: async () => {
-    return apiRequest('/newsletter/subscriptions');
-  },
+  }
 };
 
 export default apiRequest;

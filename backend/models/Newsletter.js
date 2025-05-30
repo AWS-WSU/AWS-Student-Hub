@@ -12,16 +12,7 @@ const newsletterSchema = new mongoose.Schema({
   subscribedAt: {
     type: Date,
     default: Date.now
-  },
-  isActive: {
-    type: Boolean,
-    default: true
   }
-}, {
-  timestamps: true
 });
-
-// Index for better query performance
-newsletterSchema.index({ subscribedAt: -1 });
 
 module.exports = mongoose.model('Newsletter', newsletterSchema);
