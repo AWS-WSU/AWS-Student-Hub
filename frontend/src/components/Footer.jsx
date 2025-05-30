@@ -1,16 +1,47 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { newsletterAPI } from '../utils/api';
 import './styles/Footer.css';
 
 function Footer({ theme }) {
   const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState({ text: '', type: '' }); // type: 'success', 'error', ''
   
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Add newsletter subscription functionality here
-    console.log(`Subscribing email: ${email}`);
-    setEmail('');
-    // You could add a toast notification or success message here
+    
+    if (!email.trim()) {
+      setMessage({ text: 'Please enter your email address', type: 'error' });
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage({ text: '', type: '' });
+
+    try {
+      const response = await newsletterAPI.subscribe(email);
+      
+      if (response.success) {
+        setMessage({ text: response.message, type: 'success' });
+        setEmail(''); // Clear the input on success
+      } else {
+        setMessage({ text: response.message || 'Something went wrong', type: 'error' });
+      }
+    } catch (error) {
+      console.error('Newsletter subscription error:', error);
+      setMessage({ 
+        text: error.message || 'Unable to subscribe. Please try again later.',
+        type: 'error' 
+      });
+    } finally {
+      setIsLoading(false);
+      
+      // Clear message after 5 seconds
+      setTimeout(() => {
+        setMessage({ text: '', type: '' });
+      }, 5000);
+    }
   };
 
   return (
@@ -76,16 +107,33 @@ function Footer({ theme }) {
                 placeholder="Your email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
                 required
               />
               <motion.button 
                 type="submit"
-                whileHover={{ backgroundColor: 'var(--accent-secondary)' }}
-                whileTap={{ scale: 0.95 }}
+                disabled={isLoading}
+                whileHover={!isLoading ? { backgroundColor: 'var(--accent-secondary)' } : {}}
+                whileTap={!isLoading ? { scale: 0.95 } : {}}
+                style={{ 
+                  opacity: isLoading ? 0.7 : 1,
+                  cursor: isLoading ? 'not-allowed' : 'pointer'
+                }}
               >
-                Join
+                {isLoading ? 'Joining...' : 'Join'}
               </motion.button>
             </form>
+            {message.text && (
+              <motion.div 
+                className={`newsletter-message ${message.type}`}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                {message.text}
+              </motion.div>
+            )}
           </div>
         </motion.div>
       </div>

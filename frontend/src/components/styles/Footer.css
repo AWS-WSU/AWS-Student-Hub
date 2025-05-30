@@ -169,6 +169,32 @@
   background-color: var(--accent-secondary);
 }
 
+.newsletter-form button:disabled {
+  background-color: rgba(var(--accent-rgb), 0.6);
+  cursor: not-allowed;
+}
+
+.newsletter-message {
+  margin-top: 0.8rem;
+  padding: 0.6rem 1rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  max-width: 300px;
+}
+
+.newsletter-message.success {
+  background-color: rgba(40, 167, 69, 0.1);
+  color: #28a745;
+  border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
+.newsletter-message.error {
+  background-color: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
 .footer-bottom {
   margin-top: 2.5rem;
   text-align: center;
