@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './styles/Navbar.css';
+import { useAuth0 } from '@auth0/auth0-react';
+
 
 function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -15,6 +17,9 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
     setIsAccountDropdownOpen(!isAccountDropdownOpen);
   };
   
+  //Auth0
+  const { loginWithRedirect, logout, isAuthenticated, user } = useAuth0();
+
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 50) {
@@ -144,7 +149,11 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
                 <motion.button 
                   className="auth-option primary"
                   onClick={() => {
-                    console.log('Sign Up clicked');
+                    loginWithRedirect({
+                      authorizationParams: {
+                        screen_hint : 'signup' ,
+                      }
+                    });
                     setIsAccountDropdownOpen(false);
                   }}
                   whileHover={{ scale: 1.02 }}
@@ -158,7 +167,7 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
                 <motion.button 
                   className="auth-option secondary"
                   onClick={() => {
-                    console.log('Login clicked');
+                    loginWithRedirect();
                     setIsAccountDropdownOpen(false);
                   }}
                   whileHover={{ scale: 1.02 }}
