@@ -1,20 +1,49 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import './styles/Navbar.css';
+import { useAuth0 } from '@auth0/auth0-react';
+import { useAuth } from '../context/AuthContext';
 
 function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [profileImage, setProfileImage] = useState('/account.svg');
+  const navigate = useNavigate();
   
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+  const { logout: auth0Logout, isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
+  const { user: authUser, logout: authLogout } = useAuth();
 
-  const toggleAccountDropdown = () => {
-    setIsAccountDropdownOpen(!isAccountDropdownOpen);
-  };
-  
+  // Handle profile picture from any provider
+  useEffect(() => {
+    if (auth0User) {
+      // Check for picture from social provider
+      if (auth0User.picture) {
+        setProfileImage(auth0User.picture);
+      } else if (auth0User.sub && auth0User.sub.startsWith('google-oauth2|')) {
+        // Fallback for Google if picture not in standard field
+        const googleId = auth0User.sub.split('|')[1];
+        setProfileImage(`https://lh3.googleusercontent.com/a/${googleId}`);
+      } else {
+        setProfileImage('/account.svg');
+      }
+    } else if (authUser) {
+      setProfileImage(authUser.profilePicture || '/account.svg');
+    } else {
+      setProfileImage('/account.svg');
+    }
+  }, [auth0User, authUser]);
+
+  // Check for persistent login
+  useEffect(() => {
+    const rememberMe = localStorage.getItem('rememberMe');
+    if (!rememberMe && isAuth0Authenticated) {
+      // If user didn't choose remember me, we could implement auto-logout after session
+      // For now, we'll keep them logged in until they manually log out
+    }
+  }, [isAuth0Authenticated]);
+
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 50) {
@@ -53,6 +82,49 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const handleLogout = () => {
+    if (isAuth0Authenticated) {
+      auth0Logout();
+    } else {
+      authLogout();
+    }
+    setIsAccountDropdownOpen(false);
+  };
+
+  const isAuthenticated = isAuth0Authenticated || !!authUser;
+  const currentUser = auth0User || authUser;
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const toggleAccountDropdown = () => {
+    setIsAccountDropdownOpen(!isAccountDropdownOpen);
+  };
+
+  const getDisplayName = (user) => {
+    if (!user) return 'User';
+    
+    // For Auth0 users (social login)
+    if (user.sub) {
+      if (user.sub.startsWith('google-oauth2|') || user.sub.startsWith('windowslive|')) {
+        return user.name?.split(' ')[0] || user.name || 'User';
+      }
+    }
+    
+    // For our own users (email/password login)
+    if (user.username) {
+      return user.username;
+    }
+    
+    // Fallback to full name or first name
+    if (user.fullName) {
+      return user.fullName.split(' ')[0] || user.fullName;
+    }
+
+    return 'User';
+  };
 
   return (
     <header className={`landing-header ${scrolled ? 'scrolled' : ''}`}>
@@ -111,71 +183,87 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
       </nav>
       
       <div className="header-controls">
-        <div className="account-dropdown-container">
-          <motion.button 
-            className="account-toggle"
-            onClick={toggleAccountDropdown}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            aria-label="Account options"
-          >
-            <img 
-              src="/account.svg" 
-              alt="Account" 
-              className="account-icon" 
-              style={{ filter: theme === 'dark' ? 'invert(100%)' : 'invert(0%)' }}
-            />
-          </motion.button>
+        {!isAuth0Authenticated && !authUser && (
+          <div className="auth-buttons">
+            <motion.button 
+              className="auth-option secondary"
+              onClick={() => navigate('/auth')}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Sign In
+            </motion.button>
+            <motion.button 
+              className="auth-option primary"
+              onClick={() => navigate('/auth')}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Sign Up
+            </motion.button>
+          </div>
+        )}
 
-          <AnimatePresence>
-            {isAccountDropdownOpen && (
-              <motion.div 
-                className="account-dropdown"
-                initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 300, 
-                  damping: 25,
-                  duration: 0.2 
+        {isAuthenticated && (
+          <div className="account-dropdown-container">
+            <motion.button 
+              className="account-toggle"
+              onClick={toggleAccountDropdown}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <motion.img
+                src={profileImage}
+                alt="Account"
+                className="account-icon"
+                onError={(e) => {
+                  e.target.onerror = null; // Prevent infinite loop
+                  e.target.src = '/account.svg';
+                  setProfileImage('/account.svg');
                 }}
-              >
-                <motion.button 
-                  className="auth-option primary"
-                  onClick={() => {
-                    console.log('Sign Up clicked');
-                    setIsAccountDropdownOpen(false);
-                  }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                initial={false}
+                animate={{
+                  scale: isAccountDropdownOpen ? 0.95 : 1,
+                  rotate: isAccountDropdownOpen ? 180 : 0
+                }}
+              />
+            </motion.button>
+
+            <AnimatePresence>
+              {isAccountDropdownOpen && (
+                <motion.div
+                  className="account-dropdown"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  Sign Up
-                </motion.button>
-                
-                <div className="auth-divider"></div>
-                
-                <motion.button 
-                  className="auth-option secondary"
-                  onClick={() => {
-                    console.log('Login clicked');
-                    setIsAccountDropdownOpen(false);
-                  }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <img 
-                    src="/login.svg" 
-                    alt="Login" 
-                    className="login-icon" 
-                    style={{ filter: theme === 'dark' ? 'invert(100%)' : 'invert(0%)' }}
-                  />
-                  Already have an account?
-                </motion.button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                  <div className="user-info">
+                    <div className="user-details">
+                      <strong>{getDisplayName(currentUser)}</strong>
+                      <span>{currentUser?.email || ''}</span>
+                    </div>
+                  </div>
+
+                  <motion.button 
+                    className="auth-option secondary"
+                    onClick={handleLogout}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <img 
+                      src="/login.svg" 
+                      alt="Logout" 
+                      className="login-icon" 
+                      style={{ filter: theme === 'dark' ? 'invert(100%)' : 'invert(0%)' }}
+                    />
+                    Sign Out
+                  </motion.button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
 
         <motion.button 
           className="theme-toggle"
@@ -207,12 +295,13 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
                 alt="Switch to light mode" 
                 className="theme-icon" 
                 style={{ filter: 'invert(100%)' }}
-                animate={{ rotate: 180 }} // This counters the parent rotation to keep the sun upright
-                transition={{ duration: 0 }} // Apply immediately with no animation
+                animate={{ rotate: 180 }}
+                transition={{ duration: 0 }}
               />
             }
           </motion.div>
         </motion.button>
+        
         <button className="mobile-menu-toggle" onClick={toggleMenu} aria-label="Toggle menu">
           <span></span>
           <span></span>
