@@ -48,7 +48,26 @@ cd ..
 npm install
 ```
 
-### 3. Start the Application
+### 3. Environment Variables
+
+**Frontend (.env):**
+```bash
+VITE_AUTH0_DOMAIN=your-auth0-domain
+VITE_AUTH0_CLIENT_ID=your-auth0-client-id
+VITE_AUTH0_CALLBACK_URL=http://localhost:5173
+VITE_API_URL=http://localhost:5001/api
+```
+
+**Backend (.env):**
+```bash
+AUTH0_DOMAIN=your-auth0-domain
+AUTH0_AUDIENCE=your-auth0-audience
+MONGODB_URI=your-mongodb-connection-string
+PORT=5001
+CORS_ORIGIN=http://localhost:5173
+```
+
+### 4. Start the Application
 
 ```bash
 npm run dev
@@ -64,7 +83,7 @@ This should give you an output in your terminal that looks something like this:
 
 <img width="824" alt="Screenshot 2025-05-23 at 12 20 32 PM" src="https://github.com/user-attachments/assets/9187283c-346b-4f8d-b75c-d0cab6e2b57e" />
 
-### 4. Open the Site
+### 5. Open the Site
 
 Navigate to `localhost:5173` in any browser, and you'll see the website. Any changes you make to either the frontend or backend should update automatically without you needing to refresh the page.
 
@@ -244,6 +263,25 @@ taskkill /PID <PID> /F
 - Ensure you're running the app via `npm run dev` from the root directory
 - Try restarting the Vite server (`Ctrl + C` and then `npm run dev` again)
 - Make sure your file changes are inside the `frontend/src` directory and not outside the watched paths
+
+---
+
+## Authentication Flow
+
+The application now includes a custom authentication flow:
+
+1. **Custom Auth Page**: Users are directed to `/auth` for login/signup
+2. **Social Login Options**: Google and Outlook integration via Auth0
+3. **Persistent Login**: "Remember me" option stores login preference
+4. **Protected Routes**: Authenticated users see profile info in navbar
+5. **Logout Functionality**: Clean logout that clears session data
+
+### Auth Features:
+- Custom styled login/signup forms
+- Social authentication (Google, Outlook)
+- User avatar display in navbar
+- Persistent login sessions
+- Responsive design for all screen sizes
 
 ---
 

@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/database");
 const newsletterRoutes = require("./routes/newsletter");
+const authRoutes = require("./routes/auth");
 const checkJwt = require("./middleware/auth");
 
 const app = express();
@@ -38,6 +39,7 @@ app.get("/", (req, res) => {
 
 // Newsletter routes
 app.use("/api/newsletter", newsletterRoutes);
+app.use("/api/auth", authRoutes);
 
 // Protected route we can use later to test authentication
 app.get("/api/user", checkJwt, (req, res) => {
@@ -47,13 +49,12 @@ app.get("/api/user", checkJwt, (req, res) => {
   });
 });
 
-
 // Global error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
-    success: false,
-    message: 'Something went wrong!'
+    error: 'Something went wrong!',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 

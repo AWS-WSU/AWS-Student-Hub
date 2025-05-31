@@ -8,11 +8,15 @@ import App from './App.jsx'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Auth0Provider
-      domain={import.meta.env.VITE_AUTH0_DOMAIN}
+      domain="dev-3cub4xczdiiecs8d.us.auth0.com"
       clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
       authorizationParams={{
-        redirect_uri: import.meta.env.VITE_AUTH0_CALLBACK_URL
+        redirect_uri: `${window.location.origin}`,
+        scope: "openid profile email",
+        response_type: "code",
+        code_challenge_method: "S256"
       }}
+      cacheLocation="localstorage"
     >
       <BrowserRouter>
         <App />

@@ -1,21 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import './styles/Landing.css';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import SocialLinks from '../components/SocialLinks';
 
-function Landing() {
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+function Landing({ theme, toggleTheme }) {
   const [activeSection, setActiveSection] = useState('home');
   const sectionsRef = useRef({});
+  const navigate = useNavigate();
   
-  // Set theme preference
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
   // Intersection Observer for sections
   useEffect(() => {
     const observers = [];
@@ -42,16 +37,15 @@ function Landing() {
     };
   }, []);
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-  };
-  
   const scrollToSection = (sectionId) => {
     const section = document.getElementById(sectionId);
     if (section) {
       section.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  const handleJoinClick = () => {
+    navigate('/auth');
   };
 
   return (
@@ -118,8 +112,12 @@ function Landing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.1, duration: 0.8 }}
           >
-            <button className="cta-primary pulse-animation">Join the Club</button>
-            <button className="cta-secondary">Learn More</button>
+            <button className="cta-primary pulse-animation" onClick={handleJoinClick}>
+              Join the Club
+            </button>
+            <button className="cta-secondary" onClick={() => scrollToSection('about')}>
+              Learn More
+            </button>
           </motion.div>
           
           <motion.div 
@@ -350,7 +348,9 @@ function Landing() {
         >
           <h2>Ready to start your cloud journey?</h2>
           <p>Join our community today and get access to workshops, networking events, and resources to accelerate your career.</p>
-          <button className="join-button pulse-animation">Join the Club</button>
+          <button className="join-button pulse-animation" onClick={handleJoinClick}>
+            Join the Club
+          </button>
         </motion.div>
       </section>
       <SocialLinks />
