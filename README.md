@@ -266,25 +266,6 @@ taskkill /PID <PID> /F
 
 ---
 
-## Authentication Flow
-
-The application now includes a custom authentication flow:
-
-1. **Custom Auth Page**: Users are directed to `/auth` for login/signup
-2. **Social Login Options**: Google and Outlook integration via Auth0
-3. **Persistent Login**: "Remember me" option stores login preference
-4. **Protected Routes**: Authenticated users see profile info in navbar
-5. **Logout Functionality**: Clean logout that clears session data
-
-### Auth Features:
-- Custom styled login/signup forms
-- Social authentication (Google, Outlook)
-- User avatar display in navbar
-- Persistent login sessions
-- Responsive design for all screen sizes
-
----
-
 ## Need Help?
 
 If you're still stuck after trying the troubleshooting steps above, feel free to reach out to any of the project leads for assistance.
