@@ -20,13 +20,15 @@
     "express-validator": "^7.0.1",
     "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.2.0",
+    "leo-profanity": "^1.7.0",
     "mongoose": "^7.6.3",
     "multer": "^2.0.1",
     "multer-s3": "^3.0.1",
     "nodemailer": "^6.9.7",
     "sharp": "^0.33.0",
     "uuid": "^11.1.0",
-    "validator": "^13.11.0"
+    "validator": "^13.11.0",
+    "bad-words": "^1.0.0"
   },
   "devDependencies": {
     "multer": "^2.0.1",

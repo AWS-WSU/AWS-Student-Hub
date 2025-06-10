@@ -2,6 +2,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const { sendResetCode } = require('../services/emailService');
+const Filter = require('bad-words');
 
 const generateToken = (user, rememberMe = false) => {
   const expiresIn = rememberMe ? '30d' : '24h';
@@ -27,6 +28,27 @@ const generateUsername = async (email) => {
   }
 };
 
+const filter = new Filter();
+
+function containsProfanity(input) {
+  return filter.isProfane(input);
+}
+
+function normalizeInput(str) {
+  return str
+    .toLowerCase()
+    .replace(/[!1|i]/g, 'i')
+    .replace(/[@4]/g, 'a')
+    .replace(/3/g, 'e')
+    .replace(/0/g, 'o')
+    .replace(/[^a-z]/g, ''); // remove non-alphabetic
+}
+
+function containsProfanity(input) {
+  const normalized = normalizeInput(input);
+  return filter.isProfane(normalized);
+}
+
 exports.signup = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -38,16 +60,26 @@ exports.signup = async (req, res) => {
 
     let existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({
-        error: 'Email already exists'
-      });
+      return res.status(400).json({ error: 'Email already exists' });
     }
 
     if (providedUsername) {
       const existingUsername = await User.findOne({ username: providedUsername });
       if (existingUsername) {
+        return res.status(400).json({ error: 'Username already exists' });
+      }
+    }
+
+    const fieldsToCheck = [
+      { name: 'username', value: providedUsername },
+      { name: 'full name', value: fullName },
+      { name: 'email', value: email }
+    ];
+
+    for (const field of fieldsToCheck) {
+      if (field.value && containsProfanity(field.value)) {
         return res.status(400).json({
-          error: 'Username already exists'
+          error: `Hey, thats not nice. Try again.`
         });
       }
     }
@@ -72,9 +104,10 @@ exports.signup = async (req, res) => {
       token,
       user: user.toSafeObject()
     });
+
   } catch (error) {
     console.error('Signup error:', error);
-    
+
     if (error.code === 11000) {
       const field = Object.keys(error.keyValue)[0];
       const fieldName = field === 'email' ? 'Email' : field === 'username' ? 'Username' : 'Field';
@@ -82,12 +115,11 @@ exports.signup = async (req, res) => {
         error: `${fieldName} already exists`
       });
     }
-    
-    res.status(500).json({
-      error: 'Server error during signup'
-    });
+
+    res.status(500).json({ error: 'Server error during signup' });
   }
 };
+
 
 exports.login = async (req, res) => {
   try {
