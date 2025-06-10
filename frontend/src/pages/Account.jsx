@@ -22,10 +22,13 @@ function Account({ theme, toggleTheme }) {
   });
   const [originalData, setOriginalData] = useState({});
   const [loading, setLoading] = useState(false);
+  const [fieldLoading, setFieldLoading] = useState({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [successField, setSuccessField] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
+  const inputRefs = useRef({});
   
   const navigate = useNavigate();
   const { logout: auth0Logout, isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
@@ -127,8 +130,61 @@ function Account({ theme, toggleTheme }) {
     }
   };
 
+  const handleFieldClick = (field) => {
+    if (isSocialLogin && (field === 'name' || field === 'username')) return;
+    
+    setIsEditing(prev => ({
+      ...prev,
+      [field]: true
+    }));
+    
+    // Not sure why but sometimes the input doesn't focus immediately
+    // So we use a timeout to ensure it does. This also 
+    // Stops the text from being selected when clicking the field.
+    setTimeout(() => {
+      if (inputRefs.current[field]) {
+        inputRefs.current[field].focus();
+      }
+    }, 100);
+  };
+
+  const handleInputBlur = async (field) => {
+    if (formData[field] !== originalData[field]) {
+      await handleSave(field);
+    } else {
+      setIsEditing(prev => ({
+        ...prev,
+        [field]: false
+      }));
+    }
+  };
+
+  const handleInputKeyDown = async (e, field) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (formData[field] !== originalData[field]) {
+        await handleSave(field);
+      } else {
+        setIsEditing(prev => ({
+          ...prev,
+          [field]: false
+        }));
+      }
+    } else if (e.key === 'Escape') {
+      setFormData(prev => ({
+        ...prev,
+        [field]: originalData[field]
+      }));
+      setIsEditing(prev => ({
+        ...prev,
+        [field]: false
+      }));
+      setError('');
+    }
+  };
+
   const handleSave = async (field) => {
-    setLoading(true);
+    setFieldLoading(prev => ({ ...prev, [field]: true }));
     setError('');
     setSuccess('');
 
@@ -172,12 +228,22 @@ function Account({ theme, toggleTheme }) {
         [field]: false
       }));
       
-      setSuccess(`${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully!`);
-      setTimeout(() => setSuccess(''), 3000);
+      // Show success flash
+      setSuccessField(field);
+      setTimeout(() => setSuccessField(''), 600);
+      
     } catch (err) {
       setError(err.message || `Failed to update ${field}`);
+      setFormData(prev => ({
+        ...prev,
+        [field]: originalData[field]
+      }));
+      setIsEditing(prev => ({
+        ...prev,
+        [field]: false
+      }));
     } finally {
-      setLoading(false);
+      setFieldLoading(prev => ({ ...prev, [field]: false }));
     }
   };
 
@@ -201,6 +267,61 @@ function Account({ theme, toggleTheme }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const renderEditableField = (field, label, value, placeholder, readonly = false) => {
+    const isCurrentlyEditing = isEditing[field];
+    const isFieldLoading = fieldLoading[field];
+    const showSuccessFlash = successField === field;
+    
+    return (
+      <div className="form-field">
+        <label>{label}</label>
+        <div 
+          className={`field-container ${isCurrentlyEditing ? 'editing' : ''} ${readonly ? 'readonly' : ''}`}
+          onClick={() => !readonly && handleFieldClick(field)}
+        >
+          {showSuccessFlash && <div className="success-flash" />}
+          
+          <div className="display-container">
+            <span 
+              className={`field-value ${!readonly ? 'editable' : ''} ${isCurrentlyEditing ? 'editing' : ''} ${field === 'email' ? 'email-readonly' : ''}`}
+            >
+              {field === 'username' && value ? `@${value}` : value || 'Not set'}
+            </span>
+            {readonly && <span className="readonly-indicator">Read-only</span>}
+          </div>
+
+          <div className={`edit-overlay ${isCurrentlyEditing ? 'active' : ''}`}>
+            <input
+              ref={el => inputRefs.current[field] = el}
+              type="text"
+              name={field}
+              value={formData[field]}
+              onChange={handleInputChange}
+              onBlur={() => handleInputBlur(field)}
+              onKeyDown={(e) => handleInputKeyDown(e, field)}
+              className="edit-input"
+              placeholder={placeholder}
+            />
+          </div>
+
+          <div className={`edit-hint ${readonly || isCurrentlyEditing || isFieldLoading ? 'hidden' : ''}`}>
+            {isFieldLoading ? (
+              <div className="loading-indicator">
+                <div className="loading-dots">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            ) : (
+              'Click to edit'
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (!isAuthenticated) {
@@ -310,101 +431,28 @@ function Account({ theme, toggleTheme }) {
             </div>
 
             <div className="form-fields">
-              <div className="form-field">
-                <label>Full Name</label>
-                <div className="field-container">
-                  {isEditing.name ? (
-                    <div className="edit-container">
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        className="edit-input"
-                        placeholder="Enter your full name"
-                      />
-                      <div className="edit-buttons">
-                        <button 
-                          className="save-btn"
-                          onClick={() => handleSave('name')}
-                          disabled={loading}
-                        >
-                          {loading ? '...' : '✓'}
-                        </button>
-                        <button 
-                          className="cancel-btn"
-                          onClick={() => handleCancel('name')}
-                          disabled={loading}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="display-container">
-                      <span className="field-value">{formData.name || 'Not set'}</span>
-                      <button 
-                        className="edit-btn"
-                        onClick={() => handleEdit('name')}
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
+              {renderEditableField(
+                'name', 
+                'Full Name', 
+                formData.name, 
+                'Enter your full name',
+                isSocialLogin
+              )}
 
-              <div className="form-field">
-                <label>Username</label>
-                <div className="field-container">
-                  {isEditing.username ? (
-                    <div className="edit-container">
-                      <input
-                        type="text"
-                        name="username"
-                        value={formData.username}
-                        onChange={handleInputChange}
-                        className="edit-input"
-                        placeholder="Enter your username"
-                      />
-                      <div className="edit-buttons">
-                        <button 
-                          className="save-btn"
-                          onClick={() => handleSave('username')}
-                          disabled={loading}
-                        >
-                          {loading ? '...' : '✓'}
-                        </button>
-                        <button 
-                          className="cancel-btn"
-                          onClick={() => handleCancel('username')}
-                          disabled={loading}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="display-container">
-                      <span className="field-value">@{formData.username || 'Not set'}</span>
-                      <button 
-                        className="edit-btn"
-                        onClick={() => handleEdit('username')}
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
+              {renderEditableField(
+                'username', 
+                'Username', 
+                formData.username, 
+                'Enter your username'
+              )}
 
-              <div className="form-field">
-                <label>Email Address</label>
-                <div className="field-container">
-                  <span className="field-value email-readonly">{formData.email}</span>
-                  <span className="readonly-indicator">Read-only</span>
-                </div>
-              </div>
+              {renderEditableField(
+                'email', 
+                'Email Address', 
+                formData.email, 
+                '',
+                true
+              )}
             </div>
           </motion.section>
 
