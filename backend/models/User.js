@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Password is required'],
     minlength: [8, 'Password must be at least 8 characters long'],
-    select: false // Don't include password in normal queries
+    select: false
   },
   auth0Id: {
     type: String,
@@ -80,8 +80,10 @@ userSchema.pre('save', async function(next) {
     let baseUsername = this.email.split('@')[0];
     let username = baseUsername;
     let counter = 1;
+    let attempts = 0;
+    const maxAttempts = 10;
     
-    while (true) {
+    while (attempts < maxAttempts) {
       try {
         const existingUser = await this.constructor.findOne({ username });
         if (!existingUser) {
@@ -90,10 +92,15 @@ userSchema.pre('save', async function(next) {
         }
         username = `${baseUsername}${counter}`;
         counter++;
+        attempts++;
       } catch (error) {
         next(error);
         return;
       }
+    }
+    
+    if (attempts >= maxAttempts) {
+      this.username = `${baseUsername}_${Date.now()}`;
     }
   }
   next();
@@ -116,7 +123,7 @@ userSchema.methods.toSafeObject = function() {
 userSchema.methods.generateResetToken = function() {
   const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
   this.resetPasswordToken = resetToken;
-  this.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  this.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
   return resetToken;
 };
 

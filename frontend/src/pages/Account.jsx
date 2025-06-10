@@ -59,7 +59,8 @@ function Account({ theme, toggleTheme }) {
   }, [isAuthenticated, currentUser, navigate]);
 
   const scrollToSection = (sectionId) => {
-    // Placeholder for navbar compatibility
+    // Navigate to home page with section anchor
+    navigate(`/#${sectionId}`);
   };
 
   const handleInputChange = (e) => {

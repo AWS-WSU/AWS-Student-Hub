@@ -12,7 +12,6 @@ const generateToken = (user, rememberMe = false) => {
   );
 };
 
-// Helper function to generate username from email
 const generateUsername = async (email) => {
   let baseUsername = email.split('@')[0];
   let username = baseUsername;
@@ -37,18 +36,24 @@ exports.signup = async (req, res) => {
 
     const { fullName, email, password, username: providedUsername, rememberMe } = req.body;
 
-    // Check if user exists
     let existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
-        error: 'User already exists'
+        error: 'Email already exists'
       });
     }
 
-    // Generate username if not provided
+    if (providedUsername) {
+      const existingUsername = await User.findOne({ username: providedUsername });
+      if (existingUsername) {
+        return res.status(400).json({
+          error: 'Username already exists'
+        });
+      }
+    }
+
     const username = providedUsername || await generateUsername(email);
 
-    // Create new user
     const user = new User({
       username,
       fullName,
@@ -69,8 +74,17 @@ exports.signup = async (req, res) => {
     });
   } catch (error) {
     console.error('Signup error:', error);
+    
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0];
+      const fieldName = field === 'email' ? 'Email' : field === 'username' ? 'Username' : 'Field';
+      return res.status(400).json({
+        error: `${fieldName} already exists`
+      });
+    }
+    
     res.status(500).json({
-      error: error.message || 'Server error during signup'
+      error: 'Server error during signup'
     });
   }
 };
@@ -87,11 +101,18 @@ exports.login = async (req, res) => {
     let user;
     const isEmail = email.includes('@');
     
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database timeout')), 3000)
+    );
+    
+    let findUserPromise;
     if (isEmail) {
-      user = await User.findOne({ email }).select('+password');
+      findUserPromise = User.findOne({ email }).select('+password');
     } else {
-      user = await User.findOne({ username: email }).select('+password');
+      findUserPromise = User.findOne({ username: email }).select('+password');
     }
+    
+    user = await Promise.race([findUserPromise, timeoutPromise]);
 
     if (!user) {
       return res.status(401).json({
@@ -108,8 +129,10 @@ exports.login = async (req, res) => {
 
     const token = generateToken(user, rememberMe);
 
-    user.lastLogin = Date.now();
-    await user.save();
+    setImmediate(() => {
+      user.lastLogin = Date.now();
+      user.save().catch(err => console.error('Failed to update lastLogin:', err));
+    });
 
     res.json({
       token,
@@ -117,8 +140,15 @@ exports.login = async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
+    
+    if (error.message === 'Database timeout') {
+      return res.status(503).json({
+        error: 'Service temporarily unavailable. Please try again.'
+      });
+    }
+    
     res.status(500).json({
-      error: error.message || 'Server error during login'
+      error: 'Server error during login'
     });
   }
 };
@@ -152,10 +182,9 @@ exports.checkUsername = async (req, res) => {
       });
     }
 
-    // Check if username is already taken by another user
     const existingUser = await User.findOne({ 
       username,
-      _id: { $ne: currentUserId } // Exclude current user
+      _id: { $ne: currentUserId }
     });
 
     res.json({
@@ -194,7 +223,7 @@ exports.updateProfile = async (req, res) => {
       if (existingUser) {
         return res.status(400).json({
           success: false,
-          message: 'Username is already taken'
+          message: 'Username already exists'
         });
       }
     }
@@ -212,6 +241,16 @@ exports.updateProfile = async (req, res) => {
     });
   } catch (error) {
     console.error('Update profile error:', error);
+    
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0];
+      const fieldName = field === 'username' ? 'Username' : 'Field';
+      return res.status(400).json({
+        success: false,
+        message: `${fieldName} already exists`
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Server error while updating profile'
