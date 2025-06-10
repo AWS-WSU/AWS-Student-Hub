@@ -32,17 +32,41 @@ const validateSignup = [
 const validateLogin = [
   body('email')
     .trim()
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please enter a valid email'),
+    .notEmpty()
+    .withMessage('Email or username is required'),
   body('password')
     .notEmpty()
     .withMessage('Password is required')
 ];
 
+const validateForgotPassword = [
+  body('identifier')
+    .trim()
+    .notEmpty()
+    .withMessage('Email or username is required')
+];
+
+const validateResetPassword = [
+  body('identifier')
+    .trim()
+    .notEmpty()
+    .withMessage('Email or username is required'),
+  body('code')
+    .trim()
+    .isLength({ min: 6, max: 6 })
+    .withMessage('Reset code must be 6 digits'),
+  body('newPassword')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long')
+];
+
 // Routes
 router.post('/signup', validateSignup, authController.signup);
 router.post('/login', validateLogin, authController.login);
+router.post('/forgot-password', validateForgotPassword, authController.forgotPassword);
+router.post('/verify-email', authController.verifyEmail);
+router.post('/verify-reset-code', authController.verifyResetCode);
+router.post('/reset-password', validateResetPassword, authController.resetPassword);
 router.get('/me', checkJwt, authController.getCurrentUser);
 router.post('/check-username', checkJwt, authController.checkUsername);
 router.put('/profile', checkJwt, authController.updateProfile);

@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
+const { sendResetCode } = require('../services/emailService');
 
 const generateToken = (user, rememberMe = false) => {
   const expiresIn = rememberMe ? '30d' : '24h';
@@ -83,7 +84,15 @@ exports.login = async (req, res) => {
 
     const { email, password, rememberMe } = req.body;
 
-    const user = await User.findOne({ email }).select('+password');
+    let user;
+    const isEmail = email.includes('@');
+    
+    if (isEmail) {
+      user = await User.findOne({ email }).select('+password');
+    } else {
+      user = await User.findOne({ username: email }).select('+password');
+    }
+
     if (!user) {
       return res.status(401).json({
         error: 'Invalid credentials'
@@ -206,6 +215,211 @@ exports.updateProfile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error while updating profile'
+    });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { identifier } = req.body;
+
+    if (!identifier) {
+      return res.status(400).json({
+        error: 'Email or username is required'
+      });
+    }
+
+    let user;
+    const isEmail = identifier.includes('@');
+    
+    if (isEmail) {
+      user = await User.findOne({ email: identifier.toLowerCase() });
+    } else {
+      user = await User.findOne({ username: identifier });
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        error: isEmail ? 
+          'No account found with this email address. If you signed up with Google, please use the "Continue with Google" option.' :
+          'No account found with this username.'
+      });
+    }
+
+    if (user.auth0Id) {
+      return res.status(400).json({
+        error: 'This account uses Google sign-in. Please use the "Continue with Google" option to sign in.'
+      });
+    }
+
+    if (!isEmail) {
+      const censoredEmail = user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
+      return res.json({
+        success: true,
+        needsEmailVerification: true,
+        censoredEmail,
+        message: 'Please enter the email address associated with this username to verify your identity.'
+      });
+    }
+
+    const resetToken = user.generateResetToken();
+    await user.save();
+
+    await sendResetCode(user.email, resetToken, user.fullName);
+
+    res.json({
+      success: true,
+      message: 'A 6-digit reset code has been sent to your email address.'
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      error: 'Server error while processing password reset request'
+    });
+  }
+};
+
+exports.verifyEmail = async (req, res) => {
+  try {
+    const { username, email } = req.body;
+
+    if (!username || !email) {
+      return res.status(400).json({
+        error: 'Username and email are required'
+      });
+    }
+
+    const user = await User.findOne({ 
+      username,
+      email: email.toLowerCase()
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        error: 'The email address does not match the username provided.'
+      });
+    }
+
+    if (user.auth0Id) {
+      return res.status(400).json({
+        error: 'This account uses Google sign-in. Please use the "Continue with Google" option to sign in.'
+      });
+    }
+
+    const resetToken = user.generateResetToken();
+    await user.save();
+
+    await sendResetCode(user.email, resetToken, user.fullName);
+
+    res.json({
+      success: true,
+      message: 'A 6-digit reset code has been sent to your email address.'
+    });
+  } catch (error) {
+    console.error('Email verification error:', error);
+    res.status(500).json({
+      error: 'Server error while verifying email'
+    });
+  }
+};
+
+exports.verifyResetCode = async (req, res) => {
+  try {
+    const { identifier, code } = req.body;
+
+    if (!identifier || !code) {
+      return res.status(400).json({
+        error: 'Email/username and reset code are required'
+      });
+    }
+
+    let user;
+    const isEmail = identifier.includes('@');
+    
+    if (isEmail) {
+      user = await User.findOne({ 
+        email: identifier.toLowerCase(),
+        resetPasswordToken: code,
+        resetPasswordExpires: { $gt: Date.now() }
+      }).select('+resetPasswordToken +resetPasswordExpires');
+    } else {
+      user = await User.findOne({ 
+        username: identifier,
+        resetPasswordToken: code,
+        resetPasswordExpires: { $gt: Date.now() }
+      }).select('+resetPasswordToken +resetPasswordExpires');
+    }
+
+    if (!user) {
+      return res.status(400).json({
+        error: 'Invalid or expired reset code'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Reset code verified successfully. You can now set a new password.',
+      resetToken: code
+    });
+  } catch (error) {
+    console.error('Verify reset code error:', error);
+    res.status(500).json({
+      error: 'Server error while verifying reset code'
+    });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { identifier, code, newPassword } = req.body;
+
+    if (!identifier || !code || !newPassword) {
+      return res.status(400).json({
+        error: 'All fields are required'
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        error: 'Password must be at least 8 characters long'
+      });
+    }
+
+    let user;
+    const isEmail = identifier.includes('@');
+    
+    if (isEmail) {
+      user = await User.findOne({ 
+        email: identifier.toLowerCase(),
+        resetPasswordToken: code,
+        resetPasswordExpires: { $gt: Date.now() }
+      }).select('+resetPasswordToken +resetPasswordExpires +password');
+    } else {
+      user = await User.findOne({ 
+        username: identifier,
+        resetPasswordToken: code,
+        resetPasswordExpires: { $gt: Date.now() }
+      }).select('+resetPasswordToken +resetPasswordExpires +password');
+    }
+
+    if (!user) {
+      return res.status(400).json({
+        error: 'Invalid or expired reset code'
+      });
+    }
+
+    user.password = newPassword;
+    user.clearResetToken();
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password has been reset successfully. You can now sign in with your new password.'
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      error: 'Server error while resetting password'
     });
   }
 };

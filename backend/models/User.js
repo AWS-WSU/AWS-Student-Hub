@@ -50,6 +50,14 @@ const userSchema = new mongoose.Schema({
   lastLogin: {
     type: Date,
     default: Date.now
+  },
+  resetPasswordToken: {
+    type: String,
+    select: false
+  },
+  resetPasswordExpires: {
+    type: Date,
+    select: false
   }
 }, {
   timestamps: true
@@ -103,6 +111,18 @@ userSchema.methods.toSafeObject = function() {
   const obj = this.toObject();
   delete obj.password;
   return obj;
+};
+
+userSchema.methods.generateResetToken = function() {
+  const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+  this.resetPasswordToken = resetToken;
+  this.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  return resetToken;
+};
+
+userSchema.methods.clearResetToken = function() {
+  this.resetPasswordToken = undefined;
+  this.resetPasswordExpires = undefined;
 };
 
 const User = mongoose.model('User', userSchema);
