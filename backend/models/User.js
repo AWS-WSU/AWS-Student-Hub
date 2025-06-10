@@ -39,6 +39,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: '/account.svg'
   },
+  wantsEmails: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -103,4 +107,4 @@ userSchema.methods.toSafeObject = function() {
 
 const User = mongoose.model('User', userSchema);
 
-module.exports = User; 
+module.exports = User;

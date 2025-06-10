@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { useState, useEffect } from 'react';
 import Landing from './pages/Landing';
 import Auth from './pages/Auth';
+import Account from './pages/Account';
 import './App.css';
 
 function App() {
@@ -40,6 +41,10 @@ function App() {
       <Routes>
         <Route path="/" element={<Landing theme={theme} toggleTheme={toggleTheme} />} />
         <Route path="/auth" element={<Auth theme={theme} />} />
+        <Route 
+          path="/account" 
+          element={<Account theme={theme} toggleTheme={toggleTheme} />} 
+        />
       </Routes>
     </AuthProvider>
   );

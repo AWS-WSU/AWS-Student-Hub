@@ -49,13 +49,27 @@ export const AuthProvider = ({ children }) => {
     navigate('/auth');
   };
 
+  const updateUser = async (updates) => {
+    const response = await authAPI.updateProfile(updates);
+    setUser(response.user);
+    return response;
+  };
+
+  const uploadProfilePicture = async (file) => {
+    const response = await authAPI.uploadProfilePicture(file);
+    setUser(response.user);
+    return response;
+  };
+
   const value = {
     user,
     loading,
     login,
     signup,
     logout,
-    checkAuth
+    checkAuth,
+    updateUser,
+    uploadProfilePicture
   };
 
   if (loading) {
@@ -86,4 +100,4 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};

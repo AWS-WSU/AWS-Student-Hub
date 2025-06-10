@@ -236,6 +236,24 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
 
                   <motion.button 
                     className="auth-option secondary"
+                    onClick={() => {
+                      navigate('/account');
+                      setIsAccountDropdownOpen(false);
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <img 
+                      src="/account.svg" 
+                      alt="Profile" 
+                      className="login-icon" 
+                      style={{ filter: theme === 'dark' ? 'invert(100%)' : 'invert(0%)' }}
+                    />
+                    Profile
+                  </motion.button>
+
+                  <motion.button 
+                    className="auth-option secondary"
                     onClick={handleLogout}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}

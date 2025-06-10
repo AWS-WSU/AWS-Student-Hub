@@ -128,4 +128,83 @@ exports.getCurrentUser = async (req, res) => {
       error: 'Server error while fetching user'
     });
   }
-}; 
+};
+
+exports.checkUsername = async (req, res) => {
+  try {
+    const { username } = req.body;
+    const currentUserId = req.user.id;
+
+    if (!username) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username is required'
+      });
+    }
+
+    // Check if username is already taken by another user
+    const existingUser = await User.findOne({ 
+      username,
+      _id: { $ne: currentUserId } // Exclude current user
+    });
+
+    res.json({
+      success: true,
+      available: !existingUser,
+      message: existingUser ? 'Username is already taken' : 'Username is available'
+    });
+  } catch (error) {
+    console.error('Check username error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while checking username'
+    });
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { fullName, username, wantsEmails } = req.body;
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    if (username && username !== user.username) {
+      const existingUser = await User.findOne({ 
+        username,
+        _id: { $ne: userId }
+      });
+      
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Username is already taken'
+        });
+      }
+    }
+
+    if (fullName !== undefined) user.fullName = fullName;
+    if (username !== undefined) user.username = username;
+    if (wantsEmails !== undefined) user.wantsEmails = wantsEmails;
+
+    await user.save();
+
+    res.json({
+      success: true,
+      user: user.toSafeObject(),
+      message: 'Profile updated successfully'
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating profile'
+    });
+  }
+};

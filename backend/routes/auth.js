@@ -44,5 +44,7 @@ const validateLogin = [
 router.post('/signup', validateSignup, authController.signup);
 router.post('/login', validateLogin, authController.login);
 router.get('/me', checkJwt, authController.getCurrentUser);
+router.post('/check-username', checkJwt, authController.checkUsername);
+router.put('/profile', checkJwt, authController.updateProfile);
 
-module.exports = router; 
+module.exports = router;
