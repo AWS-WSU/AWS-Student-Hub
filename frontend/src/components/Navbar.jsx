@@ -15,19 +15,9 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
   const { logout: auth0Logout, isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
   const { user: authUser, logout: authLogout } = useAuth();
 
-  // Handle profile picture from any provider
   useEffect(() => {
     if (auth0User) {
-      // Check for picture from social provider
-      if (auth0User.picture) {
-        setProfileImage(auth0User.picture);
-      } else if (auth0User.sub && auth0User.sub.startsWith('google-oauth2|')) {
-        // Fallback for Google if picture not in standard field
-        const googleId = auth0User.sub.split('|')[1];
-        setProfileImage(`https://lh3.googleusercontent.com/a/${googleId}`);
-      } else {
-        setProfileImage('/account.svg');
-      }
+      setProfileImage(auth0User.picture || '/account.svg');
     } else if (authUser) {
       setProfileImage(authUser.profilePicture || '/account.svg');
     } else {
@@ -35,7 +25,6 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
     }
   }, [auth0User, authUser]);
 
-  // Check for persistent login
   useEffect(() => {
     const rememberMe = localStorage.getItem('rememberMe');
     if (!rememberMe && isAuth0Authenticated) {
@@ -57,7 +46,6 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
-  // Close mobile menu when window is resized to desktop width
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 992 && isMenuOpen) {
@@ -69,7 +57,6 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
     return () => window.removeEventListener('resize', handleResize);
   }, [isMenuOpen]);
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest('.account-dropdown-container')) {
@@ -217,10 +204,12 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
                 alt="Account"
                 className="account-icon"
                 onError={(e) => {
-                  e.target.onerror = null; // Prevent infinite loop
+                  e.target.onerror = null;
                   e.target.src = '/account.svg';
                   setProfileImage('/account.svg');
                 }}
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
                 initial={false}
                 animate={{
                   scale: isAccountDropdownOpen ? 0.95 : 1,
