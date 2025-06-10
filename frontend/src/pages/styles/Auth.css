@@ -184,6 +184,14 @@
   margin-bottom: 2rem;
 }
 
+.form-options:has(.forgot-password:only-child) {
+  justify-content: flex-end;
+}
+
+.form-options:has(.checkbox-container:only-child) {
+  justify-content: flex-start;
+}
+
 .checkbox-container {
   display: flex;
   align-items: center;
@@ -212,14 +220,17 @@
 }
 
 .checkbox-container input:checked + .checkmark::after {
-  content: '✓';
+  content: '';
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  color: #000;
-  font-size: 14px;
-  font-weight: bold;
+  width: 12px;
+  height: 12px;
+  background-image: url('/check.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 .forgot-password {

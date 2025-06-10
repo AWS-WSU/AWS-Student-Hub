@@ -2,11 +2,12 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 
-const generateToken = (user) => {
+const generateToken = (user, rememberMe = false) => {
+  const expiresIn = rememberMe ? '30d' : '24h';
   return jwt.sign(
     { id: user._id, email: user.email },
     process.env.JWT_SECRET,
-    { expiresIn: '30d' }
+    { expiresIn }
   );
 };
 
@@ -33,7 +34,7 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { fullName, email, password, username: providedUsername } = req.body;
+    const { fullName, email, password, username: providedUsername, rememberMe } = req.body;
 
     // Check if user exists
     let existingUser = await User.findOne({ email });
@@ -56,7 +57,7 @@ exports.signup = async (req, res) => {
 
     await user.save();
 
-    const token = generateToken(user);
+    const token = generateToken(user, rememberMe);
 
     user.lastLogin = Date.now();
     await user.save();
@@ -80,7 +81,7 @@ exports.login = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
 
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
@@ -96,7 +97,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    const token = generateToken(user);
+    const token = generateToken(user, rememberMe);
 
     user.lastLogin = Date.now();
     await user.save();

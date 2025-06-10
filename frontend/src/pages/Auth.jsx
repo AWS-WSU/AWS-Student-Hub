@@ -9,6 +9,7 @@ function Auth({ theme }) {
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     fullName: '',
@@ -46,10 +47,12 @@ function Auth({ theme }) {
       }
 
       const { confirmPassword, ...authData } = formData;
+      const authPayload = { ...authData, rememberMe };
+      
       if (isLogin) {
-        await login(authData);
+        await login(authPayload);
       } else {
-        await signup(authData);
+        await signup(authPayload);
       }
     } catch (err) {
       setError(err.message);
@@ -221,6 +224,23 @@ function Auth({ theme }) {
               </motion.div>
             )}
           </AnimatePresence>
+
+          <div className="form-options">
+            <label className="checkbox-container">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              <span className="checkmark"></span>
+              Keep me signed in
+            </label>
+            {isLogin && (
+              <a href="#" className="forgot-password">
+                Forgot Password?
+              </a>
+            )}
+          </div>
 
           <motion.button
             type="submit"
