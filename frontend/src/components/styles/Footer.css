@@ -203,24 +203,96 @@
   font-size: 0.9rem;
 }
 
+@media (max-width: 1024px) {
+  .footer-content {
+    max-width: 900px;
+    gap: 2rem;
+  }
+
+  .footer-section {
+    flex: 1 1 200px;
+  }
+}
+
 @media (max-width: 768px) {
   .landing-footer {
     padding: 3rem 1.5rem 1rem;
   }
   
+  .footer-content {
+    gap: 2rem;
+  }
+
   .footer-aws-logo {
-    height: 35px;
+    height: 80px; /* More reasonable reduction from 125px */
   }
   
   .footer-logo h3 {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
+  }
+
+  .footer-section {
+    flex: 1 1 300px;
   }
   
   .social-links {
-    justify-content: center;
+    justify-content: flex-start;
   }
   
   .newsletter-form {
     max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-footer {
+    padding: 2.5rem 1rem 1rem;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .footer-aws-logo {
+    height: 60px;
+  }
+
+  .footer-section {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .footer-logo {
+    margin-bottom: 1.2rem;
+  }
+
+  .footer-section h3 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+  }
+
+  .footer-section p {
+    font-size: 0.9rem;
+  }
+
+  .footer-section ul li a {
+    font-size: 0.9rem;
+  }
+
+  .newsletter-form {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .newsletter-form input,
+  .newsletter-form button {
+    width: 100%;
+    border-radius: 4px;
+  }
+
+  .footer-bottom {
+    margin-top: 2rem;
+    font-size: 0.85rem;
   }
 }

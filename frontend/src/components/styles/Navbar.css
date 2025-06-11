@@ -396,45 +396,157 @@
 }
 
 /* Mobile Responsive */
-@media (max-width: 768px) {
-  .account-dropdown {
-    min-width: 220px;
-    right: -0.5rem;
+@media (max-width: 1200px) {
+  .landing-header {
+    padding: 1rem 1.5rem;
   }
-  
-  .account-icon {
-    width: 32px;
-    height: 32px;
+
+  .landing-header.scrolled {
+    padding: 0.5rem 1.5rem;
   }
-  
-  .auth-option {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.9rem;
-  }
-  
-  .header-controls {
-    gap: 0.5rem;
+
+  .desktop-nav ul {
+    gap: 2rem;
   }
 }
 
-@media (max-width: 576px) {
+@media (max-width: 992px) {
+  .desktop-nav {
+    display: none;
+  }
+  
+  .mobile-menu-toggle {
+    display: flex;
+  }
+
+  .header-controls {
+    gap: 0.8rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .landing-header {
+    padding: 0.8rem 1rem;
+  }
+
+  .landing-header.scrolled {
+    padding: 0.5rem 1rem;
+  }
+
+  .aws-logo {
+    height: 40px;
+  }
+
+  .logo-text h1 {
+    font-size: 1.2rem;
+  }
+
+  .accent-text {
+    font-size: 1rem;
+  }
+
+  .header-controls {
+    gap: 0.6rem;
+  }
+
+  .theme-toggle {
+    font-size: 1.6rem;
+    padding: 0.4rem;
+  }
+
+  .theme-toggle img {
+    width: 20px;
+    height: 20px;
+  }
+
+  .mobile-menu {
+    width: 100%;
+    padding: 5rem 1.5rem 2rem;
+  }
+
+  .mobile-menu li a {
+    font-size: 1.2rem;
+  }
+
   .account-dropdown {
-    min-width: 200px;
+    width: 280px;
     right: -1rem;
   }
-  
+
   .account-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .auth-option {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-header {
+    padding: 0.6rem 0.8rem;
+  }
+
+  .landing-header.scrolled {
+    padding: 0.4rem 0.8rem;
+  }
+
+  .logo-container {
+    gap: 1rem;
+  }
+
+  .aws-logo {
+    height: 35px;
+  }
+
+  /* Hide title on mobile as requested */
+  .logo-text {
+    display: none;
+  }
+
+  .theme-toggle {
+    font-size: 1.4rem;
+    padding: 0.3rem;
+  }
+
+  .theme-toggle img {
+    width: 18px;
+    height: 18px;
+  }
+
+  .mobile-menu-toggle {
     width: 30px;
-    height: 30px;
+    height: 22px;
   }
-  
-  .login-icon {
-    width: 16px;
-    height: 16px;
+
+  .mobile-menu {
+    padding: 4rem 1.2rem 1.5rem;
   }
-  
+
+  .mobile-menu li {
+    margin-bottom: 1.2rem;
+  }
+
+  .mobile-menu li a {
+    font-size: 1.1rem;
+    padding: 0.4rem 0;
+  }
+
+  .account-dropdown {
+    width: calc(100vw - 2rem);
+    right: -0.8rem;
+  }
+
   .auth-buttons {
+    flex-direction: column;
     gap: 0.5rem;
+  }
+
+  .auth-option {
+    width: 100%;
+    text-align: center;
   }
 }
 

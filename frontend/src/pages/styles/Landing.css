@@ -263,7 +263,6 @@
 .hero-logo {
   height: 500px;
   margin-bottom: 2rem;
-  filter: drop-shadow(0 0 20px rgba(var(--accent-rgb), 0.5));
 }
 
 .hero-content h2 {
@@ -1161,124 +1160,239 @@ section {
 }
 
 /* Responsive Design */
+@media (max-width: 1200px) {
+  .hero-section {
+    padding: 7rem 1.5rem 4rem;
+  }
+
+  .hero-content {
+    max-width: 900px;
+  }
+
+  .about-content,
+  .resources-container {
+    gap: 1.5rem;
+  }
+
+  .events-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
 @media (max-width: 992px) {
   .logo-text h1 {
-    font-size: 1rem;
+    font-size: 1.1rem;
   }
-  
+
   .accent-text {
     font-size: 0.9rem;
   }
-  
+
   .hero-content h2 {
-    font-size: clamp(2rem, 5vw, 3rem);
+    font-size: 2.8rem;
   }
-  
+
   .cta-buttons {
     flex-direction: column;
-    align-items: center;
     gap: 1rem;
-  }
-  
-  .cta-primary, .cta-secondary {
     width: 100%;
     max-width: 300px;
+    margin: 0 auto;
+  }
+
+  .cta-primary,
+  .cta-secondary {
+    width: 100%;
+    text-align: center;
+  }
+
+  .about-content,
+  .resources-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stats-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
   }
 }
 
 @media (max-width: 768px) {
-  .landing-header {
-    padding: 1rem;
-  }
-  
-  .aws-logo {
-    height: 30px;
-  }
-  
-  .logo-text h1 {
-    font-size: 0.9rem;
-  }
-  
-  .accent-text {
-    font-size: 0.8rem;
-  }
-  
   section {
-    padding: 4rem 1rem;
+    padding: 4rem 1.5rem;
   }
-  
-  .hero-section {
-    padding-top: 6rem;
-  }
-  
-  .hero-logo {
-    height: 80px;
-  }
-  
-  .section-header {
-    margin-bottom: 3rem;
-  }
-  
-  .testimonial p {
-    font-size: 1rem;
-  }
-  
-  .cta-card {
-    padding: 2rem;
-  }
-  
-  .cta-card h2 {
-    font-size: 1.8rem;
-  }
-  
-  .cta-card p {
-    font-size: 1rem;
-  }
-}
 
-@media (max-width: 576px) {
-  .hero-logo {
-    height: 70px;
+  .hero-section {
+    padding: 6rem 1rem 3rem;
+    text-align: center;
   }
-  
-  .about-content, .resources-container {
+
+  .hero-logo {
+    width: 150px;
+    margin: 0 auto 2rem;
+  }
+
+  .hero-content h2 {
+    font-size: 2.4rem;
+  }
+
+  .hero-content p {
+    font-size: 1.1rem;
+  }
+
+  .section-header {
+    margin-bottom: 2.5rem;
+  }
+
+  .section-header h2 {
+    font-size: 2rem;
+  }
+
+  .about-content,
+  .resources-container {
+    grid-template-columns: 1fr;
     gap: 1.5rem;
   }
-  
-  .about-card, .resource-card {
+
+  .about-card,
+  .resource-card {
     padding: 1.5rem;
   }
-  
-  .stats-container {
-    gap: 2rem;
+
+  .events-container {
+    grid-template-columns: 1fr;
   }
-  
-  .stat-number {
-    font-size: 2.5rem;
-  }
-  
+
   .event-card {
     flex-direction: column;
   }
-  
+
   .event-date-badge {
     width: 100%;
-    flex-direction: row;
+    height: auto;
     padding: 0.8rem;
+    flex-direction: row;
     justify-content: center;
     gap: 0.5rem;
+    border-radius: 8px 8px 0 0;
   }
-  
-  .event-month, .event-day {
+
+  .event-month,
+  .event-day {
     font-size: 1.2rem;
   }
-  
-  .testimonial p::before, .testimonial p::after {
+
+  .testimonial {
+    padding: 1.5rem;
+  }
+
+  .testimonial p {
+    font-size: 1rem;
+  }
+
+  .cta-card {
+    padding: 2rem 1.5rem;
+  }
+
+  .cta-card h2 {
     font-size: 2rem;
   }
-  
-  .testimonial-author img {
-    width: 50px;
-    height: 50px;
+
+  .cta-card p {
+    font-size: 1.1rem;
   }
 }
+
+@media (max-width: 480px) {
+  section {
+    padding: 3rem 1rem;
+  }
+
+  .hero-section {
+    padding: 5rem 1rem 2rem;
+  }
+
+  .hero-logo {
+    width: 400px;
+  }
+
+  .hero-content h2 {
+    margin-top: -125px;
+    font-size: 2rem;
+  }
+
+  .hero-content p {
+    font-size: 1rem;
+  }
+
+  .section-header h2 {
+    font-size: 1.8rem;
+  }
+
+  .about-card,
+  .resource-card {
+    padding: 1.2rem;
+  }
+
+  .about-card h3,
+  .resource-card h3 {
+    font-size: 1.3rem;
+  }
+
+  .stats-container {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .stat-number {
+    font-size: 2.5rem;
+  }
+
+  .stat-label {
+    font-size: 1rem;
+  }
+
+  .event-card {
+    margin-bottom: 1.5rem;
+  }
+
+  .event-content h3 {
+    font-size: 1.2rem;
+  }
+
+  .event-details {
+    font-size: 0.9rem;
+  }
+
+  .testimonial {
+    padding: 1.2rem;
+  }
+
+  .testimonial p {
+    font-size: 0.95rem;
+  }
+
+  .testimonial-author img {
+    width: 40px;
+    height: 40px;
+  }
+
+  .cta-card {
+    padding: 1.8rem 1.2rem;
+  }
+
+  .cta-card h2 {
+    font-size: 1.8rem;
+  }
+
+  .cta-card p {
+    font-size: 1rem;
+  }
+
+  .join-button {
+    width: 100%;
+    text-align: center;
+  }
+}
+
