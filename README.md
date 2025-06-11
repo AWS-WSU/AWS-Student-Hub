@@ -50,21 +50,72 @@ npm install
 
 ### 3. Environment Variables
 
+### 🌐 Environment Variables Overview
+
+| Variable Name              | Description                                                                 | Required? | Who Needs This |
+|---------------------------|-----------------------------------------------------------------------------|-----------|----------------|
+| `MONGODB_URI`             | MongoDB connection string for the primary database                          | Yes       | Backend        |
+| `ADMIN_TOKEN`             | Token used for privileged admin actions                                     | Optional  | Backend        |
+| `JWT_SECRET`              | Secret key for signing/verifying JWTs                                       | Yes       | Backend        |
+| `PORT`                    | Port for backend server                                                     | Yes       | Backend        |
+| `NODE_ENV`                | Application environment mode                                                | Yes       | Backend        |
+| `CORS_ORIGIN`             | Allowed origins for CORS requests                                           | Yes       | Backend        |
+| `AWS_ACCESS_KEY_ID`       | AWS credential for accessing services (e.g., S3)                             | Optional  | Backend        |
+| `AWS_SECRET_ACCESS_KEY`   | Secret AWS key paired with access key ID                                    | Optional  | Backend        |
+| `AWS_REGION`              | AWS region for services                                                     | Optional  | Backend        |
+| `AWS_S3_BUCKET`           | S3 bucket name used for file uploads                                        | Optional  | Backend        |
+| `SMTP_HOST`               | SMTP server address for sending emails                                      | Optional  | Backend        |
+| `SMTP_PORT`               | SMTP port number                                                             | Optional  | Backend        |
+| `SMTP_ENCRYPTION`         | Email encryption method (e.g., `STARTTLS`)                                  | Optional  | Backend        |
+| `SMTP_USER`               | SMTP username or email                                                      | Optional  | Backend        |
+| `SMTP_PASS`               | SMTP password or app-specific key                                           | Optional  | Backend        |
+| `VITE_AUTH0_DOMAIN`       | Auth0 domain for authentication                                             | Yes       | Frontend       |
+| `VITE_AUTH0_CLIENT_ID`    | Public Auth0 client ID                                                      | Yes       | Frontend       |
+| `VITE_AUTH0_AUDIENCE`     | Auth0 API audience identifier                                               | Yes       | Frontend       |
+| `VITE_API_URL`            | Base URL for frontend to connect to backend                                 | Yes       | Frontend       |
+
+
 **Frontend (.env):**
-```bash
+```env
 VITE_AUTH0_DOMAIN=your-auth0-domain
 VITE_AUTH0_CLIENT_ID=your-auth0-client-id
-VITE_AUTH0_CALLBACK_URL=http://localhost:5173
+VITE_AUTH0_AUDIENCE=your-auth0-api-audience
 VITE_API_URL=http://localhost:5001/api
 ```
 
 **Backend (.env):**
-```bash
-AUTH0_DOMAIN=your-auth0-domain
-AUTH0_AUDIENCE=your-auth0-audience
-MONGODB_URI=your-mongodb-connection-string
+```env
+# MongoDB connection string
+MONGODB_URI=your-mongodb-uri
+
+# Admin access token
+ADMIN_TOKEN=your-admin-token
+
+# Secret key for signing JWTs
+JWT_SECRET=your-jwt-secret
+
+# Backend port
 PORT=5001
-CORS_ORIGIN=http://localhost:5173
+
+# Environment mode
+NODE_ENV=development
+
+# CORS configuration
+CORS_ORIGIN=http://localhost:5173,http://localhost:3000
+
+# AWS Configuration
+AWS_ACCESS_KEY_ID=your-aws-access-key-id
+AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=aws-student-hub
+
+# SMTP configuration for email
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_ENCRYPTION=STARTTLS
+SMTP_USER=your-email
+SMTP_PASS=your-email-password
+
 ```
 
 ### 4. Start the Application
