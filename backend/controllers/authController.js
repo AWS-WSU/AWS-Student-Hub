@@ -30,10 +30,6 @@ const generateUsername = async (email) => {
 
 const filter = new Filter();
 
-function containsProfanity(input) {
-  return filter.isProfane(input);
-}
-
 function normalizeInput(str) {
   return str
     .toLowerCase()
@@ -45,8 +41,9 @@ function normalizeInput(str) {
 }
 
 function containsProfanity(input) {
+  if (!input || typeof input !== 'string') return false;
   const normalized = normalizeInput(input);
-  return filter.isProfane(normalized);
+  return filter.isProfane(input) || filter.isProfane(normalized);
 }
 
 exports.signup = async (req, res) => {
@@ -70,6 +67,7 @@ exports.signup = async (req, res) => {
       }
     }
 
+    // Check for profanity in user inputs
     const fieldsToCheck = [
       { name: 'username', value: providedUsername },
       { name: 'full name', value: fullName },
@@ -79,7 +77,7 @@ exports.signup = async (req, res) => {
     for (const field of fieldsToCheck) {
       if (field.value && containsProfanity(field.value)) {
         return res.status(400).json({
-          error: `Hey, thats not nice. Try again.`
+          error: `Hey, that's not nice. Try again.`
         });
       }
     }
@@ -243,6 +241,21 @@ exports.updateProfile = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'User not found'
+      });
+    }
+
+    // Check for profanity in username and fullName
+    if (username && containsProfanity(username)) {
+      return res.status(400).json({
+        success: false,
+        message: "Hey, that's not nice. Try again."
+      });
+    }
+
+    if (fullName && containsProfanity(fullName)) {
+      return res.status(400).json({
+        success: false,
+        message: "Hey, that's not nice. Try again."
       });
     }
 

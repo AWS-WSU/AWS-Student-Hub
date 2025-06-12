@@ -49,6 +49,7 @@ npm install
 ```
 
 ### 3. Environment Variables
+You can test most functionalities without about 50% of the environment variables. However, for more focused features and implementations, you will need the official production/development level variables to which those are only available by contacting @cachebag (Akrm Al-Hakimi) and you _must_ be an official board member or verified club member/contributor.
 
 ### 🌐 Environment Variables Overview
 

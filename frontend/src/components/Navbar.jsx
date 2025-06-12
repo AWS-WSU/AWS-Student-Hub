@@ -309,11 +309,37 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
           </motion.div>
         </motion.button>
         
-        <button className="mobile-menu-toggle" onClick={toggleMenu} aria-label="Toggle menu">
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
+        <motion.button 
+          className={`mobile-menu-toggle ${isMenuOpen ? 'active' : ''}`}
+          onClick={toggleMenu} 
+          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <motion.span
+            animate={{ 
+              rotate: isMenuOpen ? 45 : 0,
+              y: isMenuOpen ? 10 : 0,
+              x: isMenuOpen ? 2 : 0
+            }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          />
+          <motion.span
+            animate={{ 
+              opacity: isMenuOpen ? 0 : 1,
+              scale: isMenuOpen ? 0 : 1
+            }}
+            transition={{ duration: 0.2 }}
+          />
+          <motion.span
+            animate={{ 
+              rotate: isMenuOpen ? -45 : 0,
+              y: isMenuOpen ? -10 : 0,
+              x: isMenuOpen ? 2 : 0
+            }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          />
+        </motion.button>
       </div>
       
       <AnimatePresence>
@@ -325,32 +351,31 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           >
-            <button className="close-menu" onClick={toggleMenu}>×</button>
             <ul>
               <motion.li 
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
+                initial={{ opacity: 0, x: 20 }} 
+                animate={{ opacity: 1, x: 0 }} 
                 transition={{ delay: 0.1 }}
               >
                 <a onClick={() => { scrollToSection('home'); toggleMenu(); }}>Home</a>
               </motion.li>
               <motion.li 
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
+                initial={{ opacity: 0, x: 20 }} 
+                animate={{ opacity: 1, x: 0 }} 
                 transition={{ delay: 0.2 }}
               >
                 <a onClick={() => { scrollToSection('about'); toggleMenu(); }}>About</a>
               </motion.li>
               <motion.li 
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
+                initial={{ opacity: 0, x: 20 }} 
+                animate={{ opacity: 1, x: 0 }} 
                 transition={{ delay: 0.3 }}
               >
                 <a onClick={() => { scrollToSection('events'); toggleMenu(); }}>Events</a>
               </motion.li>
               <motion.li 
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
+                initial={{ opacity: 0, x: 20 }} 
+                animate={{ opacity: 1, x: 0 }} 
                 transition={{ delay: 0.4 }}
               >
                 <a onClick={() => { scrollToSection('resources'); toggleMenu(); }}>Resources</a>
