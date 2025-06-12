@@ -166,4 +166,11 @@ export const authAPI = {
   }
 };
 
+// Discord API functions
+export const discordAPI = {
+  getInvite: async () => {
+    return apiRequest('/discord-invite');
+  }
+};
+
 export { apiRequest };
