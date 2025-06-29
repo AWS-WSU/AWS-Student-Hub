@@ -3,6 +3,7 @@ const { body } = require('express-validator');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const checkJwt = require('../middleware/auth');
+const { authLimiter, loginLimiter, passwordResetLimiter, signupLimiter } = require('../middleware/rateLimiter');
 
 // Validation middleware
 const validateSignup = [
@@ -23,10 +24,10 @@ const validateSignup = [
     .normalizeEmail()
     .withMessage('Please enter a valid email'),
   body('password')
-    .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters long')
-    .matches(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).*$/)
-    .withMessage('Password must contain at least one number, one uppercase and one lowercase letter')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters long')
+    .matches(/^(?=.*\d)(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).*$/)
+    .withMessage('Password must contain at least one number, one uppercase letter, and one special character')
 ];
 
 const validateLogin = [
@@ -56,17 +57,19 @@ const validateResetPassword = [
     .isLength({ min: 6, max: 6 })
     .withMessage('Reset code must be 6 digits'),
   body('newPassword')
-    .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters long')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters long')
+    .matches(/^(?=.*\d)(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).*$/)
+    .withMessage('Password must contain at least one number, one uppercase letter, and one special character')
 ];
 
 // Routes
-router.post('/signup', validateSignup, authController.signup);
-router.post('/login', validateLogin, authController.login);
-router.post('/forgot-password', validateForgotPassword, authController.forgotPassword);
-router.post('/verify-email', authController.verifyEmail);
-router.post('/verify-reset-code', authController.verifyResetCode);
-router.post('/reset-password', validateResetPassword, authController.resetPassword);
+router.post('/signup', signupLimiter, validateSignup, authController.signup);
+router.post('/login', loginLimiter, validateLogin, authController.login);
+router.post('/forgot-password', passwordResetLimiter, validateForgotPassword, authController.forgotPassword);
+router.post('/verify-email', passwordResetLimiter, authController.verifyEmail);
+router.post('/verify-reset-code', authLimiter, authController.verifyResetCode);
+router.post('/reset-password', authLimiter, validateResetPassword, authController.resetPassword);
 router.get('/me', checkJwt, authController.getCurrentUser);
 router.post('/check-username', checkJwt, authController.checkUsername);
 router.put('/profile', checkJwt, authController.updateProfile);

@@ -177,6 +177,112 @@
   font-family: var(--font-family);
 }
 
+.password-input-container {
+  position: relative;
+}
+
+.password-input-container input {
+  padding-right: 3rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.password-toggle:hover {
+  opacity: 1;
+  background: rgba(var(--text-primary-rgb), 0.05);
+}
+
+.password-toggle:focus {
+  outline: none;
+  opacity: 1;
+  background: rgba(var(--text-primary-rgb), 0.08);
+}
+
+.password-toggle img {
+  width: 18px;
+  height: 18px;
+  color: var(--text-secondary);
+  filter: brightness(0) saturate(100%) invert(50%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(90%) contrast(95%);
+}
+
+.password-field-container {
+  position: relative;
+}
+
+.password-requirements {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: rgba(var(--accent-rgb), 0.04);
+  border: 1px solid rgba(var(--accent-rgb), 0.1);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.requirements-title {
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  font-family: var(--font-family);
+}
+
+.requirements-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.requirement {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.25rem;
+  color: var(--text-secondary);
+  font-family: var(--font-family);
+  transition: color 0.2s ease;
+}
+
+.requirement:last-child {
+  margin-bottom: 0;
+}
+
+.requirement.met {
+  color: #22c55e;
+}
+
+.requirement.unmet {
+  color: var(--text-secondary);
+}
+
+.requirement-icon {
+  margin-right: 0.5rem;
+  width: 16px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.requirement.met .requirement-icon {
+  color: #22c55e;
+}
+
+.requirement.unmet .requirement-icon {
+  color: var(--text-secondary);
+  opacity: 0.4;
+}
+
 .form-options {
   display: flex;
   justify-content: space-between;

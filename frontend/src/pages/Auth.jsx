@@ -6,11 +6,90 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import './styles/Auth.css';
 
+const PasswordRequirements = ({ password, isVisible }) => {
+  const requirements = [
+    {
+      test: (pwd) => pwd.length >= 6,
+      text: 'At least 6 characters long'
+    },
+    {
+      test: (pwd) => /\d/.test(pwd),
+      text: 'Contains at least one number'
+    },
+    {
+      test: (pwd) => /[A-Z]/.test(pwd),
+      text: 'Contains at least one uppercase letter'
+    },
+    {
+      test: (pwd) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd),
+      text: 'Contains at least one special character'
+    }
+  ];
+
+  if (!isVisible) return null;
+
+  return (
+    <motion.div
+      className="password-requirements"
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <div className="requirements-title">Password must:</div>
+      <ul className="requirements-list">
+        {requirements.map((req, index) => (
+          <li 
+            key={index} 
+            className={`requirement ${req.test(password) ? 'met' : 'unmet'}`}
+          >
+            <span className="requirement-icon">
+              {req.test(password) ? '✓' : '○'}
+            </span>
+            {req.text}
+          </li>
+        ))}
+      </ul>
+    </motion.div>
+  );
+};
+
+const PasswordInput = ({ name, placeholder, value, onChange, onFocus, onBlur, required = false, minLength, showField, showPassword, togglePasswordVisibility }) => {
+  const fieldKey = showField || name;
+  return (
+    <div className="form-group password-input-container">
+      <input
+        type={showPassword[fieldKey] ? "text" : "password"}
+        name={name}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        required={required}
+        minLength={minLength}
+      />
+      <button
+        type="button"
+        className="password-toggle"
+        onClick={() => togglePasswordVisibility(fieldKey)}
+        aria-label={showPassword[fieldKey] ? "Hide password" : "Show password"}
+      >
+        <img
+          src={showPassword[fieldKey] ? "/eye-closed.svg" : "/eye-open.svg"}
+          alt={showPassword[fieldKey] ? "Hide" : "Show"}
+        />
+      </button>
+    </div>
+  );
+};
+
 function Auth({ theme }) {
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
   const [forgotPasswordStep, setForgotPasswordStep] = useState(null);
   const [resetData, setResetData] = useState({
     identifier: '',
@@ -27,6 +106,12 @@ function Auth({ theme }) {
     email: '',
     password: '',
     confirmPassword: ''
+  });
+  const [showPassword, setShowPassword] = useState({
+    password: false,
+    confirmPassword: false,
+    newPassword: false,
+    confirmResetPassword: false
   });
   
   const { loginWithRedirect, isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
@@ -54,6 +139,13 @@ function Auth({ theme }) {
       [e.target.name]: e.target.value
     });
     setError('');
+  };
+
+  const togglePasswordVisibility = (field) => {
+    setShowPassword(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -491,28 +583,28 @@ function Auth({ theme }) {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
-              <div className="form-group">
-                <input
-                  type="password"
-                  name="newPassword"
-                  placeholder="New Password"
-                  value={resetData.newPassword}
-                  onChange={handleResetInputChange}
-                  minLength="8"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  placeholder="Confirm New Password"
-                  value={resetData.confirmPassword}
-                  onChange={handleResetInputChange}
-                  minLength="8"
-                  required
-                />
-              </div>
+              <PasswordInput
+                name="newPassword"
+                placeholder="New Password"
+                value={resetData.newPassword}
+                onChange={handleResetInputChange}
+                minLength="8"
+                required
+                showField="newPassword"
+                showPassword={showPassword}
+                togglePasswordVisibility={togglePasswordVisibility}
+              />
+              <PasswordInput
+                name="confirmPassword"
+                placeholder="Confirm New Password"
+                value={resetData.confirmPassword}
+                onChange={handleResetInputChange}
+                minLength="8"
+                required
+                showField="confirmResetPassword"
+                showPassword={showPassword}
+                togglePasswordVisibility={togglePasswordVisibility}
+              />
               <motion.button
                 type="submit"
                 className="auth-submit"
@@ -586,15 +678,24 @@ function Auth({ theme }) {
                 />
               </div>
 
-              <div className="form-group">
-                <input
-                  type="password"
+              <div className="password-field-container">
+                <PasswordInput
                   name="password"
                   placeholder="Password"
                   value={formData.password}
                   onChange={handleInputChange}
+                  onFocus={() => !isLogin && setShowPasswordRequirements(true)}
+                  onBlur={() => setShowPasswordRequirements(false)}
                   required
+                  showPassword={showPassword}
+                  togglePasswordVisibility={togglePasswordVisibility}
                 />
+                <AnimatePresence>
+                  <PasswordRequirements
+                    password={formData.password}
+                    isVisible={!isLogin && showPasswordRequirements}
+                  />
+                </AnimatePresence>
               </div>
 
               <AnimatePresence mode="wait">
@@ -605,16 +706,15 @@ function Auth({ theme }) {
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <div className="form-group">
-                      <input
-                        type="password"
-                        name="confirmPassword"
-                        placeholder="Confirm Password"
-                        value={formData.confirmPassword}
-                        onChange={handleInputChange}
-                        required={!isLogin}
-                      />
-                    </div>
+                    <PasswordInput
+                      name="confirmPassword"
+                      placeholder="Confirm Password"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      required={!isLogin}
+                      showPassword={showPassword}
+                      togglePasswordVisibility={togglePasswordVisibility}
+                    />
                   </motion.div>
                 )}
               </AnimatePresence>
