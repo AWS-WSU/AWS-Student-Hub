@@ -58,6 +58,11 @@ function Account({ theme, toggleTheme }) {
     }
   }, [isAuthenticated, currentUser, navigate]);
 
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   const scrollToSection = (sectionId) => {
     // Navigate to home page with section anchor
     navigate(`/#${sectionId}`);

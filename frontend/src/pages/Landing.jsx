@@ -83,18 +83,16 @@ function Landing({ theme, toggleTheme }) {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.8 }}
+            className="hero-title"
           >
-            <span 
-              className="gradient-text animated-text"
-              style={{
-                position: 'relative',
-                padding: '0 10px',
-                display: 'inline-block'
-              }}
-            >
-              Building The Future
-              <span className="text-line-animation"></span>
-            </span> with Cloud Computing
+            <span className="hero-main-text">
+              <span className="gradient-text animated-text">
+                Building The Future
+              </span>
+            </span>
+            <span className="hero-subtitle">
+              with Cloud Computing
+            </span>
           </motion.h2>
           
           

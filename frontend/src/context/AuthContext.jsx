@@ -85,6 +85,13 @@ export const AuthProvider = ({ children }) => {
       
       if (!response.ok) {
         const data = await response.json().catch(() => ({ error: 'Network error' }));
+        
+        // Handle validation errors from express-validator
+        if (data.errors && Array.isArray(data.errors)) {
+          const errorMessages = data.errors.map(err => err.msg).join('. ');
+          throw new Error(errorMessages);
+        }
+        
         throw new Error(data.error || `HTTP ${response.status}: Login failed`);
       }
 
@@ -121,6 +128,13 @@ export const AuthProvider = ({ children }) => {
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({ error: 'Network error' }));
+        
+        // Handle validation errors from express-validator
+        if (data.errors && Array.isArray(data.errors)) {
+          const errorMessages = data.errors.map(err => err.msg).join('. ');
+          throw new Error(errorMessages);
+        }
+        
         throw new Error(data.error || `HTTP ${response.status}: Signup failed`);
       }
 

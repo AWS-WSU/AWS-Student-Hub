@@ -30,10 +30,6 @@ const generateUsername = async (email) => {
 
 const filter = new Filter();
 
-function containsProfanity(input) {
-  return filter.isProfane(input);
-}
-
 function normalizeInput(str) {
   return str
     .toLowerCase()
@@ -45,8 +41,9 @@ function normalizeInput(str) {
 }
 
 function containsProfanity(input) {
+  if (!input || typeof input !== 'string') return false;
   const normalized = normalizeInput(input);
-  return filter.isProfane(normalized);
+  return filter.isProfane(input) || filter.isProfane(normalized);
 }
 
 exports.signup = async (req, res) => {
@@ -60,16 +57,17 @@ exports.signup = async (req, res) => {
 
     let existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ error: 'Email already exists' });
+      return res.status(400).json({ error: 'Account creation failed. Please check your information.' });
     }
 
     if (providedUsername) {
       const existingUsername = await User.findOne({ username: providedUsername });
       if (existingUsername) {
-        return res.status(400).json({ error: 'Username already exists' });
+        return res.status(400).json({ error: 'Account creation failed. Please check your information.' });
       }
     }
 
+    // Check for profanity in user inputs
     const fieldsToCheck = [
       { name: 'username', value: providedUsername },
       { name: 'full name', value: fullName },
@@ -79,7 +77,7 @@ exports.signup = async (req, res) => {
     for (const field of fieldsToCheck) {
       if (field.value && containsProfanity(field.value)) {
         return res.status(400).json({
-          error: `Hey, thats not nice. Try again.`
+          error: `Hey, that's not nice. Try again.`
         });
       }
     }
@@ -109,10 +107,8 @@ exports.signup = async (req, res) => {
     console.error('Signup error:', error);
 
     if (error.code === 11000) {
-      const field = Object.keys(error.keyValue)[0];
-      const fieldName = field === 'email' ? 'Email' : field === 'username' ? 'Username' : 'Field';
       return res.status(400).json({
-        error: `${fieldName} already exists`
+        error: 'Account creation failed. Please check your information.'
       });
     }
 
@@ -246,6 +242,21 @@ exports.updateProfile = async (req, res) => {
       });
     }
 
+    // Check for profanity in username and fullName
+    if (username && containsProfanity(username)) {
+      return res.status(400).json({
+        success: false,
+        message: "Hey, that's not nice. Try again."
+      });
+    }
+
+    if (fullName && containsProfanity(fullName)) {
+      return res.status(400).json({
+        success: false,
+        message: "Hey, that's not nice. Try again."
+      });
+    }
+
     if (username && username !== user.username) {
       const existingUser = await User.findOne({ 
         username,
@@ -275,11 +286,9 @@ exports.updateProfile = async (req, res) => {
     console.error('Update profile error:', error);
     
     if (error.code === 11000) {
-      const field = Object.keys(error.keyValue)[0];
-      const fieldName = field === 'username' ? 'Username' : 'Field';
       return res.status(400).json({
         success: false,
-        message: `${fieldName} already exists`
+        message: 'Update failed. Please check your information.'
       });
     }
     
@@ -310,16 +319,20 @@ exports.forgotPassword = async (req, res) => {
     }
 
     if (!user) {
-      return res.status(404).json({
-        error: isEmail ? 
-          'No account found with this email address. If you signed up with Google, please use the "Continue with Google" option.' :
-          'No account found with this username.'
+      // Don't reveal that account doesn't exist - always return success message
+      return res.json({
+        success: true,
+        message: isEmail ? 
+          'If an account exists with this email, a reset code has been sent.' :
+          'If an account exists with this username, you will need to verify your email address.'
       });
     }
 
     if (user.auth0Id) {
-      return res.status(400).json({
-        error: 'This account uses Google sign-in. Please use the "Continue with Google" option to sign in.'
+      // Don't reveal auth method - return generic message
+      return res.json({
+        success: true,
+        message: 'If an account exists with this information, a reset code has been sent.'
       });
     }
 
@@ -340,7 +353,7 @@ exports.forgotPassword = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'A 6-digit reset code has been sent to your email address.'
+      message: 'If an account exists with this email, a reset code has been sent.'
     });
   } catch (error) {
     console.error('Forgot password error:', error);
@@ -366,14 +379,18 @@ exports.verifyEmail = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({
-        error: 'The email address does not match the username provided.'
+      // Don't reveal mismatch - always return success message
+      return res.json({
+        success: true,
+        message: 'If the email matches the username, a reset code has been sent.'
       });
     }
 
     if (user.auth0Id) {
-      return res.status(400).json({
-        error: 'This account uses Google sign-in. Please use the "Continue with Google" option to sign in.'
+      // Don't reveal auth method - return generic message
+      return res.json({
+        success: true,
+        message: 'If the email matches the username, a reset code has been sent.'
       });
     }
 
@@ -384,7 +401,7 @@ exports.verifyEmail = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'A 6-digit reset code has been sent to your email address.'
+      message: 'If the email matches the username, a reset code has been sent.'
     });
   } catch (error) {
     console.error('Email verification error:', error);
@@ -450,9 +467,9 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    if (newPassword.length < 8) {
+    if (newPassword.length < 6) {
       return res.status(400).json({
-        error: 'Password must be at least 8 characters long'
+        error: 'Password must be at least 6 characters long'
       });
     }
 

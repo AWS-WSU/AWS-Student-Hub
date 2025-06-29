@@ -11,16 +11,17 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.500.0",
     "@aws-sdk/lib-storage": "^3.500.0",
+    "axios": "^1.6.0",
+    "bad-words": "^1.0.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-jwt": "^8.5.1",
-    "express-rate-limit": "^7.1.5",
+    "express-rate-limit": "^7.5.1",
     "express-validator": "^7.0.1",
     "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.2.0",
-    "axios": "^1.6.0",
     "leo-profanity": "^1.7.0",
     "mongoose": "^7.6.3",
     "multer": "^2.0.1",
@@ -28,8 +29,7 @@
     "nodemailer": "^6.9.7",
     "sharp": "^0.33.0",
     "uuid": "^11.1.0",
-    "validator": "^13.11.0",
-    "bad-words": "^1.0.0"
+    "validator": "^13.11.0"
   },
   "devDependencies": {
     "multer": "^2.0.1",
