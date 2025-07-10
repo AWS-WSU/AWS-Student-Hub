@@ -165,7 +165,9 @@ function Account({ theme, toggleTheme }) {
 
     try {
       const response = await uploadProfilePicture(file);
-      setProfileImage(response.profilePicture);
+      // Add cache-busting to force immediate image refresh
+      const cacheBustedUrl = `${response.profilePicture}?t=${Date.now()}`;
+      setProfileImage(cacheBustedUrl);
       setSuccess('Profile picture updated successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
@@ -458,6 +460,7 @@ function Account({ theme, toggleTheme }) {
                   }}
                   referrerPolicy="no-referrer"
                   crossOrigin="anonymous"
+                  key={profileImage}
                 />
                 {!isSocialLogin && (
                   <>

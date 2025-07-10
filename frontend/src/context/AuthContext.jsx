@@ -14,9 +14,35 @@ export const useAuth = () => {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
+// Helper to get initial user state from cache
+const getInitialUserState = () => {
+  try {
+    const token = localStorage.getItem('token');
+    const rememberMe = localStorage.getItem('rememberMe') === 'true';
+    const cachedUser = localStorage.getItem('cachedUser');
+    
+    if (token && rememberMe && cachedUser) {
+      return JSON.parse(cachedUser);
+    }
+  } catch (e) {
+    console.warn('Failed to parse cached user data');
+  }
+  return null;
+};
+
+// Helper to get initial loading state
+const getInitialLoadingState = () => {
+  const token = localStorage.getItem('token');
+  const rememberMe = localStorage.getItem('rememberMe') === 'true';
+  const cachedUser = localStorage.getItem('cachedUser');
+  
+  // If we have valid cached data, don't show loading
+  return !(token && rememberMe && cachedUser);
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(getInitialUserState);
+  const [loading, setLoading] = useState(getInitialLoadingState);
   const { isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
 
   useEffect(() => {
@@ -24,29 +50,41 @@ export const AuthProvider = ({ children }) => {
       try {
         const token = localStorage.getItem('token');
         const rememberMe = localStorage.getItem('rememberMe') === 'true';
+        const cachedUser = localStorage.getItem('cachedUser');
         
         if (token && rememberMe) {
-          const userData = await authAPI.getCurrentUser();
-          setUser(userData);
+          // Loading is already set to false in initial state if we have cached data
+          setLoading(false);
+          
+          // Verify token in background and update user data
+          try {
+            const userData = await authAPI.getCurrentUser();
+            setUser(userData);
+            // Update cache with fresh data
+            localStorage.setItem('cachedUser', JSON.stringify(userData));
+          } catch (verifyError) {
+            // Only clear user if token is actually invalid (not network errors)
+            if (!verifyError.message?.includes('ECONNREFUSED') && 
+                !verifyError.message?.includes('Failed to fetch') &&
+                !verifyError.message?.includes('timeout')) {
+              console.error('Token verification failed:', verifyError);
+              setUser(null);
+              localStorage.removeItem('token');
+              localStorage.removeItem('rememberMe');
+              localStorage.removeItem('cachedUser');
+            }
+          }
+        } else {
+          setLoading(false);
         }
       } catch (error) {
-        if (!error.message?.includes('ECONNREFUSED') && !error.message?.includes('Failed to fetch')) {
-          console.error('Session check error:', error);
-        }
-        if (error.message?.includes('ECONNREFUSED') || error.message?.includes('Failed to fetch')) {
-          setTimeout(checkExistingSession, 2000);
-          return;
-        } else {
-          localStorage.removeItem('token');
-          localStorage.removeItem('rememberMe');
-        }
-      } finally {
+        console.error('Session check error:', error);
         setLoading(false);
       }
     };
 
     if (!isAuth0Authenticated) {
-      setTimeout(checkExistingSession, 1000);
+      checkExistingSession();
     } else {
       setLoading(false);
     }
@@ -93,8 +131,11 @@ export const AuthProvider = ({ children }) => {
       
       if (credentials.rememberMe) {
         localStorage.setItem('rememberMe', 'true');
+        // Cache user data for optimistic loading
+        localStorage.setItem('cachedUser', JSON.stringify(data.user));
       } else {
         localStorage.removeItem('rememberMe');
+        localStorage.removeItem('cachedUser');
       }
 
       setLoading(false); 
@@ -135,8 +176,11 @@ export const AuthProvider = ({ children }) => {
       
       if (userData.rememberMe) {
         localStorage.setItem('rememberMe', 'true');
+        // Cache user data for optimistic loading
+        localStorage.setItem('cachedUser', JSON.stringify(data.user));
       } else {
         localStorage.removeItem('rememberMe');
+        localStorage.removeItem('cachedUser');
       }
 
       setLoading(false);
@@ -151,6 +195,13 @@ export const AuthProvider = ({ children }) => {
     const response = await authAPI.updateProfile(updateData);
 
     setUser(response.user);
+    
+    // Update cached user data if rememberMe is enabled
+    const rememberMe = localStorage.getItem('rememberMe') === 'true';
+    if (rememberMe) {
+      localStorage.setItem('cachedUser', JSON.stringify(response.user));
+    }
+    
     return response;
   };
 
@@ -172,10 +223,20 @@ export const AuthProvider = ({ children }) => {
       throw new Error(data.message || 'Upload failed');
     }
 
-    setUser(prev => ({
-      ...prev,
-      profilePicture: data.profilePicture
-    }));
+    const cacheBustedUrl = `${data.profilePicture}?t=${Date.now()}`;
+    
+    const updatedUser = {
+      ...user,
+      profilePicture: cacheBustedUrl
+    };
+    
+    setUser(updatedUser);
+    
+    // Update cached user data if rememberMe is enabled
+    const rememberMe = localStorage.getItem('rememberMe') === 'true';
+    if (rememberMe) {
+      localStorage.setItem('cachedUser', JSON.stringify(updatedUser));
+    }
 
     return data;
   };
@@ -184,6 +245,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('rememberMe');
+    localStorage.removeItem('cachedUser');
   };
 
   const value = {

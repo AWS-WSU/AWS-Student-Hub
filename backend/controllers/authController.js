@@ -231,7 +231,7 @@ exports.checkUsername = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { bio, major, grade, programmingLanguages, profileSetupCompleted } = req.body;
+    const { bio, major, grade, programmingLanguages, profileSetupCompleted, wantsEmails, fullName, username } = req.body;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -245,6 +245,9 @@ exports.updateProfile = async (req, res) => {
     if (grade !== undefined) user.grade = grade;
     if (programmingLanguages !== undefined) user.programmingLanguages = programmingLanguages;
     if (profileSetupCompleted !== undefined) user.profileSetupCompleted = profileSetupCompleted;
+    if (wantsEmails !== undefined) user.wantsEmails = wantsEmails;
+    if (fullName !== undefined) user.fullName = fullName;
+    if (username !== undefined) user.username = username;
 
     await user.save();
 

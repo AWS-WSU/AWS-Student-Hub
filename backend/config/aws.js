@@ -18,7 +18,10 @@ const uploadToS3 = async (file, key) => {
       Key: key,
       Body: file.buffer,
       ContentType: file.mimetype,
-      CacheControl: 'max-age=31536000'
+      CacheControl: 'max-age=3600, must-revalidate', // 1 hour cache with revalidation
+      Metadata: {
+        'uploaded-at': new Date().toISOString()
+      }
     }
   });
 

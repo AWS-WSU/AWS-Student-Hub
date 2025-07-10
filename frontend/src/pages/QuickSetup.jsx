@@ -171,7 +171,11 @@ function QuickSetup({ theme }) {
     
     try {
       if (profileImage) {
-        await uploadProfilePicture(profileImage);
+        const response = await uploadProfilePicture(profileImage);
+        if (response.profilePicture) {
+          const cacheBustedUrl = `${response.profilePicture}?t=${Date.now()}`;
+          setProfileImagePreview(cacheBustedUrl);
+        }
       }
       
       await updateUser({

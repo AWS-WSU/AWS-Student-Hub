@@ -30,11 +30,21 @@ function AppContent() {
         }
       }, 100);
     }
+  }, [location.hash]);
+
+  useEffect(() => {
+    const validPaths = ['/', '/auth', '/account', '/admin', '/setup'];
+    const isValidProfilePath = location.pathname.startsWith('/profile/');
+    const isValidPath = validPaths.includes(location.pathname) || isValidProfilePath;
     
-    if (location.pathname !== '/' && location.pathname !== '/auth' && location.pathname !== '/account' && location.pathname !== '/admin' && location.pathname !== '/setup' && !location.pathname.startsWith('/profile/')) {
-      navigate('/', { replace: true });
+    if (!isValidPath && !location.state?.fromApp) {
+      const timer = setTimeout(() => {
+        navigate('/', { replace: true, state: { fromApp: true } });
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
-  }, [location, navigate]);
+  }, [location.pathname, navigate]);
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';

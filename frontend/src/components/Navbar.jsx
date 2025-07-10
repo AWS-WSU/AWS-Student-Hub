@@ -19,7 +19,8 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
     if (auth0User) {
       setProfileImage(auth0User.picture || '/account.svg');
     } else if (authUser) {
-      setProfileImage(authUser.profilePicture || '/account.svg');
+      const profilePic = authUser.profilePicture || '/account.svg';
+      setProfileImage(profilePic);
     } else {
       setProfileImage('/account.svg');
     }
