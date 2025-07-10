@@ -3,11 +3,12 @@ backend:
   phases:
     preBuild:
       commands:
-        - npm install
+        - nvm install 20
+        - nvm use 20
+        - npm install --production=false
     build:
       commands:
-        - echo "Backend build complete"
-        - node server.js &
+        - echo "Backend dependencies installed and ready"
   artifacts:
     baseDirectory: .
     files:
