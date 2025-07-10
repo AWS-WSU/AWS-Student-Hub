@@ -11,11 +11,9 @@ require('dotenv').config();
 
 async function createSuperuser(email) {
   try {
-    // Connect to MongoDB
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('📦 Connected to MongoDB');
 
-    // Find user by email
     const user = await User.findOne({ email: email.toLowerCase() });
     
     if (!user) {
@@ -24,16 +22,14 @@ async function createSuperuser(email) {
       process.exit(1);
     }
 
-    // Check if user is already a superuser
     if (user.role === 'superuser') {
       console.log('ℹ️  User', email, 'is already a superuser');
       process.exit(0);
     }
 
-    // Update user to superuser
     await User.findByIdAndUpdate(user._id, { 
       role: 'superuser',
-      status: 'active' // Ensure they're not banned
+      status: 'active'
     });
 
     console.log('🎉 Successfully promoted', email, 'to superuser!');
@@ -55,14 +51,12 @@ async function createSuperuser(email) {
     console.error('❌ Error creating superuser:', error.message);
     process.exit(1);
   } finally {
-    // Close MongoDB connection
     await mongoose.disconnect();
     console.log('🔐 Disconnected from MongoDB');
     process.exit(0);
   }
 }
 
-// Check command line arguments
 const email = process.argv[2];
 
 if (!email) {
@@ -78,7 +72,6 @@ if (!email) {
   process.exit(1);
 }
 
-// Validate email format
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 if (!emailRegex.test(email)) {
   console.log('❌ Invalid email format');

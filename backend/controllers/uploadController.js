@@ -32,7 +32,7 @@ exports.uploadProfilePicture = async (req, res) => {
       mimetype: 'image/jpeg'
     }, fileName);
 
-    if (user.profilePicture && user.profilePicture !== '/account.svg' && user.profilePicture.includes(process.env.AWS_S3_BUCKET)) {
+    if (user.profilePicture && user.profilePicture !== '/account.svg' && user.profilePicture.includes(process.env.S3_BUCKET)) {
       try {
         const oldKey = user.profilePicture.split('.amazonaws.com/')[1];
         if (oldKey) {

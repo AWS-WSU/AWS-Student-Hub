@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Check if user is authenticated and has minimum required role
 const requireRole = (minRole = 'member') => {
   const roleHierarchy = {
     'member': 0,
@@ -12,7 +11,6 @@ const requireRole = (minRole = 'member') => {
 
   return async (req, res, next) => {
     try {
-      // Get token from header
       const authHeader = req.header('Authorization');
       const token = authHeader && authHeader.split(' ')[1];
 
@@ -22,10 +20,8 @@ const requireRole = (minRole = 'member') => {
         });
       }
 
-      // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
-      // Get user with role information
       const user = await User.findById(decoded.id).select('+role +status');
       
       if (!user) {
@@ -34,14 +30,12 @@ const requireRole = (minRole = 'member') => {
         });
       }
 
-      // Check if user is banned or suspended
       if (user.status !== 'active') {
         return res.status(403).json({
           error: `Account is ${user.status}. Access denied.`
         });
       }
 
-      // Check role hierarchy
       const userRoleLevel = roleHierarchy[user.role] || 0;
       const requiredRoleLevel = roleHierarchy[minRole] || 0;
 
@@ -51,7 +45,6 @@ const requireRole = (minRole = 'member') => {
         });
       }
 
-      // Add user info to request
       req.user = {
         id: user._id,
         email: user.email,
@@ -69,12 +62,10 @@ const requireRole = (minRole = 'member') => {
   };
 };
 
-// Specific role checkers
 const requireModerator = requireRole('moderator');
 const requireAdmin = requireRole('admin'); 
 const requireSuperuser = requireRole('superuser');
 
-// Check if user can manage target user (can't manage equal or higher roles)
 const canManageUser = async (req, res, next) => {
   try {
     const targetUserId = req.params.userId || req.body.userId;
@@ -95,8 +86,7 @@ const canManageUser = async (req, res, next) => {
 
     const currentUserLevel = roleHierarchy[req.user.role];
     const targetUserLevel = roleHierarchy[targetUser.role];
-
-    // Can only manage users with lower role level
+    
     if (currentUserLevel <= targetUserLevel) {
       return res.status(403).json({
         error: 'Cannot manage user with equal or higher privileges'

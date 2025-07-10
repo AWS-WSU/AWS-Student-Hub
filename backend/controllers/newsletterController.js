@@ -2,7 +2,6 @@ const Newsletter = require('../models/Newsletter');
 const validator = require('validator');
 const mongoose = require('mongoose');
 
-// Subscribe to newsletter
 const subscribe = async (req, res) => {
   try {
     const { email } = req.body;
