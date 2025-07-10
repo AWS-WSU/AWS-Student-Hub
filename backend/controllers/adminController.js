@@ -1,7 +1,6 @@
 const User = require('../models/User');
 const Newsletter = require('../models/Newsletter');
 
-// Get admin dashboard stats
 exports.getDashboardStats = async (req, res) => {
   try {
     const [
@@ -42,7 +41,6 @@ exports.getDashboardStats = async (req, res) => {
   }
 };
 
-// Get all users with pagination and filtering
 exports.getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -52,7 +50,6 @@ exports.getAllUsers = async (req, res) => {
     const roleFilter = req.query.role || '';
     const statusFilter = req.query.status || '';
 
-    // Build filter object
     const filter = {};
     
     if (search) {
@@ -103,7 +100,6 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// Update user role
 exports.updateUserRole = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -116,7 +112,6 @@ exports.updateUserRole = async (req, res) => {
       });
     }
 
-    // Only superusers can create other admins or superusers
     if ((role === 'admin' || role === 'superuser') && req.user.role !== 'superuser') {
       return res.status(403).json({
         success: false,
@@ -151,7 +146,6 @@ exports.updateUserRole = async (req, res) => {
   }
 };
 
-// Ban user
 exports.banUser = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -189,7 +183,6 @@ exports.banUser = async (req, res) => {
   }
 };
 
-// Unban user
 exports.unbanUser = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -226,12 +219,10 @@ exports.unbanUser = async (req, res) => {
   }
 };
 
-// Delete user
 exports.deleteUser = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Prevent deletion of superusers unless requester is also superuser
     if (req.targetUser.role === 'superuser' && req.user.role !== 'superuser') {
       return res.status(403).json({
         success: false,
@@ -239,7 +230,6 @@ exports.deleteUser = async (req, res) => {
       });
     }
 
-    // Prevent self-deletion
     if (userId === req.user.id) {
       return res.status(400).json({
         success: false,
@@ -269,7 +259,6 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
-// Get user details (for admin view)
 exports.getUserDetails = async (req, res) => {
   try {
     const { userId } = req.params;
