@@ -21,7 +21,7 @@ const PasswordRequirements = ({ password, isVisible }) => {
       text: 'Contains at least one uppercase letter'
     },
     {
-      test: (pwd) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd),
+      test: (pwd) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pwd),
       text: 'Contains at least one special character'
     }
   ];
@@ -164,18 +164,17 @@ function Auth({ theme }) {
         throw new Error('Passwords do not match');
       }
 
-      const { confirmPassword, ...authData } = formData;
+      const { confirmPassword: _, ...authData } = formData;
       const authPayload = { ...authData, rememberMe };
       
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Connection timeout - backend may be starting up')), 5000)
       );
       
-      let result;
       if (isLogin) {
-        result = await Promise.race([login(authPayload), timeoutPromise]);
+        await Promise.race([login(authPayload), timeoutPromise]);
       } else {
-        result = await Promise.race([signup(authPayload), timeoutPromise]);
+        await Promise.race([signup(authPayload), timeoutPromise]);
       }
       
       setIsLoading(false);
@@ -356,7 +355,7 @@ function Auth({ theme }) {
           prompt: "login"
         }
       });
-    } catch (error) {
+    } catch {
       setError('Social login failed. Please try again.');
       setIsLoading(false);
     }

@@ -17,7 +17,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { isAuthenticated: isAuth0Authenticated, user: auth0User, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
 
   useEffect(() => {
     const checkExistingSession = async () => {
@@ -148,44 +148,36 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateUser = async (updateData) => {
-    try {
-      const response = await authAPI.updateProfile(updateData);
+    const response = await authAPI.updateProfile(updateData);
 
-      setUser(response.user);
-      return response;
-    } catch (error) {
-      throw error;
-    }
+    setUser(response.user);
+    return response;
   };
 
   const uploadProfilePicture = async (file) => {
-    try {
-      const formData = new FormData();
-      formData.append('profilePicture', file);
+    const formData = new FormData();
+    formData.append('profilePicture', file);
 
-      const response = await fetch(`${API_BASE_URL}/upload/profile-picture`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: formData,
-      });
+    const response = await fetch(`${API_BASE_URL}/upload/profile-picture`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: formData,
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Upload failed');
-      }
-
-      setUser(prev => ({
-        ...prev,
-        profilePicture: data.profilePicture
-      }));
-
-      return data;
-    } catch (error) {
-      throw error;
+    if (!response.ok) {
+      throw new Error(data.message || 'Upload failed');
     }
+
+    setUser(prev => ({
+      ...prev,
+      profilePicture: data.profilePicture
+    }));
+
+    return data;
   };
 
   const logout = () => {

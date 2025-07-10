@@ -34,7 +34,7 @@ const languageIcons = {
 const grades = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Other'];
 
 function Account({ theme, toggleTheme }) {
-  const [activeSection, setActiveSection] = useState('profile');
+  const [activeSection] = useState('profile');
   const [profileImage, setProfileImage] = useState('/account.svg');
   const [isEditing, setIsEditing] = useState({
     name: false,
@@ -65,8 +65,8 @@ function Account({ theme, toggleTheme }) {
   const inputRefs = useRef({});
   
   const navigate = useNavigate();
-  const { logout: auth0Logout, isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
-  const { user: authUser, logout: authLogout, updateUser, uploadProfilePicture } = useAuth();
+  const { isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
+  const { user: authUser, updateUser, uploadProfilePicture } = useAuth();
 
   const isAuthenticated = isAuth0Authenticated || !!authUser;
   const currentUser = auth0User || authUser;
@@ -124,12 +124,7 @@ function Account({ theme, toggleTheme }) {
     setError('');
   };
 
-  const handleEdit = (field) => {
-    setIsEditing(prev => ({
-      ...prev,
-      [field]: true
-    }));
-  };
+
 
   const handleCancel = (field) => {
     setFormData(prev => ({
@@ -321,7 +316,7 @@ function Account({ theme, toggleTheme }) {
       setOriginalData(prev => ({ ...prev, wantsEmails: newValue }));
       setSuccess(`Email notifications ${newValue ? 'enabled' : 'disabled'}!`);
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
+    } catch {
       setFormData(prev => ({ ...prev, wantsEmails: !prev.wantsEmails }));
       setError('Failed to update email preferences');
     } finally {

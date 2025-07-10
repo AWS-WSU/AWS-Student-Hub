@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import Navbar from '../components/Navbar';
@@ -84,7 +84,7 @@ function AdminDashboard({ theme, toggleTheme }) {
       try {
         const response = await adminAPI.getDashboardStats();
         setStats(response.stats);
-      } catch (err) {
+      } catch {
         setError('Failed to load dashboard stats');
       } finally {
         setLoading(false);
@@ -100,9 +100,9 @@ function AdminDashboard({ theme, toggleTheme }) {
     if (activeTab === 'users') {
       loadUsers();
     }
-  }, [activeTab, currentPage, searchTerm, roleFilter, statusFilter]);
+  }, [activeTab, loadUsers]);
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setUsersLoading(true);
     try {
       const response = await adminAPI.getAllUsers(
@@ -114,12 +114,12 @@ function AdminDashboard({ theme, toggleTheme }) {
       );
       setUsers(response.users);
       setTotalPages(response.pagination.totalPages);
-    } catch (err) {
+    } catch {
       showToast('Failed to load users', 'error');
     } finally {
       setUsersLoading(false);
     }
-  };
+  }, [currentPage, searchTerm, roleFilter, statusFilter, showToast]);
 
   const handleRoleUpdate = async () => {
     try {

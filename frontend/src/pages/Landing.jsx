@@ -122,13 +122,7 @@ function Landing({ theme, toggleTheme }) {
     }
   };
 
-  const clearSearch = () => {
-    setSearchQuery('');
-    setSearchResults([]);
-    setSearchPerformed(false);
-    setShowReferralLink(false);
-    setReferralCopied(false);
-  };
+
 
   const scrollToSection = (sectionId) => {
     const section = document.getElementById(sectionId);

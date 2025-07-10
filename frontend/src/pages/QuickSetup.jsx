@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { authAPI } from '../utils/api';
 import './styles/QuickSetup.css';
 
 const programmingLanguages = [
@@ -28,7 +27,6 @@ function QuickSetup({ theme }) {
   const { user, updateUser, uploadProfilePicture } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const [error, setError] = useState('');
   const [imageError, setImageError] = useState('');
   
   const compressImage = (file, maxSizeMB = 1) => {
