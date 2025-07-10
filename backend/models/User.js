@@ -39,6 +39,31 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: '/account.svg'
   },
+  bio: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Bio cannot be more than 500 characters'],
+    default: ''
+  },
+  major: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Major cannot be more than 100 characters'],
+    default: ''
+  },
+  grade: {
+    type: String,
+    enum: ['', 'Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Other'],
+    default: ''
+  },
+  programmingLanguages: [{
+    type: String,
+    trim: true
+  }],
+  profileSetupCompleted: {
+    type: Boolean,
+    default: false
+  },
   role: {
     type: String,
     enum: ['member', 'moderator', 'admin', 'superuser'],

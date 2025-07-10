@@ -37,7 +37,7 @@ function normalizeInput(str) {
     .replace(/[@4]/g, 'a')
     .replace(/3/g, 'e')
     .replace(/0/g, 'o')
-    .replace(/[^a-z]/g, ''); // remove non-alphabetic
+    .replace(/[^a-z]/g, '');
 }
 
 function containsProfanity(input) {
@@ -67,7 +67,6 @@ exports.signup = async (req, res) => {
       }
     }
 
-    // Check for profanity in user inputs
     const fieldsToCheck = [
       { name: 'username', value: providedUsername },
       { name: 'full name', value: fullName },
@@ -232,69 +231,32 @@ exports.checkUsername = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { fullName, username, wantsEmails } = req.body;
-    
+    const { bio, major, grade, programmingLanguages, profileSetupCompleted } = req.body;
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
-        success: false,
-        message: 'User not found'
+        error: 'User not found'
       });
     }
 
-    // Check for profanity in username and fullName
-    if (username && containsProfanity(username)) {
-      return res.status(400).json({
-        success: false,
-        message: "Hey, that's not nice. Try again."
-      });
-    }
-
-    if (fullName && containsProfanity(fullName)) {
-      return res.status(400).json({
-        success: false,
-        message: "Hey, that's not nice. Try again."
-      });
-    }
-
-    if (username && username !== user.username) {
-      const existingUser = await User.findOne({ 
-        username,
-        _id: { $ne: userId }
-      });
-      
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: 'Username already exists'
-        });
-      }
-    }
-
-    if (fullName !== undefined) user.fullName = fullName;
-    if (username !== undefined) user.username = username;
-    if (wantsEmails !== undefined) user.wantsEmails = wantsEmails;
+    if (bio !== undefined) user.bio = bio;
+    if (major !== undefined) user.major = major;
+    if (grade !== undefined) user.grade = grade;
+    if (programmingLanguages !== undefined) user.programmingLanguages = programmingLanguages;
+    if (profileSetupCompleted !== undefined) user.profileSetupCompleted = profileSetupCompleted;
 
     await user.save();
 
     res.json({
       success: true,
-      user: user.toSafeObject(),
-      message: 'Profile updated successfully'
+      message: 'Profile updated successfully',
+      user: user.toSafeObject()
     });
   } catch (error) {
     console.error('Update profile error:', error);
-    
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: 'Update failed. Please check your information.'
-      });
-    }
-    
     res.status(500).json({
-      success: false,
-      message: 'Server error while updating profile'
+      error: 'Server error while updating profile'
     });
   }
 };
@@ -319,7 +281,6 @@ exports.forgotPassword = async (req, res) => {
     }
 
     if (!user) {
-      // Don't reveal that account doesn't exist - always return success message
       return res.json({
         success: true,
         message: isEmail ? 
@@ -329,7 +290,6 @@ exports.forgotPassword = async (req, res) => {
     }
 
     if (user.auth0Id) {
-      // Don't reveal auth method - return generic message
       return res.json({
         success: true,
         message: 'If an account exists with this information, a reset code has been sent.'
@@ -379,7 +339,6 @@ exports.verifyEmail = async (req, res) => {
     });
 
     if (!user) {
-      // Don't reveal mismatch - always return success message
       return res.json({
         success: true,
         message: 'If the email matches the username, a reset code has been sent.'
@@ -387,7 +346,6 @@ exports.verifyEmail = async (req, res) => {
     }
 
     if (user.auth0Id) {
-      // Don't reveal auth method - return generic message
       return res.json({
         success: true,
         message: 'If the email matches the username, a reset code has been sent.'
@@ -537,53 +495,100 @@ exports.getRecentUsers = async (req, res) => {
 exports.getPublicProfile = async (req, res) => {
   try {
     const { username } = req.params;
-    
-    if (!username) {
-      return res.status(400).json({
-        success: false,
-        error: 'Username is required'
-      });
-    }
 
     const user = await User.findOne({ username })
-      .select('username fullName profilePicture createdAt lastLogin');
+      .select('username fullName profilePicture bio major grade programmingLanguages role createdAt lastLogin');
 
     if (!user) {
       return res.status(404).json({
-        success: false,
         error: 'User not found'
       });
     }
 
-    // Calculate some profile stats
-    const joinDate = user.createdAt;
-    const daysSinceJoin = Math.floor((Date.now() - joinDate) / (1000 * 60 * 60 * 24));
-    const lastSeenDate = user.lastLogin;
-    const daysSinceLastSeen = Math.floor((Date.now() - lastSeenDate) / (1000 * 60 * 60 * 24));
+    const now = new Date();
+    const createdAt = new Date(user.createdAt);
+    const lastLogin = new Date(user.lastLogin);
+    
+    const daysSinceJoin = Math.floor((now - createdAt) / (1000 * 60 * 60 * 24));
+    const daysSinceLastSeen = Math.floor((now - lastLogin) / (1000 * 60 * 60 * 24));
+    
+    const memberSince = createdAt.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const profileData = {
+      username: user.username,
+      fullName: user.fullName,
+      profilePicture: user.profilePicture,
+      bio: user.bio || '',
+      major: user.major || '',
+      grade: user.grade || '',
+      programmingLanguages: user.programmingLanguages || [],
+      role: user.role || 'member',
+      lastLogin: user.lastLogin,
+      stats: {
+        memberSince,
+        daysSinceJoin,
+        daysSinceLastSeen
+      }
+    };
 
     res.json({
       success: true,
-      profile: {
-        username: user.username,
-        fullName: user.fullName,
-        profilePicture: user.profilePicture,
-        joinDate: user.createdAt,
-        lastLogin: user.lastLogin,
-        stats: {
-          daysSinceJoin,
-          daysSinceLastSeen,
-          memberSince: joinDate.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long' 
-          })
-        }
-      }
+      profile: profileData
     });
   } catch (error) {
     console.error('Get public profile error:', error);
     res.status(500).json({
-      success: false,
       error: 'Server error while fetching profile'
+    });
+  }
+};
+
+exports.searchUsers = async (req, res) => {
+  try {
+    const { q: searchQuery, limit = 10 } = req.query;
+
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      return res.status(400).json({
+        success: false,
+        error: 'Search query must be at least 2 characters long'
+      });
+    }
+
+    const query = searchQuery.trim();
+    const searchLimit = Math.min(parseInt(limit), 20);
+
+    const filter = {
+      status: 'active',
+      $or: [
+        { username: { $regex: query, $options: 'i' } },
+        { fullName: { $regex: query, $options: 'i' } },
+        { email: { $regex: query, $options: 'i' } }
+      ]
+    };
+
+    const users = await User.find(filter)
+      .select('username fullName profilePicture role createdAt')
+      .sort({ 
+        username: 1,
+        fullName: 1 
+      })
+      .limit(searchLimit);
+
+    res.json({
+      success: true,
+      users,
+      count: users.length,
+      query: searchQuery
+    });
+  } catch (error) {
+    console.error('Search users error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error while searching users'
     });
   }
 };
