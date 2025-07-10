@@ -1,17 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
 import './styles/Landing.css';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import SocialLinks from '../components/SocialLinks';
+import { authAPI } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 function Landing({ theme, toggleTheme }) {
   const [activeSection, setActiveSection] = useState('home');
+  const [recentUsers, setRecentUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchPerformed, setSearchPerformed] = useState(false);
+  const [showReferralLink, setShowReferralLink] = useState(false);
+  const [referralCopied, setReferralCopied] = useState(false);
   const sectionsRef = useRef({});
   const navigate = useNavigate();
+  const { user } = useAuth();
   
-  // Intersection Observer for sections
   useEffect(() => {
     const observers = [];
     const sections = ['home', 'about', 'events', 'resources'];
@@ -37,6 +47,89 @@ function Landing({ theme, toggleTheme }) {
     };
   }, []);
 
+  useEffect(() => {
+    const fetchRecentUsers = async () => {
+      try {
+        const response = await authAPI.getRecentUsers(6);
+        setRecentUsers(response.users || []);
+      } catch (error) {
+        console.error('Error fetching recent users:', error);
+        setRecentUsers([]);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    fetchRecentUsers();
+  }, []);
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim() || searchQuery.length < 2) {
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchPerformed(true);
+    setShowReferralLink(false);
+    
+    try {
+      const response = await authAPI.searchUsers(searchQuery.trim(), 5);
+      setSearchResults(response.users || []);
+      
+      if (!response.users || response.users.length === 0) {
+        setTimeout(() => setShowReferralLink(true), 500);
+      }
+    } catch (error) {
+      console.error('Error searching users:', error);
+      setSearchResults([]);
+      setTimeout(() => setShowReferralLink(true), 500);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchInputChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    
+    if (!value.trim()) {
+      setSearchResults([]);
+      setSearchPerformed(false);
+      setShowReferralLink(false);
+      setReferralCopied(false);
+    }
+  };
+
+  const handleSearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const generateReferralLink = () => {
+    const currentUrl = window.location.origin;
+    return `${currentUrl}/auth?mode=signup&ref=${user?.username || 'friend'}`;
+  };
+
+  const copyReferralLink = async () => {
+    try {
+      const referralLink = generateReferralLink();
+      await navigator.clipboard.writeText(referralLink);
+      setReferralCopied(true);
+      setTimeout(() => setReferralCopied(false), 3000);
+    } catch (error) {
+      console.error('Failed to copy referral link:', error);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchPerformed(false);
+    setShowReferralLink(false);
+    setReferralCopied(false);
+  };
+
   const scrollToSection = (sectionId) => {
     const section = document.getElementById(sectionId);
     if (section) {
@@ -45,7 +138,11 @@ function Landing({ theme, toggleTheme }) {
   };
 
   const handleJoinClick = () => {
-    navigate('/auth');
+    navigate('/auth?mode=signup');
+  };
+
+  const handleUserClick = (username) => {
+    navigate(`/profile/${username}`);
   };
 
   return (
@@ -137,6 +234,228 @@ function Landing({ theme, toggleTheme }) {
           <div className="shape shape-4"></div>
         </div>
       </section>
+
+      <section id="welcome" className="welcome-section">
+        <div className="section-header">
+          <h2>Welcome Our Newest Members!</h2>
+          <div className="section-divider">
+            <span></span>
+            <div className="divider-icon">👋</div>
+            <span></span>
+          </div>
+        </div>
+        
+        {loadingUsers ? (
+          <motion.div 
+            className="loading-users"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="loading-text">
+              <span>Loading our newest members...</span>
+              <div className="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          </motion.div>
+        ) : recentUsers.length > 0 ? (
+          <motion.div 
+            className="welcome-users-container"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true, amount: 0.3 }}
+          >
+            <div className="welcome-users-grid">
+              {Array.from({ length: 3 }).map((_, index) => {
+                const user = recentUsers[index];
+                const isPlaceholder = !user;
+                
+                return (
+                  <motion.div
+                    key={user?._id || `placeholder-${index}`}
+                    className={`welcome-user-card ${isPlaceholder ? 'placeholder-card' : ''}`}
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                    viewport={{ once: true, amount: 0.3 }}
+                    onClick={!isPlaceholder ? () => handleUserClick(user.username) : undefined}
+                    whileHover={!isPlaceholder ? { scale: 1.02 } : {}}
+                    whileTap={!isPlaceholder ? { scale: 0.98 } : {}}
+                  >
+                    {!isPlaceholder ? (
+                      <>
+                                                 <div className="user-avatar">
+                           <img 
+                             src={user.profilePicture || '/account.svg'} 
+                             alt={`${user.fullName}'s profile`}
+                             onError={(e) => {
+                               e.target.src = '/account.svg';
+                             }}
+                           />
+                         </div>
+                        <div className="user-info">
+                          <h4 className="user-name">{user.fullName}</h4>
+                          <p className="user-username">@{user.username}</p>
+                          <span className="join-date">
+                            Joined {new Date(user.createdAt).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                                                 <div className="welcome-badge">
+                           New
+                         </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="placeholder-avatar">
+                          <div className="placeholder-icon">👋</div>
+                        </div>
+                        <div className="placeholder-info">
+                          <h4 className="placeholder-title">Your Spot Awaits</h4>
+                          <p className="placeholder-text">Join our community</p>
+                          <span className="placeholder-cta">Be the next member!</span>
+                        </div>
+                      </>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+            <motion.p 
+              className="welcome-message"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              viewport={{ once: true, amount: 0.3 }}
+            >
+              Let's give a warm welcome to our newest club members! 🎉 
+              Ready to join this amazing community?
+            </motion.p>
+          </motion.div>
+        ) : (
+          <motion.div 
+            className="no-users-message"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true, amount: 0.3 }}
+          >
+            <div className="no-users-icon">🌟</div>
+            <h3>Be Our First Member!</h3>
+            <p>Join our community and be part of something amazing from the beginning.</p>
+          </motion.div>
+        )}
+      </section>
+
+      {user && (
+        <section id="friend-search" className="friend-search-section">
+          <div className="section-header">
+            <h2>Find a Friend</h2>
+            <div className="section-divider">
+              <span></span>
+              <div className="divider-icon">🔍</div>
+              <span></span>
+            </div>
+          </div>
+          <div className="friend-search-content">
+            <motion.div 
+              className="search-input-container"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true, amount: 0.3 }}
+            >
+                             <input
+                 type="text"
+                 placeholder="Search by name, username, or email..."
+                 value={searchQuery}
+                 onChange={handleSearchInputChange}
+                 onKeyPress={handleSearchKeyPress}
+                 className="search-input"
+               />
+              <button className="search-button" onClick={handleSearch} disabled={isSearching}>
+                {isSearching ? 'Searching...' : 'Search'}
+              </button>
+            </motion.div>
+
+            {searchPerformed && searchResults.length === 0 && (
+              <motion.div 
+                className="no-results-message"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                viewport={{ once: true, amount: 0.3 }}
+              >
+                <div className="no-results-icon">🔍</div>
+                <h3>No results found for "{searchQuery}"</h3>
+                <p>Try a different search term or invite a friend directly.</p>
+                {showReferralLink && (
+                  <motion.div 
+                    className="referral-link-container"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6 }}
+                    viewport={{ once: true, amount: 0.3 }}
+                  >
+                                         <p>Don't see your friend? <span className="referral-link" onClick={copyReferralLink}>Copy invite link</span></p>
+                    {referralCopied && (
+                      <span className="copied-message">Copied!</span>
+                    )}
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
+
+            {searchPerformed && searchResults.length > 0 && (
+              <motion.div 
+                className="search-results-container"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                viewport={{ once: true, amount: 0.3 }}
+              >
+                <h3>Search Results</h3>
+                <div className="search-results-grid">
+                  {searchResults.map(result => (
+                    <motion.div
+                      key={result._id}
+                      className="search-result-card"
+                      initial={{ opacity: 0, y: 30 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: searchResults.indexOf(result) * 0.1 }}
+                      viewport={{ once: true, amount: 0.3 }}
+                      onClick={() => handleUserClick(result.username)}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <div className="user-avatar">
+                        <img 
+                          src={result.profilePicture || '/account.svg'} 
+                          alt={`${result.fullName}'s profile`}
+                          onError={(e) => {
+                            e.target.src = '/account.svg';
+                          }}
+                        />
+                      </div>
+                      <div className="user-info">
+                        <h4 className="user-name">{result.fullName}</h4>
+                        <p className="user-username">@{result.username}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </section>
+      )}
 
       <section id="about" className="about-section" ref={el => sectionsRef.current.about = el}>
         <div className="section-header">

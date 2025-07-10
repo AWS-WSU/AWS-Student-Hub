@@ -605,3 +605,14 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* Admin link styling - subtle approach */
+.admin-link {
+  border-left: 3px solid var(--accent) !important;
+  background-color: rgba(var(--accent-rgb), 0.05) !important;
+  position: relative;
+}
+
+.admin-link .login-icon {
+  filter: hue-rotate(20deg) brightness(1.1) !important;
+}

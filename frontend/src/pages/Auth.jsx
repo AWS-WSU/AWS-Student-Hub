@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import './styles/Auth.css';
@@ -85,7 +85,8 @@ const PasswordInput = ({ name, placeholder, value, onChange, onFocus, onBlur, re
 };
 
 function Auth({ theme }) {
-  const [isLogin, setIsLogin] = useState(true);
+  const [searchParams] = useSearchParams();
+  const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -121,7 +122,12 @@ function Auth({ theme }) {
 
   useEffect(() => {
     if ((authUser || (isAuth0Authenticated && auth0User)) && !isLoading) {
-      navigate('/', { replace: true });
+      const currentUser = auth0User || authUser;
+      if (currentUser && !currentUser.profileSetupCompleted) {
+        navigate('/setup', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     }
   }, [authUser, isAuth0Authenticated, auth0User, navigate, isLoading]);
 

@@ -1,11 +1,9 @@
-// API configuration
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
-// Helper function for making API requests
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
   
-  // Get token from localStorage
   const token = localStorage.getItem('token');
   
   const defaultOptions = {
@@ -27,7 +25,6 @@ const apiRequest = async (endpoint, options = {}) => {
   try {
     const response = await fetch(url, finalOptions);
     
-    // Check if the response has content
     const contentType = response.headers.get('content-type');
     let data;
     
@@ -51,7 +48,6 @@ const apiRequest = async (endpoint, options = {}) => {
   }
 };
 
-// Newsletter API functions
 export const newsletterAPI = {
   subscribe: async (email) => {
     return apiRequest('/newsletter/subscribe', {
@@ -61,7 +57,6 @@ export const newsletterAPI = {
   }
 };
 
-// Auth API functions
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
   return {
@@ -144,6 +139,32 @@ export const authAPI = {
     return response.json();
   },
 
+  getRecentUsers: async (limit = 6) => {
+    const response = await fetch(`${API_BASE_URL}/auth/recent-users?limit=${limit}`, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch recent users');
+    }
+    
+    return response.json();
+  },
+
+  getPublicProfile: async (username) => {
+    const response = await fetch(`${API_BASE_URL}/auth/public-profile/${username}`, {
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to get public profile');
+    }
+    
+    return response.json();
+  },
+
   uploadProfilePicture: async (file) => {
     const formData = new FormData();
     formData.append('profilePicture', file);
@@ -163,13 +184,137 @@ export const authAPI = {
     }
 
     return response.json();
+  },
+
+  searchUsers: async (query, limit = 10) => {
+    const params = new URLSearchParams({
+      q: query,
+      limit: limit.toString()
+    });
+    
+    const response = await fetch(`${API_BASE_URL}/auth/search?${params}`, {
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to search users');
+    }
+    
+    return response.json();
   }
 };
 
-// Discord API functions
 export const discordAPI = {
   getInvite: async () => {
     return apiRequest('/discord-invite');
+  }
+};
+  
+export const adminAPI = {
+  getDashboardStats: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch dashboard stats');
+    }
+    
+    return response.json();
+  },
+
+  getAllUsers: async (page = 1, limit = 20, search = '', role = '', status = '') => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      ...(search && { search }),
+      ...(role && { role }),
+      ...(status && { status })
+    });
+    
+    const response = await fetch(`${API_BASE_URL}/admin/users?${params}`, {
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch users');
+    }
+    
+    return response.json();
+  },
+
+  getUserDetails: async (userId) => {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch user details');
+    }
+    
+    return response.json();
+  },
+
+  updateUserRole: async (userId, role) => {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/role`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ role })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update user role');
+    }
+    
+    return response.json();
+  },
+
+  banUser: async (userId, reason) => {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/ban`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ reason })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to ban user');
+    }
+    
+    return response.json();
+  },
+
+  unbanUser: async (userId) => {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/unban`, {
+      method: 'PUT',
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to unban user');
+    }
+    
+    return response.json();
+  },
+
+  deleteUser: async (userId) => {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete user');
+    }
+    
+    return response.json();
   }
 };
 

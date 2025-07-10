@@ -5,7 +5,6 @@ const authController = require('../controllers/authController');
 const checkJwt = require('../middleware/auth');
 const { authLimiter, loginLimiter, passwordResetLimiter, signupLimiter } = require('../middleware/rateLimiter');
 
-// Validation middleware
 const validateSignup = [
   body('fullName')
     .trim()
@@ -71,7 +70,10 @@ router.post('/verify-email', passwordResetLimiter, authController.verifyEmail);
 router.post('/verify-reset-code', authLimiter, authController.verifyResetCode);
 router.post('/reset-password', authLimiter, validateResetPassword, authController.resetPassword);
 router.get('/me', checkJwt, authController.getCurrentUser);
-router.post('/check-username', checkJwt, authController.checkUsername);
+router.get('/public-profile/:username', authController.getPublicProfile);
 router.put('/profile', checkJwt, authController.updateProfile);
+router.post('/check-username', checkJwt, authController.checkUsername);
+router.get('/recent-users', authController.getRecentUsers);
+router.get('/search', checkJwt, authController.searchUsers);
 
 module.exports = router;
