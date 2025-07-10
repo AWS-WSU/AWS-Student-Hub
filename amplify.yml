@@ -5,10 +5,11 @@ applications:
       phases:
         preBuild:
           commands:
-            - npm install
+            - nvm use 22
+            - npm ci --include=dev
         build:
           commands:
-            - npm run build
+            - npx vite build
       artifacts:
         baseDirectory: dist
         files:
