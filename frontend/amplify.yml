@@ -21,16 +21,16 @@ applications:
       phases:
         preBuild:
           commands:
+            - cd ../backend
             - npm install
         build:
           commands:
             - echo "Backend build complete"
       artifacts:
-        baseDirectory: .
+        baseDirectory: ../backend
         files:
           - '**/*'
         name: api
       cache:
         paths:
-          - node_modules/**/*
-
+          - ../backend/node_modules/**/*
