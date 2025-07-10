@@ -7,7 +7,7 @@ applications:
           commands:
             - nvm install 20
             - nvm use 20
-            - npm ci --include=dev
+            - npm install
         build:
           commands:
             - npx vite build
