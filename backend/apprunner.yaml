@@ -1,0 +1,17 @@
+version: 1.0
+runtime: nodejs20
+build:
+  commands:
+    build:
+      - echo "Installing dependencies for Linux platform"
+      - npm ci --omit=dev
+      - npm install --platform=linux --arch=x64 sharp
+run:
+  runtime-version: 20.11.0
+  command: npm start
+  network:
+    port: 3000
+    env: PORT
+  env:
+    - name: NODE_ENV
+      value: production 
