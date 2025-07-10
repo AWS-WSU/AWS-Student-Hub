@@ -7,18 +7,52 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import './styles/Account.css';
 
+const programmingLanguages = [
+  'JavaScript', 'Python', 'Java', 'C++', 'C#', 'React', 'Node.js', 'PHP', 
+  'Ruby', 'Go', 'Rust', 'TypeScript', 'Swift', 'Kotlin', 'HTML/CSS', 'SQL'
+];
+
+const languageIcons = {
+  'JavaScript': '/js.svg',
+  'Python': '/py.svg',
+  'Java': '/java.svg',
+  'C++': '/cpp.svg',  
+  'C#': '/csharp.svg',
+  'React': '/jsx.svg',
+  'Node.js': '/js.svg',
+  'PHP': '/php.svg',
+  'TypeScript': '/ts.svg',
+  'Swift': '/swift.svg',
+  'Kotlin': '/kotlin.svg',
+  'Ruby': '/ruby.svg',
+  'Go': '/go.svg',
+  'Rust': '/rs.svg',
+  'HTML/CSS': '/html.svg',
+  'SQL': '/sql.svg'
+};
+
+const grades = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Other'];
+
 function Account({ theme, toggleTheme }) {
   const [activeSection, setActiveSection] = useState('profile');
   const [profileImage, setProfileImage] = useState('/account.svg');
   const [isEditing, setIsEditing] = useState({
     name: false,
-    username: false
+    username: false,
+    bio: false,
+    major: false,
+    grade: false,
+    programmingLanguages: false
   });
   const [formData, setFormData] = useState({
     name: '',
     username: '',
     email: '',
-    wantsEmails: false
+    wantsEmails: false,
+    bio: '',
+    major: '',
+    grade: '',
+    programmingLanguages: []
   });
   const [originalData, setOriginalData] = useState({});
   const [loading, setLoading] = useState(false);
@@ -44,13 +78,16 @@ function Account({ theme, toggleTheme }) {
       return;
     }
 
-    // Set user data
     if (currentUser) {
       const userData = {
         name: currentUser.name || currentUser.fullName || '',
         username: currentUser.username || '',
         email: currentUser.email || '',
-        wantsEmails: currentUser.wantsEmails || false
+        wantsEmails: currentUser.wantsEmails || false,
+        bio: currentUser.bio || '',
+        major: currentUser.major || '',
+        grade: currentUser.grade || '',
+        programmingLanguages: currentUser.programmingLanguages || []
       };
       setFormData(userData);
       setOriginalData(userData);
@@ -73,6 +110,16 @@ function Account({ theme, toggleTheme }) {
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
+    }));
+    setError('');
+  };
+
+  const handleLanguageToggle = (language) => {
+    setFormData(prev => ({
+      ...prev,
+      programmingLanguages: prev.programmingLanguages.includes(language)
+        ? prev.programmingLanguages.filter(lang => lang !== language)
+        : [...prev.programmingLanguages, language]
     }));
     setError('');
   };
@@ -220,6 +267,14 @@ function Account({ theme, toggleTheme }) {
         updateData.fullName = formData.name;
       } else if (field === 'username') {
         updateData.username = formData.username;
+      } else if (field === 'bio') {
+        updateData.bio = formData.bio;
+      } else if (field === 'major') {
+        updateData.major = formData.major;
+      } else if (field === 'grade') {
+        updateData.grade = formData.grade;
+      } else if (field === 'programmingLanguages') {
+        updateData.programmingLanguages = formData.programmingLanguages;
       }
       
       await updateUser(updateData);
@@ -234,7 +289,6 @@ function Account({ theme, toggleTheme }) {
         [field]: false
       }));
       
-      // Show success flash
       setSuccessField(field);
       setTimeout(() => setSuccessField(''), 600);
       
@@ -459,6 +513,228 @@ function Account({ theme, toggleTheme }) {
                 '',
                 true
               )}
+            </div>
+          </motion.section>
+
+          <motion.section 
+            className="profile-details-section"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+          >
+            <h2>Profile Details</h2>
+            
+            <div className="form-fields">
+              <div className="form-field">
+                <label>Bio</label>
+                <div 
+                  className={`field-container textarea-container ${isEditing.bio ? 'editing' : ''}`}
+                  onClick={() => handleFieldClick('bio')}
+                >
+                  {successField === 'bio' && <div className="success-flash" />}
+                  
+                  <div className="display-container">
+                    <span className={`field-value editable ${isEditing.bio ? 'editing' : ''}`}>
+                      {formData.bio || 'Tell us about yourself...'}
+                    </span>
+                  </div>
+
+                  <div className={`edit-overlay ${isEditing.bio ? 'active' : ''}`}>
+                    <textarea
+                      ref={el => inputRefs.current.bio = el}
+                      name="bio"
+                      value={formData.bio}
+                      onChange={handleInputChange}
+                      onBlur={() => handleInputBlur('bio')}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          handleInputKeyDown(e, 'bio');
+                        }
+                      }}
+                      className="edit-input edit-textarea"
+                      placeholder="Tell us about yourself..."
+                      maxLength={500}
+                      rows={4}
+                    />
+                    <div className="character-count">
+                      {formData.bio.length}/500
+                    </div>
+                  </div>
+
+                  <div className={`edit-hint ${isEditing.bio || fieldLoading.bio ? 'hidden' : ''}`}>
+                    {fieldLoading.bio ? (
+                      <div className="loading-indicator">
+                        <div className="loading-dots">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </div>
+                      </div>
+                    ) : (
+                      'Click to edit'
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {renderEditableField(
+                'major', 
+                'Major/Field of Study', 
+                formData.major, 
+                'e.g. Computer Science, Engineering, Business'
+              )}
+
+              <div className="form-field">
+                <label>Academic Level</label>
+                <div 
+                  className={`field-container ${isEditing.grade ? 'editing' : ''}`}
+                  onClick={() => handleFieldClick('grade')}
+                >
+                  {successField === 'grade' && <div className="success-flash" />}
+                  
+                  <div className="display-container">
+                    <span className={`field-value editable ${isEditing.grade ? 'editing' : ''}`}>
+                      {formData.grade || 'Select your academic level'}
+                    </span>
+                  </div>
+
+                  <div className={`edit-overlay ${isEditing.grade ? 'active' : ''}`}>
+                    <select
+                      ref={el => inputRefs.current.grade = el}
+                      name="grade"
+                      value={formData.grade}
+                      onChange={handleInputChange}
+                      onBlur={() => handleInputBlur('grade')}
+                      onKeyDown={(e) => handleInputKeyDown(e, 'grade')}
+                      className="edit-input edit-select"
+                    >
+                      <option value="">Select your academic level</option>
+                      {grades.map(grade => (
+                        <option key={grade} value={grade}>{grade}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className={`edit-hint ${isEditing.grade || fieldLoading.grade ? 'hidden' : ''}`}>
+                    {fieldLoading.grade ? (
+                      <div className="loading-indicator">
+                        <div className="loading-dots">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </div>
+                      </div>
+                    ) : (
+                      'Click to edit'
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-field">
+                <label>Programming Languages & Technologies</label>
+                <div 
+                  className={`field-container languages-container ${isEditing.programmingLanguages ? 'editing' : ''}`}
+                  onClick={() => handleFieldClick('programmingLanguages')}
+                >
+                  {successField === 'programmingLanguages' && <div className="success-flash" />}
+                  
+                  <div className="display-container">
+                                         <div className="languages-display">
+                       {formData.programmingLanguages.length > 0 ? (
+                         formData.programmingLanguages.map(lang => (
+                           <span key={lang} className="language-tag">
+                             {languageIcons[lang] && (
+                               <img 
+                                 src={languageIcons[lang]} 
+                                 alt={lang}
+                                 className="language-tag-icon"
+                               />
+                             )}
+                             {lang}
+                           </span>
+                         ))
+                       ) : (
+                         <span className="field-value editable">Select your programming languages...</span>
+                       )}
+                     </div>
+                  </div>
+
+                  <div className={`edit-overlay ${isEditing.programmingLanguages ? 'active' : ''}`}>
+                    <div className="languages-modal">
+                      <button
+                        type="button"
+                        className="languages-close"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCancel('programmingLanguages');
+                        }}
+                      >
+                        ×
+                      </button>
+                      <h3>Select Programming Languages & Technologies</h3>
+                      <div className="languages-grid">
+                        {programmingLanguages.map(language => (
+                          <button
+                            key={language}
+                            type="button"
+                            className={`language-option ${formData.programmingLanguages.includes(language) ? 'selected' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleLanguageToggle(language);
+                            }}
+                          >
+                            {languageIcons[language] && (
+                              <img 
+                                src={languageIcons[language]} 
+                                alt={language}
+                                className="language-icon"
+                              />
+                            )}
+                            <span className="language-name">{language}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="languages-actions">
+                        <button
+                          type="button"
+                          className="save-languages-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleInputBlur('programmingLanguages');
+                          }}
+                        >
+                          Save Changes
+                        </button>
+                        <button
+                          type="button"
+                          className="cancel-languages-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCancel('programmingLanguages');
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={`edit-hint ${isEditing.programmingLanguages || fieldLoading.programmingLanguages ? 'hidden' : ''}`}>
+                    {fieldLoading.programmingLanguages ? (
+                      <div className="loading-indicator">
+                        <div className="loading-dots">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </div>
+                      </div>
+                    ) : (
+                      'Click to edit'
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </motion.section>
 

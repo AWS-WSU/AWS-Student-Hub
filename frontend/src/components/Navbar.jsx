@@ -93,19 +93,16 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
   const getDisplayName = (user) => {
     if (!user) return 'User';
     
-    // For Auth0 users (social login)
     if (user.sub) {
       if (user.sub.startsWith('google-oauth2|') || user.sub.startsWith('windowslive|')) {
         return user.name?.split(' ')[0] || user.name || 'User';
       }
     }
     
-    // For our own users (email/password login)
     if (user.username) {
       return user.username;
     }
     
-    // Fallback to full name or first name
     if (user.fullName) {
       return user.fullName.split(' ')[0] || user.fullName;
     }
@@ -212,8 +209,7 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
                 crossOrigin="anonymous"
                 initial={false}
                 animate={{
-                  scale: isAccountDropdownOpen ? 0.95 : 1,
-                  rotate: isAccountDropdownOpen ? 180 : 0
+                  scale: isAccountDropdownOpen ? 0.95 : 1
                 }}
               />
             </motion.button>
@@ -251,6 +247,26 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
                     />
                     Profile
                   </motion.button>
+
+                  {authUser && ['moderator', 'admin', 'superuser'].includes(authUser.role) && (
+                    <motion.button 
+                      className="auth-option secondary admin-link"
+                      onClick={() => {
+                        navigate('/admin');
+                        setIsAccountDropdownOpen(false);
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <img 
+                        src={theme === 'dark' ? '/aws-light.svg' : '/aws.svg'} 
+                        alt="Admin Dashboard" 
+                        className="login-icon"  
+                        style={{ filter: theme === 'dark' ? 'invert(100%)' : 'invert(0%)' }}
+                      />
+                      Admin Dashboard
+                    </motion.button>
+                  )}
 
                   <motion.button 
                     className="auth-option secondary"

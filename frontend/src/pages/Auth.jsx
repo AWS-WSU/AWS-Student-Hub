@@ -122,7 +122,12 @@ function Auth({ theme }) {
 
   useEffect(() => {
     if ((authUser || (isAuth0Authenticated && auth0User)) && !isLoading) {
-      navigate('/', { replace: true });
+      const currentUser = auth0User || authUser;
+      if (currentUser && !currentUser.profileSetupCompleted) {
+        navigate('/setup', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     }
   }, [authUser, isAuth0Authenticated, auth0User, navigate, isLoading]);
 

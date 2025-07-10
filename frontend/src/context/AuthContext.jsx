@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { authAPI } from '../utils/api';
 
 const AuthContext = createContext();
 
@@ -10,6 +11,8 @@ export const useAuth = () => {
   }
   return context;
 };
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -23,19 +26,8 @@ export const AuthProvider = ({ children }) => {
         const rememberMe = localStorage.getItem('rememberMe') === 'true';
         
         if (token && rememberMe) {
-          const response = await fetch('/api/auth/me', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (response.ok) {
-            const userData = await response.json();
-            setUser(userData);
-          } else {
-            localStorage.removeItem('token');
-            localStorage.removeItem('rememberMe');
-          }
+          const userData = await authAPI.getCurrentUser();
+          setUser(userData);
         }
       } catch (error) {
         if (!error.message?.includes('ECONNREFUSED') && !error.message?.includes('Failed to fetch')) {
@@ -75,7 +67,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +78,6 @@ export const AuthProvider = ({ children }) => {
       if (!response.ok) {
         const data = await response.json().catch(() => ({ error: 'Network error' }));
         
-        // Handle validation errors from express-validator
         if (data.errors && Array.isArray(data.errors)) {
           const errorMessages = data.errors.map(err => err.msg).join('. ');
           throw new Error(errorMessages);
@@ -118,7 +109,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/auth/signup', {
+      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +120,6 @@ export const AuthProvider = ({ children }) => {
       if (!response.ok) {
         const data = await response.json().catch(() => ({ error: 'Network error' }));
         
-        // Handle validation errors from express-validator
         if (data.errors && Array.isArray(data.errors)) {
           const errorMessages = data.errors.map(err => err.msg).join('. ');
           throw new Error(errorMessages);
@@ -159,23 +149,10 @@ export const AuthProvider = ({ children }) => {
 
   const updateUser = async (updateData) => {
     try {
-      const response = await fetch('/api/auth/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(updateData),
-      });
+      const response = await authAPI.updateProfile(updateData);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Update failed');
-      }
-
-      setUser(data.user);
-      return data;
+      setUser(response.user);
+      return response;
     } catch (error) {
       throw error;
     }
@@ -186,7 +163,7 @@ export const AuthProvider = ({ children }) => {
       const formData = new FormData();
       formData.append('profilePicture', file);
 
-      const response = await fetch('/api/upload/profile-picture', {
+      const response = await fetch(`${API_BASE_URL}/upload/profile-picture`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

@@ -1,3 +1,30 @@
+
+:root[data-theme="light"] {
+  --card-bg: var(--light-card-bg);
+  --input-bg: #f1f5f9;
+  --border-color: #e2e8f0;
+  --text-muted: #64748b;
+  --accent-color: var(--light-accent);
+  --accent-hover: #e68900;
+  --accent-color-10: rgba(255, 153, 0, 0.1);
+  --accent-color-20: rgba(255, 153, 0, 0.2);
+  --error-color: #ef4444;
+  --error-bg: #fee2e2;
+}
+
+:root[data-theme="dark"] {
+  --card-bg: var(--dark-card-bg);
+  --input-bg: #334155;
+  --border-color: #334155;
+  --text-muted: #94a3b8;
+  --accent-color: var(--dark-accent);
+  --accent-hover: #ffad33;
+  --accent-color-10: rgba(255, 153, 0, 0.1);
+  --accent-color-20: rgba(255, 153, 0, 0.2);
+  --error-color: #ef4444;
+  --error-bg: rgba(239, 68, 68, 0.1);
+}
+
 #root {
   width: 100%;
   margin: 0;
