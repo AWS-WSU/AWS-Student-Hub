@@ -8,8 +8,8 @@ applications:
             - nvm install 20
             - nvm use 20
             - rm -rf node_modules package-lock.json
-            - npm install
-            - ls node_modules/.bin/ | grep vite
+            - npm install --production=false
+            - ls -la node_modules/.bin/ | head -10
         build:
           commands:
             - npx --yes vite@6.3.5 build
