@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import './styles/Landing.css';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
