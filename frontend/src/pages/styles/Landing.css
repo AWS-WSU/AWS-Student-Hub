@@ -552,6 +552,232 @@ section {
   font-size: 1.5rem;
 }
 
+/* Welcome Section */
+.welcome-section {
+  background-color: var(--bg-secondary);
+  position: relative;
+  overflow: hidden;
+}
+
+.loading-users {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4rem 0;
+}
+
+.loading-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.loading-dots span {
+  width: 8px;
+  height: 8px;
+  background-color: var(--accent);
+  border-radius: 50%;
+  animation: loadingDots 1.5s infinite ease-in-out;
+}
+
+.loading-dots span:nth-child(2) {
+  animation-delay: 0.3s;
+}
+
+.loading-dots span:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
+@keyframes loadingDots {
+  0%, 60%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  30% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+.welcome-users-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.welcome-users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.welcome-user-card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 10px 30px var(--card-shadow);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.welcome-user-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.05) 0%, rgba(var(--accent-secondary-rgb), 0.05) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 0;
+}
+
+.welcome-user-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px var(--card-shadow);
+  border-color: rgba(var(--accent-rgb), 0.3);
+}
+
+.welcome-user-card:hover::before {
+  opacity: 1;
+}
+
+.user-avatar {
+  position: relative;
+  margin-bottom: 1.5rem;
+  z-index: 1;
+}
+
+.user-avatar img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(var(--accent-rgb), 0.2);
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.welcome-user-card:hover .user-avatar img {
+  transform: scale(1.1);
+  border-color: var(--accent);
+}
+
+.avatar-ring {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  width: 90px;
+  height: 90px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: linear-gradient(45deg, var(--accent), var(--accent-secondary)) border-box;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.welcome-user-card:hover .avatar-ring {
+  opacity: 1;
+}
+
+.user-info {
+  z-index: 1;
+  flex: 1;
+}
+
+.user-name {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem 0;
+}
+
+.user-username {
+  font-size: 1rem;
+  color: var(--accent);
+  margin: 0 0 0.75rem 0;
+  font-weight: 500;
+}
+
+.join-date {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.welcome-badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+  color: #000;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  z-index: 2;
+  box-shadow: 0 2px 10px rgba(var(--accent-rgb), 0.3);
+}
+
+.welcome-badge i {
+  font-size: 0.7rem;
+}
+
+.welcome-message {
+  text-align: center;
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.no-users-message {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-secondary);
+}
+
+.no-users-icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+}
+
+.no-users-message h3 {
+  font-size: 1.8rem;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.no-users-message p {
+  font-size: 1.1rem;
+  max-width: 500px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
 /* About Section */
 .about-section {
   background-color: var(--bg-primary);
@@ -1247,6 +1473,27 @@ section {
     grid-template-columns: repeat(2, 1fr);
     gap: 2rem;
   }
+
+  .welcome-users-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .welcome-user-card {
+    padding: 1.5rem;
+  }
+
+  .user-avatar img {
+    width: 70px;
+    height: 70px;
+  }
+
+  .avatar-ring {
+    width: 80px;
+    height: 80px;
+    top: -5px;
+    left: -5px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1347,6 +1594,50 @@ section {
   }
 
   .cta-card p {
+    font-size: 1.1rem;
+  }
+
+  .welcome-users-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.2rem;
+  }
+
+  .welcome-user-card {
+    padding: 1.2rem;
+  }
+
+  .user-avatar img {
+    width: 60px;
+    height: 60px;
+  }
+
+  .avatar-ring {
+    width: 70px;
+    height: 70px;
+    top: -5px;
+    left: -5px;
+  }
+
+  .user-name {
+    font-size: 1.1rem;
+  }
+
+  .user-username {
+    font-size: 0.9rem;
+  }
+
+  .join-date {
+    font-size: 0.8rem;
+  }
+
+  .welcome-badge {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.7rem;
+    top: 0.8rem;
+    right: 0.8rem;
+  }
+
+  .welcome-message {
     font-size: 1.1rem;
   }
 }
@@ -1453,6 +1744,69 @@ section {
   .join-button {
     width: 100%;
     text-align: center;
+  }
+
+  .welcome-users-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .welcome-user-card {
+    padding: 1rem;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+
+  .user-avatar img {
+    width: 50px;
+    height: 50px;
+  }
+
+  .avatar-ring {
+    width: 60px;
+    height: 60px;
+    top: -5px;
+    left: -5px;
+  }
+
+  .user-name {
+    font-size: 1rem;
+  }
+
+  .user-username {
+    font-size: 0.85rem;
+  }
+
+  .join-date {
+    font-size: 0.75rem;
+  }
+
+  .welcome-badge {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.65rem;
+    top: 0.6rem;
+    right: 0.6rem;
+  }
+
+  .welcome-message {
+    font-size: 1rem;
+    padding: 0 1rem;
+  }
+
+  .loading-text {
+    font-size: 1rem;
+  }
+
+  .no-users-icon {
+    font-size: 3rem;
+  }
+
+  .no-users-message h3 {
+    font-size: 1.5rem;
+  }
+
+  .no-users-message p {
+    font-size: 1rem;
   }
 }
 

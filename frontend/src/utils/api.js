@@ -144,6 +144,32 @@ export const authAPI = {
     return response.json();
   },
 
+  getRecentUsers: async (limit = 6) => {
+    const response = await fetch(`${API_BASE_URL}/auth/recent-users?limit=${limit}`, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch recent users');
+    }
+    
+    return response.json();
+  },
+
+  getPublicProfile: async (username) => {
+    const response = await fetch(`${API_BASE_URL}/auth/profile/${username}`, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch profile');
+    }
+    
+    return response.json();
+  },
+
   uploadProfilePicture: async (file) => {
     const formData = new FormData();
     formData.append('profilePicture', file);

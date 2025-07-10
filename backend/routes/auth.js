@@ -73,5 +73,8 @@ router.post('/reset-password', authLimiter, validateResetPassword, authControlle
 router.get('/me', checkJwt, authController.getCurrentUser);
 router.post('/check-username', checkJwt, authController.checkUsername);
 router.put('/profile', checkJwt, authController.updateProfile);
+router.get('/recent-users', authController.getRecentUsers);
+
+router.get('/profile/:username', authController.getPublicProfile);
 
 module.exports = router;

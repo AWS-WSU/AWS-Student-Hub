@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import Landing from './pages/Landing';
 import Auth from './pages/Auth';
 import Account from './pages/Account';
+import PublicProfile from './pages/PublicProfile';
 import './App.css';
 
 function AppContent() {
@@ -32,7 +33,7 @@ function AppContent() {
     }
     
     // Redirect first-time visitors to home page
-    if (location.pathname !== '/' && location.pathname !== '/auth' && location.pathname !== '/account') {
+    if (location.pathname !== '/' && location.pathname !== '/auth' && location.pathname !== '/account' && !location.pathname.startsWith('/profile/')) {
       navigate('/', { replace: true });
     }
   }, [location, navigate]);
@@ -50,6 +51,10 @@ function AppContent() {
         <Route 
           path="/account" 
           element={<Account theme={theme} toggleTheme={toggleTheme} />} 
+        />
+        <Route 
+          path="/profile/:username" 
+          element={<PublicProfile theme={theme} toggleTheme={toggleTheme} />} 
         />
       </Routes>
     </div>

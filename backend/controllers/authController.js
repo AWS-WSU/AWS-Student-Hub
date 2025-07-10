@@ -511,3 +511,79 @@ exports.resetPassword = async (req, res) => {
     });
   }
 };
+
+exports.getRecentUsers = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 6;
+    
+    const recentUsers = await User.find({})
+      .select('username fullName profilePicture createdAt')
+      .sort({ createdAt: -1 })
+      .limit(limit);
+
+    res.json({
+      success: true,
+      users: recentUsers
+    });
+  } catch (error) {
+    console.error('Get recent users error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error while fetching recent users'
+    });
+  }
+};
+
+exports.getPublicProfile = async (req, res) => {
+  try {
+    const { username } = req.params;
+    
+    if (!username) {
+      return res.status(400).json({
+        success: false,
+        error: 'Username is required'
+      });
+    }
+
+    const user = await User.findOne({ username })
+      .select('username fullName profilePicture createdAt lastLogin');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Calculate some profile stats
+    const joinDate = user.createdAt;
+    const daysSinceJoin = Math.floor((Date.now() - joinDate) / (1000 * 60 * 60 * 24));
+    const lastSeenDate = user.lastLogin;
+    const daysSinceLastSeen = Math.floor((Date.now() - lastSeenDate) / (1000 * 60 * 60 * 24));
+
+    res.json({
+      success: true,
+      profile: {
+        username: user.username,
+        fullName: user.fullName,
+        profilePicture: user.profilePicture,
+        joinDate: user.createdAt,
+        lastLogin: user.lastLogin,
+        stats: {
+          daysSinceJoin,
+          daysSinceLastSeen,
+          memberSince: joinDate.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long' 
+          })
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get public profile error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error while fetching profile'
+    });
+  }
+};

@@ -5,9 +5,12 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import SocialLinks from '../components/SocialLinks';
+import { authAPI } from '../utils/api';
 
 function Landing({ theme, toggleTheme }) {
   const [activeSection, setActiveSection] = useState('home');
+  const [recentUsers, setRecentUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
   const sectionsRef = useRef({});
   const navigate = useNavigate();
   
@@ -37,6 +40,22 @@ function Landing({ theme, toggleTheme }) {
     };
   }, []);
 
+  useEffect(() => {
+    const fetchRecentUsers = async () => {
+      try {
+        const response = await authAPI.getRecentUsers(6);
+        setRecentUsers(response.users || []);
+      } catch (error) {
+        console.error('Error fetching recent users:', error);
+        setRecentUsers([]);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    fetchRecentUsers();
+  }, []);
+
   const scrollToSection = (sectionId) => {
     const section = document.getElementById(sectionId);
     if (section) {
@@ -45,7 +64,11 @@ function Landing({ theme, toggleTheme }) {
   };
 
   const handleJoinClick = () => {
-    navigate('/auth');
+    navigate('/auth?mode=signup');
+  };
+
+  const handleUserClick = (username) => {
+    navigate(`/profile/${username}`);
   };
 
   return (
@@ -136,6 +159,107 @@ function Landing({ theme, toggleTheme }) {
           <div className="shape shape-3"></div>
           <div className="shape shape-4"></div>
         </div>
+      </section>
+
+      <section id="welcome" className="welcome-section">
+        <div className="section-header">
+          <h2>Welcome Our Newest Members!</h2>
+          <div className="section-divider">
+            <span></span>
+            <div className="divider-icon">👋</div>
+            <span></span>
+          </div>
+        </div>
+        
+        {loadingUsers ? (
+          <motion.div 
+            className="loading-users"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="loading-text">
+              <span>Loading our newest members...</span>
+              <div className="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          </motion.div>
+        ) : recentUsers.length > 0 ? (
+          <motion.div 
+            className="welcome-users-container"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true, amount: 0.3 }}
+          >
+            <div className="welcome-users-grid">
+              {recentUsers.map((user, index) => (
+                <motion.div
+                  key={user._id}
+                  className="welcome-user-card"
+                  initial={{ opacity: 0, y: 50 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  onClick={() => handleUserClick(user.username)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="user-avatar">
+                    <img 
+                      src={user.profilePicture || '/account.svg'} 
+                      alt={`${user.fullName}'s profile`}
+                      onError={(e) => {
+                        e.target.src = '/account.svg';
+                      }}
+                    />
+                    <div className="avatar-ring"></div>
+                  </div>
+                  <div className="user-info">
+                    <h4 className="user-name">{user.fullName}</h4>
+                    <p className="user-username">@{user.username}</p>
+                    <span className="join-date">
+                      Joined {new Date(user.createdAt).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                  <div className="welcome-badge">
+                    <i className="fas fa-star"></i>
+                    <span>New</span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+            <motion.p 
+              className="welcome-message"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              viewport={{ once: true, amount: 0.3 }}
+            >
+              Let's give a warm welcome to our newest club members! 🎉 
+              Ready to join this amazing community?
+            </motion.p>
+          </motion.div>
+        ) : (
+          <motion.div 
+            className="no-users-message"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true, amount: 0.3 }}
+          >
+            <div className="no-users-icon">🌟</div>
+            <h3>Be Our First Member!</h3>
+            <p>Join our community and be part of something amazing from the beginning.</p>
+          </motion.div>
+        )}
       </section>
 
       <section id="about" className="about-section" ref={el => sectionsRef.current.about = el}>
