@@ -30,7 +30,7 @@ function AppContent() {
         }
       }, 100);
     }
-  }, [location.hash]);
+  }, [location.pathname, location.hash]);
 
   useEffect(() => {
     const validPaths = ['/', '/auth', '/account', '/admin', '/setup'];
@@ -44,7 +44,7 @@ function AppContent() {
       
       return () => clearTimeout(timer);
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname, location.state?.fromApp, navigate]);
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';

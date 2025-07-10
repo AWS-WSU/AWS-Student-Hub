@@ -24,7 +24,7 @@ const getInitialUserState = () => {
     if (token && rememberMe && cachedUser) {
       return JSON.parse(cachedUser);
     }
-  } catch (e) {
+  } catch {
     console.warn('Failed to parse cached user data');
   }
   return null;
@@ -50,7 +50,6 @@ export const AuthProvider = ({ children }) => {
       try {
         const token = localStorage.getItem('token');
         const rememberMe = localStorage.getItem('rememberMe') === 'true';
-        const cachedUser = localStorage.getItem('cachedUser');
         
         if (token && rememberMe) {
           // Loading is already set to false in initial state if we have cached data
