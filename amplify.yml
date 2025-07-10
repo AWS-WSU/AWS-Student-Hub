@@ -7,10 +7,11 @@ applications:
           commands:
             - nvm install 20
             - nvm use 20
-            - npm install
+            - npm install --include=dev
+            - npm list vitegit
         build:
           commands:
-            - npx vite build
+            - ./node_modules/.bin/vite build
       artifacts:
         baseDirectory: dist
         files:
