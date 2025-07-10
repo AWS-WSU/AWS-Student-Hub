@@ -7,11 +7,12 @@ applications:
           commands:
             - nvm install 20
             - nvm use 20
-            - npm install --include=dev
-            - npm list vite
+            - rm -rf node_modules package-lock.json
+            - npm install
+            - ls node_modules/.bin/ | grep vite
         build:
           commands:
-            - ./node_modules/.bin/vite build
+            - npx --yes vite@6.3.5 build
       artifacts:
         baseDirectory: dist
         files:
