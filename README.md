@@ -4,7 +4,6 @@
 
 # Wayne State University - AWS Student Hub
 
-![Code Quality](https://github.com/AWS-WSU/AWS-Student-Hub/actions/workflows/code-quality.yml/badge.svg)](https://github.com/AWS-WSU/AWS-Student-Hub/actions/workflows/code-quality.yml)
 [![Live Site](https://img.shields.io/badge/Live%20Site-wayneaws.dev-brightgreen?style=flat&logo=amazon-aws)](https://wayneaws.dev)
 
 <p align="center">
