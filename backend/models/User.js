@@ -39,6 +39,29 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: '/account.svg'
   },
+  role: {
+    type: String,
+    enum: ['member', 'moderator', 'admin', 'superuser'],
+    default: 'member'
+  },
+  status: {
+    type: String,
+    enum: ['active', 'banned', 'suspended'],
+    default: 'active'
+  },
+  bannedAt: {
+    type: Date,
+    default: null
+  },
+  bannedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  banReason: {
+    type: String,
+    default: null
+  },
   wantsEmails: {
     type: Boolean,
     default: false
