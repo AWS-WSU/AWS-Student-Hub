@@ -1,0 +1,36 @@
+version: 1
+applications:
+  - appRoot: frontend
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install
+        build:
+          commands:
+            - npm run build
+      artifacts:
+        baseDirectory: dist
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
+  - appRoot: backend
+    backend:
+      phases:
+        preBuild:
+          commands:
+            - npm install
+        build:
+          commands:
+            - echo "Backend build complete"
+      artifacts:
+        baseDirectory: .
+        files:
+          - '**/*'
+        name: api
+      cache:
+        paths:
+          - node_modules/**/*
+
