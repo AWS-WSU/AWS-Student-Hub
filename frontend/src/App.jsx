@@ -1,8 +1,6 @@
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { Auth0Provider } from '@auth0/auth0-react';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
-import { auth0Config } from './config/auth0';
 import { useState, useEffect } from 'react';
 import Landing from './pages/Landing';
 import Auth from './pages/Auth';
@@ -66,22 +64,11 @@ function AppContent() {
 
 function App() {
   return (
-    <Auth0Provider
-      domain={auth0Config.domain}
-      clientId={auth0Config.clientId}
-      authorizationParams={{
-        redirect_uri: auth0Config.redirectUri,
-        audience: auth0Config.audience,
-      }}
-      cacheLocation="localstorage"
-      useRefreshTokens={true}
-    >
-      <AuthProvider>
-        <ToastProvider>
-          <AppContent />
-        </ToastProvider>
-      </AuthProvider>
-    </Auth0Provider>
+    <AuthProvider>
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
+    </AuthProvider>
   );
 }
 

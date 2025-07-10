@@ -79,6 +79,25 @@ function AdminDashboard({ theme, toggleTheme }) {
     }
   }, [user, navigate, showToast, authLoading]);
 
+  const loadUsers = useCallback(async () => {
+    setUsersLoading(true);
+    try {
+      const response = await adminAPI.getAllUsers(
+        currentPage, 
+        20, 
+        searchTerm, 
+        roleFilter, 
+        statusFilter
+      );
+      setUsers(response.users);
+      setTotalPages(response.pagination.totalPages);
+    } catch {
+      showToast('Failed to load users', 'error');
+    } finally {
+      setUsersLoading(false);
+    }
+  }, [currentPage, searchTerm, roleFilter, statusFilter, showToast]);
+
   useEffect(() => {
     const loadStats = async () => {
       try {
@@ -101,25 +120,6 @@ function AdminDashboard({ theme, toggleTheme }) {
       loadUsers();
     }
   }, [activeTab, loadUsers]);
-
-  const loadUsers = useCallback(async () => {
-    setUsersLoading(true);
-    try {
-      const response = await adminAPI.getAllUsers(
-        currentPage, 
-        20, 
-        searchTerm, 
-        roleFilter, 
-        statusFilter
-      );
-      setUsers(response.users);
-      setTotalPages(response.pagination.totalPages);
-    } catch {
-      showToast('Failed to load users', 'error');
-    } finally {
-      setUsersLoading(false);
-    }
-  }, [currentPage, searchTerm, roleFilter, statusFilter, showToast]);
 
   const handleRoleUpdate = async () => {
     try {
