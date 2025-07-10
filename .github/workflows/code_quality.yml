@@ -1,0 +1,19 @@
+# .github/workflows/code-quality.yml
+name: Code Quality
+on: [push, pull_request]
+jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '23'
+      - name: Install frontend deps
+        run: cd frontend && npm install
+      - name: Install backend deps  
+        run: cd backend && npm install
+      - name: Lint frontend
+        run: cd frontend && npm run lint
+      - name: Check frontend build
+        run: cd frontend && npm run build
