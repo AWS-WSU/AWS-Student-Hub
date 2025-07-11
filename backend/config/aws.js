@@ -25,9 +25,8 @@ const uploadToS3 = async (file, key) => {
       Metadata: {
         'uploaded-at': new Date().toISOString(),
         'version': Date.now().toString()
-      },
-      // Ensure public read access
-      ACL: 'public-read'
+      }
+      // Public access controlled by bucket policy instead of ACL
     }
   });
 
