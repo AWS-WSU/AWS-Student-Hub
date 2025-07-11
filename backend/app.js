@@ -47,11 +47,11 @@ const uploadRoutes = require('./routes/upload');
 const discordInviteRoutes = require('./routes/discordInvite');
 const adminRoutes = require('./routes/admin');
 
-app.use('/api/auth', authRoutes);
-app.use('/api/newsletter', newsletterRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/discord', discordInviteRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/auth', authRoutes);
+app.use('/newsletter', newsletterRoutes);
+app.use('/upload', uploadRoutes);
+app.use('/discord', discordInviteRoutes);
+app.use('/admin', adminRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ 

@@ -242,7 +242,7 @@ function Account({ theme, toggleTheme }) {
 
     try {
       if (field === 'username') {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/auth/check-username`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/auth/check-username`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
