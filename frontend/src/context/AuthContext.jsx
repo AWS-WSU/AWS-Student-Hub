@@ -57,39 +57,6 @@ export const AuthProvider = ({ children }) => {
   const deviceId = generateDeviceId();
   const { isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
 
-  // Auto-refresh token before expiration
-  useEffect(() => {
-    const setupTokenRefresh = () => {
-      const accessToken = localStorage.getItem('accessToken');
-      if (!accessToken) return;
-
-      try {
-        const payload = JSON.parse(atob(accessToken.split('.')[1]));
-        const expiresAt = payload.exp * 1000;
-        const now = Date.now();
-        const refreshTime = expiresAt - now - 60000; // Refresh 1 minute before expiry
-
-        if (refreshTime > 0) {
-          return setTimeout(() => {
-            refreshTokens();
-          }, refreshTime);
-        } else {
-          // Token already expired, try to refresh immediately
-          refreshTokens();
-        }
-      } catch (error) {
-        console.error('Error setting up token refresh:', error);
-      }
-    };
-
-    if (user && !isAuth0Authenticated) {
-      const timeoutId = setupTokenRefresh();
-      return () => {
-        if (timeoutId) clearTimeout(timeoutId);
-      };
-    }
-  }, [user, isAuth0Authenticated, refreshTokens]);
-
   const logout = useCallback(async (allDevices = false) => {
     try {
       const refreshToken = localStorage.getItem('refreshToken');
@@ -175,6 +142,39 @@ export const AuthProvider = ({ children }) => {
 
     return refreshPromiseRef.current;
   }, [deviceId, logout]);
+
+  // Auto-refresh token before expiration
+  useEffect(() => {
+    const setupTokenRefresh = () => {
+      const accessToken = localStorage.getItem('accessToken');
+      if (!accessToken) return;
+
+      try {
+        const payload = JSON.parse(atob(accessToken.split('.')[1]));
+        const expiresAt = payload.exp * 1000;
+        const now = Date.now();
+        const refreshTime = expiresAt - now - 60000; // Refresh 1 minute before expiry
+
+        if (refreshTime > 0) {
+          return setTimeout(() => {
+            refreshTokens();
+          }, refreshTime);
+        } else {
+          // Token already expired, try to refresh immediately
+          refreshTokens();
+        }
+      } catch (error) {
+        console.error('Error setting up token refresh:', error);
+      }
+    };
+
+    if (user && !isAuth0Authenticated) {
+      const timeoutId = setupTokenRefresh();
+      return () => {
+        if (timeoutId) clearTimeout(timeoutId);
+      };
+    }
+  }, [user, isAuth0Authenticated, refreshTokens]);
 
   useEffect(() => {
     const checkExistingSession = async () => {
