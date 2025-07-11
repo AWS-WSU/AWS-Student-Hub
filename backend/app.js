@@ -58,7 +58,7 @@ app.use('/upload', uploadRoutes);
 app.use('/discord', discordInviteRoutes);
 app.use('/admin', adminRoutes);
 
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     message: 'AWS Student Hub Backend is running on Lambda',
