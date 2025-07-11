@@ -461,7 +461,6 @@ function Account({ theme, toggleTheme }) {
                     setProfileImage('/account.svg');
                   }}
                   referrerPolicy="no-referrer"
-                  crossOrigin="anonymous"
                   key={profileImage}
                 />
                 {!isSocialLogin && (

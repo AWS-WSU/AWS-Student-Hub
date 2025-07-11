@@ -207,7 +207,6 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
                   setProfileImage('/account.svg');
                 }}
                 referrerPolicy="no-referrer"
-                crossOrigin="anonymous"
                 initial={false}
                 animate={{
                   scale: isAccountDropdownOpen ? 0.95 : 1
