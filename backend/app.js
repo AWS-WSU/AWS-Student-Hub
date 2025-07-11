@@ -7,6 +7,11 @@ dotenv.config();
 
 const app = express();
 
+// Trust proxy when running in Lambda/API Gateway
+if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  app.set('trust proxy', true);
+}
+
 connectDB();
 
 const corsOptions = {

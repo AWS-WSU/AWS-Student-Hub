@@ -27,6 +27,11 @@ Parameters:
     Type: String
     Default: '*'
     Description: CORS allowed origins (comma-separated)
+  
+  JWTSecret:
+    Type: String
+    Description: JWT secret key for token signing
+    NoEcho: true
 
 Resources:
   StudentHubApi:
@@ -45,6 +50,7 @@ Resources:
           MONGODB_URI: !Ref MongoDBURI
           CORS_ORIGIN: !Ref CorsOrigin
           NODE_ENV: !Ref Environment
+          JWT_SECRET: !Ref JWTSecret
       Events:
         Api:
           Type: Api

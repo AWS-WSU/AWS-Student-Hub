@@ -10,6 +10,13 @@ const generateDeviceId = () => {
 };
 
 const generateTokens = (user, deviceId) => {
+  // Debug logging for Lambda environment
+  if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    console.log('Lambda environment detected');
+    console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
+    console.log('JWT_SECRET length:', process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0);
+  }
+  
   // Short-lived access token (15 minutes)
   const accessToken = jwt.sign(
     { 

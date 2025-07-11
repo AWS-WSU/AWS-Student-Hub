@@ -8,18 +8,25 @@ echo "🚀 Starting AWS Student Hub Lambda Deployment"
 
 if [ -z "$1" ]; then
     echo "❌ Error: Environment parameter required"
-    echo "Usage: ./deploy.sh [dev|staging|prod] [mongodb-uri] [cors-origin]"
-    echo "Example: ./deploy.sh dev 'mongodb://...' 'https://mydomain.com,http://localhost:3000'"
+    echo "Usage: ./deploy.sh [dev|staging|prod] [mongodb-uri] [jwt-secret] [cors-origin]"
+    echo "Example: ./deploy.sh dev 'mongodb://...' 'your-jwt-secret' 'https://mydomain.com,http://localhost:3000'"
     exit 1
 fi
 
 ENVIRONMENT=$1
 MONGODB_URI=${2:-""}
-CORS_ORIGIN=${3:-"*"}
+JWT_SECRET=${3:-""}
+CORS_ORIGIN=${4:-"*"}
 
 if [ -z "$MONGODB_URI" ]; then
     echo "❌ Error: MongoDB URI required"
-    echo "Usage: ./deploy.sh [dev|staging|prod] [mongodb-uri] [cors-origin]"
+    echo "Usage: ./deploy.sh [dev|staging|prod] [mongodb-uri] [jwt-secret] [cors-origin]"
+    exit 1
+fi
+
+if [ -z "$JWT_SECRET" ]; then
+    echo "❌ Error: JWT Secret required"
+    echo "Usage: ./deploy.sh [dev|staging|prod] [mongodb-uri] [jwt-secret] [cors-origin]"
     exit 1
 fi
 
@@ -27,6 +34,7 @@ echo "📋 Deployment Configuration:"
 echo "  Environment: $ENVIRONMENT"
 echo "  CORS Origin: $CORS_ORIGIN"
 echo "  MongoDB URI: [HIDDEN]"
+echo "  JWT Secret: [HIDDEN]"
 
 echo "📦 Installing dependencies..."
 npm install --production
@@ -40,6 +48,7 @@ sam deploy \
     --parameter-overrides \
         Environment="$ENVIRONMENT" \
         MongoDBURI="$MONGODB_URI" \
+        JWTSecret="$JWT_SECRET" \
         CorsOrigin="$CORS_ORIGIN" \
     --capabilities CAPABILITY_NAMED_IAM \
     --region us-east-1 \
