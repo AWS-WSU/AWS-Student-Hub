@@ -115,7 +115,7 @@ function Auth({ theme }) {
   });
   
   const { loginWithRedirect, isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
-  const { user: authUser, login, signup } = useAuth();
+  const { user: authUser, login, signup, forceLogoutAndClearData } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -777,6 +777,43 @@ function Auth({ theme }) {
               ← Back to Home
             </motion.button>
           </>
+        )}
+        
+        {/* Debug Helper for Browser Data Issues - Temporary */}
+        {error && error.includes('Load failed') && (
+          <motion.div 
+            className="debug-helper"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{
+              marginTop: '2rem',
+              padding: '1rem',
+              background: 'rgba(255, 165, 0, 0.1)',
+              border: '1px solid rgba(255, 165, 0, 0.3)',
+              borderRadius: '8px',
+              textAlign: 'center'
+            }}
+          >
+            <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              Having login issues? This might help clear corrupted browser data:
+            </p>
+            <motion.button
+              onClick={forceLogoutAndClearData}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              style={{
+                background: '#ff6b35',
+                color: 'white',
+                border: 'none',
+                padding: '0.5rem 1rem',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                cursor: 'pointer'
+              }}
+            >
+              Clear All Browser Data & Reload
+            </motion.button>
+          </motion.div>
         )}
       </motion.div>
     </div>

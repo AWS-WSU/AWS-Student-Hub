@@ -86,6 +86,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('cachedUser');
+      localStorage.removeItem('deviceId');
       
       // Clear refresh promise
       if (refreshPromiseRef.current) {
@@ -93,6 +94,22 @@ export const AuthProvider = ({ children }) => {
       }
     }
   }, [deviceId]);
+
+  // Force clear all corrupted data - for debugging browser issues
+  const forceLogoutAndClearData = useCallback(() => {
+    console.log('Force clearing all browser data due to corrupted state');
+    setUser(null);
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Clear refresh promise
+    if (refreshPromiseRef.current) {
+      refreshPromiseRef.current = null;
+    }
+    
+    // Force page reload to reset state
+    window.location.reload();
+  }, []);
 
   const refreshTokens = useCallback(async () => {
     if (refreshPromiseRef.current) {
@@ -400,7 +417,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateUser,
     uploadProfilePicture,
-    refreshTokens
+    refreshTokens,
+    forceLogoutAndClearData
   };
 
   return (
