@@ -6,7 +6,7 @@
 
 ![Code Quality](https://github.com/AWS-WSU/AWS-Student-Hub/workflows/Code%20Quality/badge.svg)
 <br>
-![Lambda](https://github.com/AWS-WSU/AWS-Student-Hub/workflows/Deploy%20Lambda./badge.svg)
+![Lambda](https://github.com/AWS-WSU/AWS-Student-Hub/actions/workflows/deploy_lambda.yml/badge.svg)
 <br>
 ![Live Site](https://img.shields.io/badge/Live%20Site-wayneaws.dev-gdarkreen?style=flat&logo=amazon-aws)
 
