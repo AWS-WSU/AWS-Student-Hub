@@ -2,6 +2,7 @@ const User = require('../models/User');
 const { uploadToS3, deleteFromS3 } = require('../config/aws');
 const { processImage } = require('../middleware/upload');
 const path = require('path');
+const crypto = require('crypto');
 
 exports.uploadProfilePicture = async (req, res) => {
   try {
@@ -25,14 +26,20 @@ exports.uploadProfilePicture = async (req, res) => {
     const processedImage = await processImage(req.file.buffer);
     
     const fileExtension = path.extname(req.file.originalname) || '.jpg';
-    const fileName = `profile-pictures/${userId}-${Date.now()}${fileExtension}`;
+    // Generate unique filename with timestamp and random hash for better cache management
+    const timestamp = Date.now();
+    const randomHash = crypto.randomBytes(8).toString('hex');
+    const fileName = `profile-pictures/${userId}-${timestamp}-${randomHash}${fileExtension}`;
     
     const uploadResult = await uploadToS3({
       buffer: processedImage,
       mimetype: 'image/jpeg'
     }, fileName);
 
-    if (user.profilePicture && user.profilePicture !== '/account.svg' && user.profilePicture.includes(process.env.S3_BUCKET)) {
+    // Clean up old profile picture if it exists and is not the default
+    if (user.profilePicture && 
+        user.profilePicture !== '/account.svg' && 
+        user.profilePicture.includes(process.env.S3_BUCKET_NAME)) {
       try {
         const oldKey = user.profilePicture.split('.amazonaws.com/')[1];
         if (oldKey) {

@@ -1,10 +1,23 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/tab.svg"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AWS-WSU Student Hub</title>
+    <link rel="icon" type="image/svg+xml" href="/aws.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#FF9900" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+    
+    <!-- Preload critical resources -->
+    <link rel="preconnect" href="https://aws-student-hub.s3.us-east-1.amazonaws.com" crossorigin>
+    
+    <!-- Security headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    
+    <title>AWS Student Hub</title>
   </head>
   <body>
     <div id="root"></div>

@@ -76,4 +76,7 @@ router.post('/check-username', checkJwt, authController.checkUsername);
 router.get('/recent-users', authController.getRecentUsers);
 router.get('/search', checkJwt, authController.searchUsers);
 
+router.post('/refresh-token', authController.refreshToken);
+router.post('/logout', checkJwt, authController.logout);
+
 module.exports = router;

@@ -11,17 +11,23 @@ const s3Client = new S3Client({
 });
 
 const uploadToS3 = async (file, key) => {
+  // Add version suffix for better cache management
+  const versionedKey = `${key}`;
+  
   const upload = new Upload({
     client: s3Client,
     params: {
       Bucket: process.env.S3_BUCKET_NAME,
-      Key: key,
+      Key: versionedKey,
       Body: file.buffer,
       ContentType: file.mimetype,
-      CacheControl: 'max-age=3600, must-revalidate', // 1 hour cache with revalidation
+      CacheControl: 'public, max-age=31536000, immutable', // 1 year cache with immutable flag
       Metadata: {
-        'uploaded-at': new Date().toISOString()
-      }
+        'uploaded-at': new Date().toISOString(),
+        'version': Date.now().toString()
+      },
+      // Ensure public read access
+      ACL: 'public-read'
     }
   });
 

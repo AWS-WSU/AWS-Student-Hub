@@ -3,14 +3,28 @@ const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const { sendResetCode } = require('../services/emailService');
 const Filter = require('bad-words');
+const crypto = require('crypto');
 
-const generateToken = (user, rememberMe = false) => {
-  const expiresIn = rememberMe ? '30d' : '24h';
-  return jwt.sign(
-    { id: user._id, email: user.email },
+const generateDeviceId = () => {
+  return crypto.randomBytes(16).toString('hex');
+};
+
+const generateTokens = (user, deviceId) => {
+  // Short-lived access token (15 minutes)
+  const accessToken = jwt.sign(
+    { 
+      id: user._id, 
+      email: user.email,
+      tokenVersion: user.tokenVersion
+    },
     process.env.JWT_SECRET,
-    { expiresIn }
+    { expiresIn: '15m' }
   );
+  
+  // Long-lived refresh token (7 days)
+  const refreshToken = user.generateRefreshToken(deviceId);
+  
+  return { accessToken, refreshToken };
 };
 
 const generateUsername = async (email) => {
@@ -53,7 +67,7 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { fullName, email, password, username: providedUsername, rememberMe } = req.body;
+    const { fullName, email, password, username: providedUsername, deviceId } = req.body;
 
     let existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -90,15 +104,16 @@ exports.signup = async (req, res) => {
       password
     });
 
-    await user.save();
-
-    const token = generateToken(user, rememberMe);
+    const currentDeviceId = deviceId || generateDeviceId();
+    const { accessToken, refreshToken } = generateTokens(user, currentDeviceId);
 
     user.lastLogin = Date.now();
     await user.save();
 
     res.status(201).json({
-      token,
+      accessToken,
+      refreshToken,
+      deviceId: currentDeviceId,
       user: user.toSafeObject()
     });
 
@@ -123,7 +138,7 @@ exports.login = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password, rememberMe } = req.body;
+    const { email, password, deviceId } = req.body;
 
     let user;
     const isEmail = email.includes('@');
@@ -154,15 +169,22 @@ exports.login = async (req, res) => {
       });
     }
 
-    const token = generateToken(user, rememberMe);
+    const currentDeviceId = deviceId || generateDeviceId();
+    
+    // Clean expired tokens before generating new ones
+    user.cleanExpiredRefreshTokens();
+    
+    const { accessToken, refreshToken } = generateTokens(user, currentDeviceId);
 
     setImmediate(() => {
       user.lastLogin = Date.now();
-      user.save().catch(err => console.error('Failed to update lastLogin:', err));
+      user.save().catch(err => console.error('Failed to update user data:', err));
     });
 
     res.json({
-      token,
+      accessToken,
+      refreshToken,
+      deviceId: currentDeviceId,
       user: user.toSafeObject()
     });
   } catch (error) {
@@ -552,46 +574,127 @@ exports.getPublicProfile = async (req, res) => {
 
 exports.searchUsers = async (req, res) => {
   try {
-    const { q: searchQuery, limit = 10 } = req.query;
-
-    if (!searchQuery || searchQuery.trim().length < 2) {
+    const { q, limit = 10 } = req.query;
+    
+    if (!q || q.length < 2) {
       return res.status(400).json({
         success: false,
         error: 'Search query must be at least 2 characters long'
       });
     }
 
-    const query = searchQuery.trim();
+    const searchRegex = new RegExp(q, 'i');
     const searchLimit = Math.min(parseInt(limit), 20);
 
-    const filter = {
-      status: 'active',
+    const users = await User.find({
       $or: [
-        { username: { $regex: query, $options: 'i' } },
-        { fullName: { $regex: query, $options: 'i' } },
-        { email: { $regex: query, $options: 'i' } }
+        { username: searchRegex },
+        { fullName: searchRegex }
       ]
-    };
-
-    const users = await User.find(filter)
-      .select('username fullName profilePicture role createdAt')
-      .sort({ 
-        username: 1,
-        fullName: 1 
-      })
-      .limit(searchLimit);
+    })
+    .select('username fullName profilePicture createdAt')
+    .limit(searchLimit)
+    .sort({ createdAt: -1 });
 
     res.json({
       success: true,
-      users,
-      count: users.length,
-      query: searchQuery
+      users
     });
   } catch (error) {
     console.error('Search users error:', error);
     res.status(500).json({
       success: false,
       error: 'Server error while searching users'
+    });
+  }
+};
+
+exports.refreshToken = async (req, res) => {
+  try {
+    const { refreshToken, deviceId } = req.body;
+
+    if (!refreshToken || !deviceId) {
+      return res.status(400).json({
+        error: 'Refresh token and device ID are required'
+      });
+    }
+
+    // Find user with this refresh token
+    const user = await User.findOne({
+      'refreshTokens.token': refreshToken,
+      'refreshTokens.deviceId': deviceId
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        error: 'Invalid refresh token'
+      });
+    }
+
+    // Validate the refresh token
+    if (!user.validateRefreshToken(refreshToken, deviceId)) {
+      return res.status(401).json({
+        error: 'Refresh token expired or invalid'
+      });
+    }
+
+    // Clean expired tokens
+    user.cleanExpiredRefreshTokens();
+
+    // Generate new tokens (this also rotates the refresh token)
+    const { accessToken, refreshToken: newRefreshToken } = generateTokens(user, deviceId);
+
+    // Remove the old refresh token
+    user.revokeRefreshToken(refreshToken);
+
+    await user.save();
+
+    res.json({
+      accessToken,
+      refreshToken: newRefreshToken,
+      user: user.toSafeObject()
+    });
+  } catch (error) {
+    console.error('Refresh token error:', error);
+    res.status(500).json({
+      error: 'Server error during token refresh'
+    });
+  }
+};
+
+exports.logout = async (req, res) => {
+  try {
+    const { refreshToken, deviceId, allDevices } = req.body;
+    const userId = req.user.id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found'
+      });
+    }
+
+    if (allDevices) {
+      // Logout from all devices
+      user.revokeAllRefreshTokens();
+    } else if (refreshToken) {
+      // Logout from specific device
+      user.revokeRefreshToken(refreshToken);
+    } else if (deviceId) {
+      // Logout by device ID
+      user.refreshTokens = user.refreshTokens.filter(token => token.deviceId !== deviceId);
+    }
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: allDevices ? 'Logged out from all devices' : 'Logged out successfully'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({
+      error: 'Server error during logout'
     });
   }
 };

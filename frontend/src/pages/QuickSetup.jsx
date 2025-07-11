@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { validateImageFile, compressImage } from '../utils/imageUtils';
 import './styles/QuickSetup.css';
 
 const programmingLanguages = [
@@ -29,51 +30,7 @@ function QuickSetup({ theme }) {
   const navigate = useNavigate();
   const [imageError, setImageError] = useState('');
   
-  const compressImage = (file, maxSizeMB = 1) => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      
-      img.onload = () => {
-        const maxDimension = 400;
-        let { width, height } = img;
-        
-        if (width > height) {
-          if (width > maxDimension) {
-            height = (height * maxDimension) / width;
-            width = maxDimension;
-          }
-        } else {
-          if (height > maxDimension) {
-            width = (width * maxDimension) / height;
-            height = maxDimension;
-          }
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        let quality = 0.8;
-        const tryCompress = () => {
-          canvas.toBlob((blob) => {
-            if (blob.size <= maxSizeMB * 1024 * 1024 || quality <= 0.1) {
-              resolve(blob);
-            } else {
-              quality -= 0.1;
-              tryCompress();
-            }
-          }, 'image/jpeg', quality);
-        };
-        
-        tryCompress();
-      };
-      
-      img.src = URL.createObjectURL(file);
-    });
-  };
+
 
   useEffect(() => {
     if (!user) {
@@ -119,18 +76,16 @@ function QuickSetup({ theme }) {
     
     setImageError('');
     
-    if (!file.type.startsWith('image/')) {
-      setImageError('Please select an image file (PNG, JPG, etc.)');
-      return;
-    }
-    
-    if (file.size > 10 * 1024 * 1024) {
-      setImageError('Image too large. Please select an image under 10MB.');
+    // Validate file using utility
+    const validation = validateImageFile(file, 5);
+    if (!validation.valid) {
+      setImageError(validation.error);
       return;
     }
     
     try {
-      const compressedBlob = await compressImage(file, 1);
+      // Compress image for better performance
+      const compressedBlob = await compressImage(file, 400, 0.9);
       const compressedFile = new File([compressedBlob], file.name, {
         type: 'image/jpeg',
         lastModified: Date.now()
@@ -173,8 +128,7 @@ function QuickSetup({ theme }) {
       if (profileImage) {
         const response = await uploadProfilePicture(profileImage);
         if (response.profilePicture) {
-          const cacheBustedUrl = `${response.profilePicture}?t=${Date.now()}`;
-          setProfileImagePreview(cacheBustedUrl);
+          setProfileImagePreview(response.profilePicture);
         }
       }
       

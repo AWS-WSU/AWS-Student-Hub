@@ -106,6 +106,28 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpires: {
     type: Date,
     select: false
+  },
+  refreshTokens: [{
+    token: {
+      type: String,
+      required: true
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+    expiresAt: {
+      type: Date,
+      required: true
+    },
+    deviceId: {
+      type: String,
+      required: true
+    }
+  }],
+  tokenVersion: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true
@@ -178,6 +200,54 @@ userSchema.methods.generateResetToken = function() {
 userSchema.methods.clearResetToken = function() {
   this.resetPasswordToken = undefined;
   this.resetPasswordExpires = undefined;
+};
+
+userSchema.methods.generateRefreshToken = function(deviceId) {
+  const crypto = require('crypto');
+  const refreshToken = crypto.randomBytes(64).toString('hex');
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+  
+  // Clean up old tokens for this device
+  this.refreshTokens = this.refreshTokens.filter(
+    token => token.deviceId !== deviceId && token.expiresAt > new Date()
+  );
+  
+  // Add new refresh token
+  this.refreshTokens.push({
+    token: refreshToken,
+    createdAt: new Date(),
+    expiresAt,
+    deviceId
+  });
+  
+  // Keep only the 5 most recent tokens
+  if (this.refreshTokens.length > 5) {
+    this.refreshTokens = this.refreshTokens
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 5);
+  }
+  
+  return refreshToken;
+};
+
+userSchema.methods.validateRefreshToken = function(token, deviceId) {
+  const tokenEntry = this.refreshTokens.find(
+    t => t.token === token && t.deviceId === deviceId && t.expiresAt > new Date()
+  );
+  return !!tokenEntry;
+};
+
+userSchema.methods.revokeRefreshToken = function(token) {
+  this.refreshTokens = this.refreshTokens.filter(t => t.token !== token);
+};
+
+userSchema.methods.revokeAllRefreshTokens = function() {
+  this.refreshTokens = [];
+  this.tokenVersion += 1;
+};
+
+userSchema.methods.cleanExpiredRefreshTokens = function() {
+  this.refreshTokens = this.refreshTokens.filter(token => token.expiresAt > new Date());
 };
 
 const User = mongoose.model('User', userSchema);

@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import './styles/Account.css';
+import { validateImageFile, compressImage } from '../utils/imageUtils';
 
 const programmingLanguages = [
   'JavaScript', 'Python', 'Java', 'C++', 'C#', 'React', 'Node.js', 'PHP', 
@@ -148,14 +149,10 @@ function Account({ theme, toggleTheme }) {
   const handleProfilePictureUpload = async (file) => {
     if (!file) return;
 
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      setError('Please select a valid image file (JPG, PNG, or WebP)');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB');
+    // Validate file using utility
+    const validation = validateImageFile(file, 5);
+    if (!validation.valid) {
+      setError(validation.error);
       return;
     }
 
@@ -164,10 +161,15 @@ function Account({ theme, toggleTheme }) {
     setSuccess('');
 
     try {
-      const response = await uploadProfilePicture(file);
-      // Add cache-busting to force immediate image refresh
-      const cacheBustedUrl = `${response.profilePicture}?t=${Date.now()}`;
-      setProfileImage(cacheBustedUrl);
+      // Compress image for better upload performance
+      const compressedFile = await compressImage(file, 400, 0.9);
+      const finalFile = new File([compressedFile], file.name, {
+        type: 'image/jpeg',
+        lastModified: Date.now()
+      });
+
+      const response = await uploadProfilePicture(finalFile);
+      setProfileImage(response.profilePicture);
       setSuccess('Profile picture updated successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
@@ -244,7 +246,7 @@ function Account({ theme, toggleTheme }) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
           },
           body: JSON.stringify({ username: formData.username })
         });

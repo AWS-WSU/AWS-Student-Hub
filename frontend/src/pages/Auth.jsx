@@ -89,7 +89,6 @@ function Auth({ theme }) {
   const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
   const [forgotPasswordStep, setForgotPasswordStep] = useState(null);
   const [resetData, setResetData] = useState({
@@ -165,16 +164,15 @@ function Auth({ theme }) {
       }
 
       const { confirmPassword: _, ...authData } = formData;
-      const authPayload = { ...authData, rememberMe };
       
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Connection timeout - backend may be starting up')), 5000)
       );
       
       if (isLogin) {
-        await Promise.race([login(authPayload), timeoutPromise]);
+        await Promise.race([login(authData), timeoutPromise]);
       } else {
-        await Promise.race([signup(authPayload), timeoutPromise]);
+        await Promise.race([signup(authData), timeoutPromise]);
       }
       
       setIsLoading(false);
@@ -725,15 +723,6 @@ function Auth({ theme }) {
               </AnimatePresence>
 
               <div className="form-options">
-                <label className="checkbox-container">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                  />
-                  <span className="checkmark"></span>
-                  Keep me signed in
-                </label>
                 {isLogin && (
                   <button 
                     type="button"

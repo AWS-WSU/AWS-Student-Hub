@@ -1,10 +1,18 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('accessToken');
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
+};
+
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
   
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken');
   
   const defaultOptions = {
     headers: {
@@ -24,6 +32,40 @@ const apiRequest = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(url, finalOptions);
+    
+    // If unauthorized and we have a refresh token, try to refresh
+    if (response.status === 401) {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (refreshToken) {
+        try {
+          await refreshTokens();
+          // Retry the original request with the new token
+          finalOptions.headers.Authorization = `Bearer ${localStorage.getItem('accessToken')}`;
+          const retryResponse = await fetch(url, finalOptions);
+          
+          const contentType = retryResponse.headers.get('content-type');
+          let data;
+          
+          if (contentType && contentType.includes('application/json')) {
+            data = await retryResponse.json();
+          } else {
+            throw new Error('Server response was not JSON');
+          }
+
+          if (!retryResponse.ok) {
+            throw new Error(data.error || data.message || `HTTP error! status: ${retryResponse.status}`);
+          }
+
+          return data;
+        } catch {
+          // Refresh failed, logout user
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('cachedUser');
+          throw new Error('Session expired. Please log in again.');
+        }
+      }
+    }
     
     const contentType = response.headers.get('content-type');
     let data;
@@ -48,6 +90,37 @@ const apiRequest = async (endpoint, options = {}) => {
   }
 };
 
+const refreshTokens = async () => {
+  const refreshToken = localStorage.getItem('refreshToken');
+  const deviceId = localStorage.getItem('deviceId');
+  
+  if (!refreshToken || !deviceId) {
+    throw new Error('No refresh token available');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      refreshToken,
+      deviceId
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Token refresh failed');
+  }
+
+  const data = await response.json();
+  localStorage.setItem('accessToken', data.accessToken);
+  localStorage.setItem('refreshToken', data.refreshToken);
+  localStorage.setItem('cachedUser', JSON.stringify(data.user));
+  
+  return data;
+};
+
 export const newsletterAPI = {
   subscribe: async (email) => {
     return apiRequest('/newsletter/subscribe', {
@@ -55,14 +128,6 @@ export const newsletterAPI = {
       body: JSON.stringify({ email }),
     });
   }
-};
-
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  };
 };
 
 export const authAPI = {
@@ -169,7 +234,7 @@ export const authAPI = {
     const formData = new FormData();
     formData.append('profilePicture', file);
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     const response = await fetch(`${API_BASE_URL}/upload/profile-picture`, {
       method: 'POST',
       headers: {
