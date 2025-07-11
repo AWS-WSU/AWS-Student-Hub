@@ -224,7 +224,7 @@ function Auth({ theme }) {
     setIsLoading(true);
 
     try {
-      const data = await authAPI.verifyEmail(resetData.identifier, resetData.email);
+      await authAPI.verifyEmail(resetData.identifier, resetData.email);
 
       setForgotPasswordStep('verify-code');
       showToast('Reset code sent to your email address', 'success');
@@ -241,7 +241,7 @@ function Auth({ theme }) {
     setIsLoading(true);
 
     try {
-      const data = await authAPI.verifyResetCode(resetData.identifier, resetData.code);
+      await authAPI.verifyResetCode(resetData.identifier, resetData.code);
 
       setForgotPasswordStep('reset-password');
       showToast('Code verified successfully', 'success');
@@ -262,7 +262,7 @@ function Auth({ theme }) {
         throw new Error('Passwords do not match');
       }
 
-      const data = await authAPI.resetPassword(resetData.identifier, resetData.code, resetData.newPassword);
+      await authAPI.resetPassword(resetData.identifier, resetData.code, resetData.newPassword);
 
       setForgotPasswordStep(null);
       setResetData({
