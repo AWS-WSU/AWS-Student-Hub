@@ -43,7 +43,7 @@ jobs:
       working-directory: backend
       run: |
         chmod +x ./deploy.sh
-        ./deploy.sh dev "${{ secrets.MONGODB_URI }}" "${{ secrets.JWT_SECRET }}" "${{ secrets.CORS_ORIGIN }}"
+        ./deploy.sh dev "${{ secrets.MONGODB_URI }}" "${{ secrets.JWT_SECRET }}" "${{ secrets.CORS_ORIGIN }}" "${{ secrets.S3_BUCKET_NAME }}" "${{ secrets.S3_ACCESS_KEY_ID }}" "${{ secrets.S3_SECRET_ACCESS_KEY }}" "${{ secrets.S3_REGION }}"
 
   deploy-prod:
     name: Deploy to Production
@@ -79,4 +79,4 @@ jobs:
       working-directory: backend
       run: |
         chmod +x ./deploy.sh
-        ./deploy.sh prod "${{ secrets.MONGODB_URI }}" "${{ secrets.JWT_SECRET }}" "${{ secrets.CORS_ORIGIN }}" 
+        ./deploy.sh prod "${{ secrets.MONGODB_URI }}" "${{ secrets.JWT_SECRET }}" "${{ secrets.CORS_ORIGIN }}" "${{ secrets.S3_BUCKET_NAME }}" "${{ secrets.S3_ACCESS_KEY_ID }}" "${{ secrets.S3_SECRET_ACCESS_KEY }}" "${{ secrets.S3_REGION }}" 

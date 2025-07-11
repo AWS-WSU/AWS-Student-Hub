@@ -20,7 +20,6 @@ module.exports.handler = serverless(app, {
     'text/javascript',
     'text/plain',
     'text/text',
-    'text/xml',
-    'multipart/form-data'
+    'text/xml'
   ]
 }); 
