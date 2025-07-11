@@ -4,6 +4,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { authAPI } from '../utils/api';
 import './styles/Auth.css';
 
 const PasswordRequirements = ({ password, isVisible }) => {
@@ -194,23 +195,10 @@ function Auth({ theme }) {
         setTimeout(() => reject(new Error('Request timeout - please check your connection')), 10000)
       );
       
-      const response = await Promise.race([
-        fetch('/api/auth/forgot-password', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ identifier: resetData.identifier }),
-        }),
+      const data = await Promise.race([
+        authAPI.forgotPassword(resetData.identifier),
         timeoutPromise
       ]);
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: 'Network error' }));
-        throw new Error(data.error || 'Request failed');
-      }
-
-      const data = await response.json();
 
       if (data.needsEmailVerification) {
         setResetData(prev => ({
@@ -236,22 +224,7 @@ function Auth({ theme }) {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/verify-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          username: resetData.identifier, 
-          email: resetData.email 
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error);
-      }
+      const data = await authAPI.verifyEmail(resetData.identifier, resetData.email);
 
       setForgotPasswordStep('verify-code');
       showToast('Reset code sent to your email address', 'success');
@@ -268,22 +241,7 @@ function Auth({ theme }) {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/verify-reset-code', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          identifier: resetData.needsEmailVerification ? resetData.identifier : resetData.identifier,
-          code: resetData.code 
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error);
-      }
+      const data = await authAPI.verifyResetCode(resetData.identifier, resetData.code);
 
       setForgotPasswordStep('reset-password');
       showToast('Code verified successfully', 'success');
@@ -304,23 +262,7 @@ function Auth({ theme }) {
         throw new Error('Passwords do not match');
       }
 
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          identifier: resetData.needsEmailVerification ? resetData.identifier : resetData.identifier,
-          code: resetData.code,
-          newPassword: resetData.newPassword
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error);
-      }
+      const data = await authAPI.resetPassword(resetData.identifier, resetData.code, resetData.newPassword);
 
       setForgotPasswordStep(null);
       setResetData({

@@ -267,6 +267,66 @@ export const authAPI = {
     }
     
     return response.json();
+  },
+
+  forgotPassword: async (identifier) => {
+    const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Network error' }));
+      throw new Error(error.error || 'Request failed');
+    }
+    
+    return response.json();
+  },
+
+  verifyEmail: async (username, email) => {
+    const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to verify email');
+    }
+    
+    return response.json();
+  },
+
+  verifyResetCode: async (identifier, code) => {
+    const response = await fetch(`${API_BASE_URL}/auth/verify-reset-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, code })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to verify reset code');
+    }
+    
+    return response.json();
+  },
+
+  resetPassword: async (identifier, code, newPassword) => {
+    const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, code, newPassword })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to reset password');
+    }
+    
+    return response.json();
   }
 };
 

@@ -20,6 +20,7 @@ createRoot(document.getElementById('root')).render(
       }}
       cacheLocation="localstorage"
       useRefreshTokens={true}
+      logoutUri={window.location.origin}
     >
       <BrowserRouter>
         <App />

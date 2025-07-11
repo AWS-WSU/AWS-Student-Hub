@@ -73,7 +73,11 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
 
   const handleLogout = () => {
     if (isAuth0Authenticated) {
-      auth0Logout();
+      auth0Logout({ 
+        logoutParams: { 
+          returnTo: window.location.origin 
+        } 
+      });
     } else {
       authLogout();
     }
