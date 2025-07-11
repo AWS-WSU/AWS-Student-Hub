@@ -6,7 +6,6 @@ module.exports.handler = serverless(app, {
   // Binary media types for file uploads
   binary: [
     'application/javascript',
-    'application/json',
     'application/octet-stream',
     'application/xml',
     'font/eot',
