@@ -44,7 +44,7 @@ sam deploy \
     --capabilities CAPABILITY_NAMED_IAM \
     --region us-east-1 \
     --resolve-s3 \
-    --confirm-changeset
+    --no-confirm-changeset
 
 echo "✅ Deployment completed successfully!"
 echo ""
