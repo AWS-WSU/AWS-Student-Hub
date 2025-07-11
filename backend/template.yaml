@@ -1,0 +1,115 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS Student Hub Backend Lambda Function
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: nodejs20.x
+    Environment:
+      Variables:
+        NODE_ENV: production
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+  
+  MongoDBURI:
+    Type: String
+    Description: MongoDB connection string
+    NoEcho: true
+  
+  CorsOrigin:
+    Type: String
+    Default: '*'
+    Description: CORS allowed origins (comma-separated)
+
+Resources:
+  StudentHubApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'student-hub-api-${Environment}'
+      CodeUri: ./
+      Handler: lambda.handler
+      Runtime: nodejs20.x
+      MemorySize: 1024
+      Timeout: 30
+      Role: !GetAtt StudentHubApiRole.Arn
+      Description: "Student Hub API v2 - Fixed dependencies"
+      Environment:
+        Variables:
+          MONGODB_URI: !Ref MongoDBURI
+          CORS_ORIGIN: !Ref CorsOrigin
+          NODE_ENV: !Ref Environment
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            RestApiId: !Ref StudentHubApiGateway
+        Root:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+            RestApiId: !Ref StudentHubApiGateway
+
+  StudentHubApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub 'student-hub-api-gateway-${Environment}'
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: !Sub "'${CorsOrigin}'"
+        AllowCredentials: true
+      BinaryMediaTypes:
+        - 'multipart/form-data'
+        - 'image/*'
+        - 'application/octet-stream'
+
+  # Lambda execution role
+  StudentHubApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'StudentHubApiRole-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:PutObjectAcl
+                Resource: '*'
+
+Outputs:
+  StudentHubApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${StudentHubApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/'
+    Export:
+      Name: !Sub '${AWS::StackName}-api-url'
+  
+  StudentHubApiFunction:
+    Description: Lambda Function ARN
+    Value: !GetAtt StudentHubApi.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-function-arn' 

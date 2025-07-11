@@ -49,4 +49,5 @@ dump/
 *.swo
 *.bak
 
-
+# SAM build artifacts
+.aws-sam/
