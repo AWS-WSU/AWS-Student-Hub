@@ -273,7 +273,7 @@ function PublicProfile({ theme, toggleTheme }) {
                 {profile.stats.daysSinceJoin < 30 ? ' They recently joined our community' : ' They have been part of our community'} 
                 {profile.stats.daysSinceJoin >= 365 ? ' for over a year' : 
                  profile.stats.daysSinceJoin >= 30 ? ` for ${Math.floor(profile.stats.daysSinceJoin / 30)} month${Math.floor(profile.stats.daysSinceJoin / 30) > 1 ? 's' : ''}` : 
-                 ` ${profile.stats.daysSinceJoin} day${profile.stats.daysSinceJoin > 1 ? 's' : ''} ago`} 
+                 ` ${profile.stats.daysSinceJoin} day${profile.stats.daysSinceJoin > 1 ? 's' : ''} ago `} 
                 and is actively learning about cloud computing technologies with AWS.
               </p>
             )}
