@@ -6,6 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { authAPI } from '../utils/api';
 import './styles/Auth.css';
+import { puzzleAPI } from '../utils/api';
+
 
 const PasswordRequirements = ({ password, isVisible }) => {
   const requirements = [
@@ -174,6 +176,13 @@ function Auth({ theme }) {
         await Promise.race([login(authData), timeoutPromise]);
       } else {
         await Promise.race([signup(authData), timeoutPromise]);
+      }
+
+      try {
+        const data = await puzzleAPI.createPuzzleId();
+        alert(`Your puzzle ID is: ${data.hashedId}\nUse it to begin at puzzle.wayneaws.dev/${data.hashedId}`);
+      } catch (err) {
+        console.error('Failed to create puzzle ID:', err);
       }
       
       setIsLoading(false);

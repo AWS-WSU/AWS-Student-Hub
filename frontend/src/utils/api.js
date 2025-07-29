@@ -443,4 +443,19 @@ export const adminAPI = {
   }
 };
 
+export const puzzleAPI = {
+  createPuzzleId: async () => {
+    return apiRequest('/puzzle/generate', {
+      method: 'POST'
+    });
+  },
+
+  loginPuzzle: async (hashedId, password) => {
+    return apiRequest('/puzzle/login', {
+      method: 'POST',
+      body: JSON.stringify({ hashedId, password })
+    });
+  }
+};
+
 export { apiRequest };

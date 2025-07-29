@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/database');
+const puzzleRoutes = require('./routes/puzzleRoutes');
 
 dotenv.config();
 
@@ -57,6 +58,7 @@ app.use('/newsletter', newsletterRoutes);
 app.use('/upload', uploadRoutes);
 app.use('/discord', discordInviteRoutes);
 app.use('/admin', adminRoutes);
+app.use('/puzzle', puzzleRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ 
