@@ -82,26 +82,30 @@ sam build
 
 echo "🚀 Deploying to AWS..."
 sam deploy \
-    --stack-name "student-hub-backend-$ENVIRONMENT" \
-    --parameter-overrides \
-        Environment="$ENVIRONMENT" \
-        MongoDBURI="$MONGODB_URI" \
-        JWTSecret="$JWT_SECRET" \
-        CorsOrigin="$CORS_ORIGIN" \
-        S3BucketName="$S3_BUCKET_NAME" \
-        S3AccessKeyId="$S3_ACCESS_KEY_ID" \
-        S3SecretAccessKey="$S3_SECRET_ACCESS_KEY" \
-        S3Region="$S3_REGION" \
-        DiscordBotToken="$DISCORD_BOT_TOKEN" \
-        DiscordGuildId="$DISCORD_GUILD_ID" \
-        DiscordChannelId="$DISCORD_CHANNEL_ID" \
-        SmtpUser="$SMTP_USER" \
-        SmtpPass="$SMTP_PASS" \
-        AwsCredEncryptionKey="$AWS_CRED_ENCRYPTION_KEY" \
-    --capabilities CAPABILITY_NAMED_IAM \
-    --region us-east-1 \
-    --resolve-s3 \
-    --no-confirm-changeset
+  --stack-name "student-hub-backend-$ENVIRONMENT" \
+  --region "us-east-1" \
+  --capabilities CAPABILITY_IAM \
+  --parameter-overrides \
+    MongoDbUri="$MONGODB_URI" \
+    JwtSecret="$JWT_SECRET" \
+    CorsOrigin="$CORS_ORIGIN" \
+    S3BucketName="$S3_BUCKET_NAME" \
+    S3AccessKeyId="$S3_ACCESS_KEY_ID" \
+    S3SecretAccessKey="$S3_SECRET_ACCESS_KEY" \
+    S3Region="$S3_REGION" \
+    AdminToken="$ADMIN_TOKEN" \
+    AwsAdminAccessKeyId="$AWS_ADMIN_ACCESS_KEY_ID" \
+    AwsAdminSecretAccessKey="$AWS_ADMIN_SECRET_ACCESS_KEY" \
+    AwsS3Bucket="$AWS_S3_BUCKET" \
+    SmtpHost="$SMTP_HOST" \
+    SmtpPort="$SMTP_PORT" \
+    SmtpEncryption="$SMTP_ENCRYPTION" \
+    SmtpUser="$SMTP_USER" \
+    SmtpPass="$SMTP_PASS" \
+    DiscordBotToken="$DISCORD_BOT_TOKEN" \
+    DiscordGuildId="$DISCORD_GUILD_ID" \
+    DiscordChannelId="$DISCORD_CHANNEL_ID" \
+    AwsCredEncryptionKey="$AWS_CRED_ENCRYPTION_KEY"
 
 echo "✅ Deployment completed successfully!"
 echo ""
