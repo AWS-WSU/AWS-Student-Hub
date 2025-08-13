@@ -11,14 +11,12 @@ const generateDeviceId = () => {
 };
 
 const generateTokens = (user, deviceId) => {
-  // Debug logging for Lambda environment
   if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
     console.log('Lambda environment detected');
     console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
     console.log('JWT_SECRET length:', process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0);
   }
   
-  // Short-lived access token (15 minutes)
   const accessToken = jwt.sign(
     { 
       id: user._id, 
@@ -29,7 +27,6 @@ const generateTokens = (user, deviceId) => {
     { expiresIn: '15m' }
   );
   
-  // Long-lived refresh token (7 days)
   const refreshToken = user.generateRefreshToken(deviceId);
   
   return { accessToken, refreshToken };
@@ -205,7 +202,6 @@ exports.login = async (req, res) => {
 
     const currentDeviceId = deviceId || generateDeviceId();
     
-    // Clean expired tokens before generating new ones
     user.cleanExpiredRefreshTokens();
     
     const { accessToken, refreshToken } = generateTokens(user, currentDeviceId);
@@ -215,7 +211,6 @@ exports.login = async (req, res) => {
       user.save().catch(err => console.error('Failed to update user data:', err));
     });
 
-    // Create safe user object but include AWS credentials
     const userObj = user.toSafeObject();
     if (user.awsAccessKeyId && user.awsSecretAccessKey) {
       userObj.awsAccessKeyId = user.awsAccessKeyId;
@@ -251,8 +246,7 @@ exports.getCurrentUser = async (req, res) => {
         error: 'User not found'
       });
     }
-    
-    // Create safe user object but include AWS credentials
+
     const userObj = user.toSafeObject();
     if (user.awsAccessKeyId && user.awsSecretAccessKey) {
       userObj.awsAccessKeyId = user.awsAccessKeyId;
@@ -668,7 +662,6 @@ exports.refreshToken = async (req, res) => {
       });
     }
 
-    // Find user with this refresh token
     const user = await User.findOne({
       'refreshTokens.token': refreshToken,
       'refreshTokens.deviceId': deviceId
@@ -680,20 +673,16 @@ exports.refreshToken = async (req, res) => {
       });
     }
 
-    // Validate the refresh token
     if (!user.validateRefreshToken(refreshToken, deviceId)) {
       return res.status(401).json({
         error: 'Refresh token expired or invalid'
       });
     }
 
-    // Clean expired tokens
     user.cleanExpiredRefreshTokens();
 
-    // Generate new tokens (this also rotates the refresh token)
     const { accessToken, refreshToken: newRefreshToken } = generateTokens(user, deviceId);
 
-    // Remove the old refresh token
     user.revokeRefreshToken(refreshToken);
 
     await user.save();
@@ -724,13 +713,10 @@ exports.logout = async (req, res) => {
     }
 
     if (allDevices) {
-      // Logout from all devices
       user.revokeAllRefreshTokens();
     } else if (refreshToken) {
-      // Logout from specific device
       user.revokeRefreshToken(refreshToken);
     } else if (deviceId) {
-      // Logout by device ID
       user.refreshTokens = user.refreshTokens.filter(token => token.deviceId !== deviceId);
     }
 
@@ -779,7 +765,6 @@ exports.getAwsCredentials = async (req, res) => {
       });
     }
 
-    // Mark that user has viewed credentials
     user.hasViewedAwsCredentials = true;
     await user.save();
 

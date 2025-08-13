@@ -348,7 +348,6 @@ function Account({ theme, toggleTheme }) {
       setCredentialsPassword('');
       setShowCredentialsModal(false);
       
-      // Show success message
       setSuccess('AWS credentials revealed successfully!');
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {

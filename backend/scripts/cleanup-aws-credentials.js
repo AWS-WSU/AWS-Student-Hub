@@ -3,10 +3,8 @@ const readline = require('readline');
 const chalk = require('chalk');
 const path = require('path');
 
-// Load environment variables from the correct path
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-// Configure AWS
 AWS.config.update({
   accessKeyId: process.env.AWS_ADMIN_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_ADMIN_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY,
@@ -21,7 +19,6 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-// Helper function for prompts
 const askQuestion = (question) => {
   return new Promise((resolve) => {
     rl.question(question, (answer) => {
@@ -30,7 +27,6 @@ const askQuestion = (question) => {
   });
 };
 
-// Display warning banner
 const displayWarning = () => {
   console.log('\n' + '='.repeat(80));
   console.log(chalk.red.bold('⚠️  DESTRUCTIVE OPERATION WARNING ⚠️'));
