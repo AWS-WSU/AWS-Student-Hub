@@ -123,6 +123,7 @@ sam deploy \
   --stack-name "student-hub-backend-$ENVIRONMENT" \
   --region "us-east-1" \
   --capabilities CAPABILITY_IAM \
+  --resolve-s3 \
   --parameter-overrides \
     MongoDbUri="$MONGODB_URI" \
     JwtSecret="$JWT_SECRET" \
