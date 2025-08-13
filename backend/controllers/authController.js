@@ -117,6 +117,10 @@ exports.signup = async (req, res) => {
     let awsCredentials = null;
     try {
       console.log(`Creating AWS challenge user for: ${username}`);
+      console.log('AWS_ADMIN_ACCESS_KEY_ID exists:', !!process.env.AWS_ADMIN_ACCESS_KEY_ID);
+      console.log('AWS_ADMIN_SECRET_ACCESS_KEY exists:', !!process.env.AWS_ADMIN_SECRET_ACCESS_KEY);
+      console.log('AWS_S3_BUCKET:', process.env.AWS_S3_BUCKET);
+      
       const challengeUserResult = await createChallengeUser(username);
       
       user.nextChallengePassword = challengeUserResult.password;
@@ -129,8 +133,15 @@ exports.signup = async (req, res) => {
       };
       
       console.log(`Successfully created AWS challenge user for: ${username}`);
+      console.log(`AWS Access Key ID: ${challengeUserResult.access_key.substring(0, 8)}...`);
     } catch (awsError) {
       console.error(`Failed to create AWS challenge user for ${username}:`, awsError);
+      console.error('AWS Error details:', {
+        message: awsError.message,
+        code: awsError.code,
+        stack: awsError.stack
+      });
+      // Don't fail the signup if AWS provisioning fails
     }
     
     await user.save();

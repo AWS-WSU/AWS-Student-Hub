@@ -35,10 +35,17 @@ const createIAMPolicy = (username) => {
 const createChallengeUser = async (username) => {
   try {
     console.log(`Creating challenge user for: ${username}`);
+    console.log('AWS Config check:', {
+      hasAdminAccessKey: !!process.env.AWS_ADMIN_ACCESS_KEY_ID,
+      hasAdminSecretKey: !!process.env.AWS_ADMIN_SECRET_ACCESS_KEY,
+      region: process.env.AWS_REGION || 'us-east-1',
+      s3Bucket: process.env.AWS_S3_BUCKET
+    });
     
     const iamUsername = `club_${username}`;
     const challengePassword = generateRandomPassword(12);
     
+    console.log(`Step 1: Creating IAM user: ${iamUsername}`);
     const createUserParams = {
       UserName: iamUsername,
       Tags: [
@@ -53,35 +60,38 @@ const createChallengeUser = async (username) => {
       ]
     };
     
-    console.log(`Creating IAM user: ${iamUsername}`);
     const createUserResult = await iam.createUser(createUserParams).promise();
+    console.log(`✅ Step 1 complete: IAM user created`);
     
     const policyDocument = JSON.stringify(createIAMPolicy(username));
     const policyName = `club_${username}_policy`;
     
+    console.log(`Step 2: Creating IAM policy: ${policyName}`);
     const createPolicyParams = {
       PolicyName: policyName,
       PolicyDocument: policyDocument,
       Description: `S3 read access policy for challenge participant ${username}`
     };
     
-    console.log(`Creating IAM policy: ${policyName}`);
     const createPolicyResult = await iam.createPolicy(createPolicyParams).promise();
+    console.log(`✅ Step 2 complete: IAM policy created`);
     
     const attachPolicyParams = {
       UserName: iamUsername,
       PolicyArn: createPolicyResult.Policy.Arn
     };
     
-    console.log(`Attaching policy to user: ${iamUsername}`);
+    console.log(`Step 3: Attaching policy to user: ${iamUsername}`);
     await iam.attachUserPolicy(attachPolicyParams).promise();
+    console.log(`✅ Step 3 complete: Policy attached to user`);
     
     const createAccessKeyParams = {
       UserName: iamUsername
     };
     
-    console.log(`Creating access key for user: ${iamUsername}`);
+    console.log(`Step 4: Creating access key for user: ${iamUsername}`);
     const createAccessKeyResult = await iam.createAccessKey(createAccessKeyParams).promise();
+    console.log(`✅ Step 4 complete: Access key created`);
     
     const s3Key = `secrets/${username}.txt`;
     const s3Content = `next_password=${challengePassword}`;
@@ -93,8 +103,9 @@ const createChallengeUser = async (username) => {
       ContentType: 'text/plain'
     };
     
-    console.log(`Uploading secret file to S3: ${s3Key}`);
+    console.log(`Step 5: Uploading secret file to S3: ${s3Key}`);
     await s3.putObject(s3Params).promise();
+    console.log(`✅ Step 5 complete: Secret file uploaded to S3`);
     
     console.log(`Successfully created challenge user: ${username}`);
     
