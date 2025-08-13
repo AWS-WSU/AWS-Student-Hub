@@ -122,7 +122,7 @@ echo "🚀 Deploying to AWS..."
 sam deploy \
   --stack-name "student-hub-backend-$ENVIRONMENT" \
   --region "us-east-1" \
-  --capabilities CAPABILITY_IAM \
+  --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
   --resolve-s3 \
   --parameter-overrides \
     MongoDbUri="$MONGODB_URI" \
