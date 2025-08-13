@@ -284,10 +284,10 @@ function Landing({ theme, toggleTheme }) {
                       <>
                                                  <div className="user-avatar">
                            <img 
-                             src={user.profilePicture || '/account.svg'} 
+                             src={user.profilePicture || '/avatar.jpg'} 
                              alt={`${user.fullName}'s profile`}
                              onError={(e) => {
-                               e.target.src = '/account.svg';
+                               e.target.src = '/avatar.jpg';
                              }}
                            />
                          </div>
@@ -431,10 +431,10 @@ function Landing({ theme, toggleTheme }) {
                     >
                       <div className="user-avatar">
                         <img 
-                          src={result.profilePicture || '/account.svg'} 
+                          src={result.profilePicture || '/avatar.jpg'} 
                           alt={`${result.fullName}'s profile`}
                           onError={(e) => {
-                            e.target.src = '/account.svg';
+                            e.target.src = '/avatar.jpg';
                           }}
                         />
                       </div>

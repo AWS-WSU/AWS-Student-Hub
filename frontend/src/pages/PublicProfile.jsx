@@ -194,10 +194,10 @@ function PublicProfile({ theme, toggleTheme }) {
           <div className="profile-avatar-section">
             <div className="profile-avatar">
               <img 
-                src={profile.profilePicture || '/account.svg'} 
+                src={profile.profilePicture || '/avatar.jpg'} 
                 alt={`${profile.fullName}'s profile`}
                 onError={(e) => {
-                  e.target.src = '/account.svg';
+                  e.target.src = '/avatar.jpg';
                 }}
               />
               <div className="avatar-border"></div>

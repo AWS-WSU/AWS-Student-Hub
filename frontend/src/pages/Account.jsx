@@ -36,7 +36,7 @@ const grades = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Other'
 
 function Account({ theme, toggleTheme }) {
   const [activeSection] = useState('profile');
-  const [profileImage, setProfileImage] = useState('/account.svg');
+  const [profileImage, setProfileImage] = useState('/avatar.jpg');
   const [isEditing, setIsEditing] = useState({
     name: false,
     username: false,
@@ -92,7 +92,7 @@ function Account({ theme, toggleTheme }) {
       };
       setFormData(userData);
       setOriginalData(userData);
-      setProfileImage(currentUser.picture || currentUser.profilePicture || '/account.svg');
+      setProfileImage(currentUser.picture || currentUser.profilePicture || '/avatar.jpg');
     }
   }, [isAuthenticated, currentUser, navigate]);
 
@@ -457,8 +457,8 @@ function Account({ theme, toggleTheme }) {
                   className="profile-picture"
                   onError={(e) => {
                     e.target.onerror = null;
-                    e.target.src = '/account.svg';
-                    setProfileImage('/account.svg');
+                    e.target.src = '/avatar.jpg';
+                    setProfileImage('/avatar.jpg');
                   }}
                   referrerPolicy="no-referrer"
                   key={profileImage}

@@ -363,7 +363,7 @@ function AdminDashboard({ theme, toggleTheme }) {
                     <div key={userData._id} className="table-row">
                       <div className="user-info">
                         <img 
-                          src={userData.profilePicture || '/account.svg'} 
+                          src={userData.profilePicture || '/avatar.jpg'} 
                           alt={userData.fullName}
                           className="user-avatar"
                         />

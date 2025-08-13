@@ -3,8 +3,8 @@
 /**
  * Get optimized image URL with fallback
  */
-export const getImageUrl = (url, fallback = '/account.svg') => {
-  if (!url || url === '/account.svg') {
+export const getImageUrl = (url, fallback = '/avatar.jpg') => {
+  if (!url || url === '/avatar.jpg') {
     return fallback;
   }
   

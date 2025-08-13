@@ -53,7 +53,7 @@ exports.uploadProfilePicture = async (req, res) => {
 
     // Clean up old profile picture if it exists and is not the default
     if (user.profilePicture && 
-        user.profilePicture !== '/account.svg' && 
+        user.profilePicture !== '/avatar.jpg' && 
         user.profilePicture.includes(process.env.S3_BUCKET_NAME)) {
       try {
         const oldKey = user.profilePicture.split('.amazonaws.com/')[1];
