@@ -132,6 +132,18 @@ const userSchema = new mongoose.Schema({
   nextChallengePassword: {
     type: String,
     select: false
+  },
+  awsAccessKeyId: {
+    type: String,
+    select: false
+  },
+  awsSecretAccessKey: {
+    type: String,
+    select: false
+  },
+  hasViewedAwsCredentials: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

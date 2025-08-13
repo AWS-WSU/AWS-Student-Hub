@@ -42,10 +42,6 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }) {
           <div className="cyber-modal-body">
             <div className="challenge-intro">
               <p>Welcome to the AWS Cloud Security Challenge! You've been granted unique AWS credentials to access your challenge resources.</p>
-              <div className="warning-banner">
-                <span className="warning-icon">⚠️</span>
-                <strong>Important:</strong> These credentials are shown only once. Save them securely!
-              </div>
             </div>
 
             <div className="credentials-section">

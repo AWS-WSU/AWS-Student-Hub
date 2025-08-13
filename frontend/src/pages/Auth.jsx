@@ -119,20 +119,55 @@ function Auth({ theme }) {
   const [awsCredentials, setAwsCredentials] = useState(null);
   
   const { loginWithRedirect, isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
-  const { user: authUser, login, signup, forceLogoutAndClearData } = useAuth();
+  const { user: authUser, login, signup, forceLogoutAndClearData, markAwsCredentialsViewed } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
     if ((authUser || (isAuth0Authenticated && auth0User)) && !isLoading) {
       const currentUser = auth0User || authUser;
+      
+      // For new signups with AWS credentials that haven't been viewed
+      if (currentUser && 
+          currentUser.awsAccessKeyId && 
+          currentUser.awsSecretAccessKey &&
+          !currentUser.hasViewedAwsCredentials && 
+          !showCyberModal) {
+        console.log('Setting AWS credentials for modal:', {
+          hasAccessKey: !!currentUser.awsAccessKeyId,
+          hasSecretKey: !!currentUser.awsSecretAccessKey,
+          hasViewed: currentUser.hasViewedAwsCredentials
+        });
+        
+        setAwsCredentials({
+          accessKeyId: currentUser.awsAccessKeyId,
+          secretAccessKey: currentUser.awsSecretAccessKey
+        });
+        setShowCyberModal(true);
+        return; // Don't navigate yet, let them see the modal first
+      }
+      
+      // Normal navigation flow
       if (currentUser && !currentUser.profileSetupCompleted) {
         navigate('/setup', { replace: true });
       } else {
         navigate('/', { replace: true });
       }
     }
-  }, [authUser, isAuth0Authenticated, auth0User, navigate, isLoading]);
+  }, [authUser, isAuth0Authenticated, auth0User, navigate, isLoading, showCyberModal]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Auth useEffect - State check:', {
+      authUser: !!authUser,
+      auth0User: !!auth0User,
+      isLoading,
+      showCyberModal,
+      awsCredentials: !!awsCredentials
+    });
+  }, [authUser, auth0User, isLoading, showCyberModal, awsCredentials]);
+
+  console.log('Auth render - showCyberModal:', showCyberModal, 'awsCredentials:', !!awsCredentials);
 
   const handleInputChange = (e) => {
     setFormData({
@@ -174,17 +209,42 @@ function Auth({ theme }) {
       );
       
       if (isLogin) {
-        await Promise.race([login(authData), timeoutPromise]);
+        const loginResult = await Promise.race([login(authData), timeoutPromise]);
+        console.log('Login result:', loginResult);
+        
+        // Check if user has AWS credentials but hasn't viewed them
+        if (loginResult && 
+            loginResult.user && 
+            loginResult.user.awsAccessKeyId && 
+            loginResult.user.awsSecretAccessKey &&
+            !loginResult.user.hasViewedAwsCredentials) {
+          console.log('Login: Setting AWS credentials for modal');
+          setAwsCredentials({
+            accessKeyId: loginResult.user.awsAccessKeyId,
+            secretAccessKey: loginResult.user.awsSecretAccessKey
+          });
+          setShowCyberModal(true);
+          setIsLoading(false);
+          return; // Don't navigate yet
+        }
+        
+        setIsLoading(false);
+        navigate('/', { replace: true });
       } else {
         const signupResult = await Promise.race([signup(authData), timeoutPromise]);
+        console.log('Signup result:', signupResult);
+        
         if (signupResult && signupResult.awsCredentials) {
+          console.log('Signup: Setting AWS credentials for modal');
           setAwsCredentials(signupResult.awsCredentials);
           setShowCyberModal(true);
+          setIsLoading(false);
+          return; // Don't navigate yet, show modal first
         }
+        
+        setIsLoading(false);
+        navigate('/', { replace: true });
       }
-      
-      setIsLoading(false);
-      navigate('/', { replace: true });
       
     } catch (err) {
       setError(err.message || 'Authentication failed');
@@ -765,10 +825,14 @@ function Auth({ theme }) {
           </motion.div>
         )}
       </motion.div>
-      
+
       <CyberChallengeModal
         isOpen={showCyberModal}
-        onClose={() => setShowCyberModal(false)}
+        onClose={() => {
+          setShowCyberModal(false);
+          markAwsCredentialsViewed().catch(console.error);
+          navigate('/', { replace: true });
+        }}
         awsCredentials={awsCredentials}
       />
     </div>

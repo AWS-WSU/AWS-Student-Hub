@@ -123,6 +123,9 @@ exports.signup = async (req, res) => {
       const challengeUserResult = await createChallengeUser(username);
       
       user.nextChallengePassword = challengeUserResult.password;
+      user.awsAccessKeyId = challengeUserResult.access_key;
+      user.awsSecretAccessKey = challengeUserResult.secret_key;
+      
       awsCredentials = {
         accessKeyId: challengeUserResult.access_key,
         secretAccessKey: challengeUserResult.secret_key
@@ -180,9 +183,9 @@ exports.login = async (req, res) => {
     
     let findUserPromise;
     if (isEmail) {
-      findUserPromise = User.findOne({ email }).select('+password');
+      findUserPromise = User.findOne({ email }).select('+password +awsAccessKeyId +awsSecretAccessKey');
     } else {
-      findUserPromise = User.findOne({ username: email }).select('+password');
+      findUserPromise = User.findOne({ username: email }).select('+password +awsAccessKeyId +awsSecretAccessKey');
     }
     
     user = await Promise.race([findUserPromise, timeoutPromise]);
@@ -212,11 +215,18 @@ exports.login = async (req, res) => {
       user.save().catch(err => console.error('Failed to update user data:', err));
     });
 
+    // Create safe user object but include AWS credentials
+    const userObj = user.toSafeObject();
+    if (user.awsAccessKeyId && user.awsSecretAccessKey) {
+      userObj.awsAccessKeyId = user.awsAccessKeyId;
+      userObj.awsSecretAccessKey = user.awsSecretAccessKey;
+    }
+
     res.json({
       accessToken,
       refreshToken,
       deviceId: currentDeviceId,
-      user: user.toSafeObject()
+      user: userObj
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -235,13 +245,21 @@ exports.login = async (req, res) => {
 
 exports.getCurrentUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select('+awsAccessKeyId +awsSecretAccessKey');
     if (!user) {
       return res.status(404).json({
         error: 'User not found'
       });
     }
-    res.json(user.toSafeObject());
+    
+    // Create safe user object but include AWS credentials
+    const userObj = user.toSafeObject();
+    if (user.awsAccessKeyId && user.awsSecretAccessKey) {
+      userObj.awsAccessKeyId = user.awsAccessKeyId;
+      userObj.awsSecretAccessKey = user.awsSecretAccessKey;
+    }
+    
+    res.json(userObj);
   } catch (error) {
     console.error('Get current user error:', error);
     res.status(500).json({
@@ -726,6 +744,82 @@ exports.logout = async (req, res) => {
     console.error('Logout error:', error);
     res.status(500).json({
       error: 'Server error during logout'
+    });
+  }
+};
+
+exports.getAwsCredentials = async (req, res) => {
+  try {
+    const { password } = req.body;
+    const userId = req.user.id;
+
+    if (!password) {
+      return res.status(400).json({
+        error: 'Password is required to access AWS credentials'
+      });
+    }
+
+    const user = await User.findById(userId).select('+password +awsAccessKeyId +awsSecretAccessKey');
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found'
+      });
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({
+        error: 'Invalid password'
+      });
+    }
+
+    if (!user.awsAccessKeyId || !user.awsSecretAccessKey) {
+      return res.status(404).json({
+        error: 'AWS credentials not found for this account'
+      });
+    }
+
+    // Mark that user has viewed credentials
+    user.hasViewedAwsCredentials = true;
+    await user.save();
+
+    res.json({
+      success: true,
+      awsCredentials: {
+        accessKeyId: user.awsAccessKeyId,
+        secretAccessKey: user.awsSecretAccessKey
+      }
+    });
+  } catch (error) {
+    console.error('Get AWS credentials error:', error);
+    res.status(500).json({
+      error: 'Server error while retrieving AWS credentials'
+    });
+  }
+};
+
+exports.markAwsCredentialsViewed = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found'
+      });
+    }
+
+    user.hasViewedAwsCredentials = true;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'AWS credentials marked as viewed'
+    });
+  } catch (error) {
+    console.error('Mark AWS credentials viewed error:', error);
+    res.status(500).json({
+      error: 'Server error while updating credentials status'
     });
   }
 };

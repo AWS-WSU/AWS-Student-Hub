@@ -1043,3 +1043,300 @@
     text-align: center;
   }
 }
+
+.credentials-display {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin-top: 1.5rem;
+}
+
+.credential-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: rgba(var(--text-primary-rgb), 0.03);
+  border: 1px solid rgba(var(--text-primary-rgb), 0.08);
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.credential-item:hover {
+  background: rgba(var(--text-primary-rgb), 0.05);
+  border-color: rgba(var(--accent-rgb), 0.2);
+}
+
+.credential-item:last-child {
+  margin-bottom: 0;
+}
+
+.credential-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.credential-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.credential-value {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  background: transparent;
+  padding: 0;
+  border: none;
+  outline: none;
+  width: 100%;
+  cursor: text;
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.credential-value:focus {
+  outline: none;
+}
+
+.credential-value::selection {
+  background: rgba(var(--accent-rgb), 0.2);
+}
+
+.copy-btn {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 60px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-left: 1rem;
+  flex-shrink: 0;
+}
+
+.copy-btn:hover {
+  background: var(--accent-hover, #f0d000);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.3);
+}
+
+.copy-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(var(--accent-rgb), 0.3);
+}
+
+.copy-btn.copied {
+  background: #28a745;
+  color: white;
+}
+
+.copy-btn.copied:hover {
+  background: #28a745;
+}
+
+.copy-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.credentials-modal {
+  background: var(--card-bg);
+  padding: 2rem;
+  border-radius: 16px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(var(--text-primary-rgb), 0.1);
+  position: relative;
+}
+
+.credentials-modal h3 {
+  color: var(--text-primary);
+  font-size: 1.4rem;
+  margin: 0 0 1.5rem 0;
+  text-align: center;
+  font-weight: 600;
+}
+
+.credentials-modal input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid rgba(var(--text-primary-rgb), 0.08);
+  border-radius: 8px;
+  background: rgba(var(--text-primary-rgb), 0.02);
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.credentials-modal input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.05);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.modal-actions button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  min-width: 100px;
+}
+
+.modal-actions button[type="submit"] {
+  background: var(--accent);
+  color: #000;
+  box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.2);
+}
+
+.modal-actions button[type="submit"]:hover {
+  background: var(--accent-hover, #f0d000);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.3);
+}
+
+.modal-actions button[type="button"] {
+  background: rgba(var(--text-primary-rgb), 0.08);
+  color: var(--text-primary);
+  border: 2px solid rgba(var(--text-primary-rgb), 0.1);
+}
+
+.modal-actions button[type="button"]:hover {
+  background: rgba(var(--text-primary-rgb), 0.12);
+  transform: translateY(-1px);
+}
+
+.show-modal-btn {
+  background: linear-gradient(135deg, #644003, #ffc107);
+  color: white;
+  border: none;
+  padding: 0.875rem 1.75rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 15px rgba(44, 30, 1, 0.2);
+}
+
+.show-modal-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
+  background: linear-gradient(135deg, #644003, #ffc107);
+}
+
+.show-modal-btn:active {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(78, 205, 196, 0.2);
+}
+
+/* Copy success animation */
+@keyframes copySuccess {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.copy-btn.copied {
+  animation: copySuccess 0.3s ease;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .credential-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+  
+  .credential-content {
+    order: 1;
+  }
+  
+  .copy-btn {
+    order: 2;
+    margin-left: 0;
+    align-self: flex-end;
+    min-width: 80px;
+  }
+  
+  .credential-value {
+    font-size: 0.85rem;
+    line-height: 1.3;
+  }
+  
+  .credentials-modal {
+    padding: 1.5rem;
+    max-width: 95%;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .modal-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .credential-item {
+    padding: 0.875rem;
+  }
+  
+  .credential-label {
+    font-size: 0.75rem;
+  }
+  
+  .credential-value {
+    font-size: 0.8rem;
+  }
+  
+  .copy-btn {
+    font-size: 0.75rem;
+    padding: 0.5rem;
+    min-width: 70px;
+    height: 32px;
+  }
+  
+  .credentials-modal {
+    padding: 1.25rem;
+  }
+  
+  .show-modal-btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+  }
+}

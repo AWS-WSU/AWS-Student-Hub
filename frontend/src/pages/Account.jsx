@@ -7,6 +7,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import './styles/Account.css';
 import { validateImageFile, compressImage } from '../utils/imageUtils';
+import CyberChallengeModal from '../components/CyberChallengeModal';
 
 const programmingLanguages = [
   'JavaScript', 'Python', 'Java', 'C++', 'C#', 'React', 'Node.js', 'PHP', 
@@ -62,12 +63,17 @@ function Account({ theme, toggleTheme }) {
   const [success, setSuccess] = useState('');
   const [successField, setSuccessField] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [awsCredentials, setAwsCredentials] = useState(null);
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [credentialsPassword, setCredentialsPassword] = useState('');
+  const [isLoadingCredentials, setIsLoadingCredentials] = useState(false);
+  const [showCyberModal, setShowCyberModal] = useState(false);
   const fileInputRef = useRef(null);
   const inputRefs = useRef({});
   
   const navigate = useNavigate();
   const { isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
-  const { user: authUser, updateUser, uploadProfilePicture } = useAuth();
+  const { user: authUser, updateUser, uploadProfilePicture, getAwsCredentials } = useAuth();
 
   const isAuthenticated = isAuth0Authenticated || !!authUser;
   const currentUser = auth0User || authUser;
@@ -124,8 +130,6 @@ function Account({ theme, toggleTheme }) {
     }));
     setError('');
   };
-
-
 
   const handleCancel = (field) => {
     setFormData(prev => ({
@@ -325,6 +329,40 @@ function Account({ theme, toggleTheme }) {
       setError('Failed to update email preferences');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRevealCredentials = async (e) => {
+    e.preventDefault();
+    if (!credentialsPassword) {
+      setError('Password is required');
+      return;
+    }
+
+    setIsLoadingCredentials(true);
+    setError('');
+
+    try {
+      const credentials = await getAwsCredentials(credentialsPassword);
+      setAwsCredentials(credentials);
+      setCredentialsPassword('');
+      setShowCredentialsModal(false);
+      
+      // Show success message
+      setSuccess('AWS credentials revealed successfully!');
+      setTimeout(() => setSuccess(''), 5000);
+    } catch (err) {
+      setError(err.message || 'Failed to retrieve AWS credentials');
+    } finally {
+      setIsLoadingCredentials(false);
+    }
+  };
+
+  const handleShowCyberModal = () => {
+    if (currentUser?.awsAccessKeyId && currentUser?.awsSecretAccessKey) {
+      setShowCyberModal(true);
+    } else {
+      setError('No AWS credentials found for your account');
     }
   };
 
@@ -789,13 +827,80 @@ function Account({ theme, toggleTheme }) {
                 </div>
               </div>
 
-              <div className="challenge-note">
-                <div className="note-icon">💡</div>
-                <div className="note-content">
-                  <strong>Note:</strong> Your AWS credentials were provided once during signup. 
-                  If you need them again, please contact the administrators.
+              {currentUser?.awsAccessKeyId ? (
+                <div className="credentials-section">
+                  {!awsCredentials ? (
+                    <>
+                      <motion.button
+                        className="reveal-credentials-btn"
+                        onClick={() => setShowCredentialsModal(true)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        🔐 Reveal AWS Credentials
+                      </motion.button>
+                      
+                      <motion.button
+                        className="show-modal-btn"
+                        onClick={handleShowCyberModal}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        style={{ marginLeft: '1rem' }}
+                      >
+                        🎯 Show Challenge Modal
+                      </motion.button>
+                    </>
+                  ) : (
+                    <div className="credentials-display">
+                      <h4>Your AWS Credentials</h4>
+                      <div className="credential-row">
+                        <label>Access Key ID:</label>
+                        <div className="credential-value">
+                          <code>{awsCredentials.accessKeyId}</code>
+                          <button
+                            onClick={() => navigator.clipboard.writeText(awsCredentials.accessKeyId)}
+                            className="copy-btn"
+                          >
+                            📋
+                          </button>
+                        </div>
+                      </div>
+                      <div className="credential-row">
+                        <label>Secret Access Key:</label>
+                        <div className="credential-value">
+                          <code>{awsCredentials.secretAccessKey}</code>
+                          <button
+                            onClick={() => navigator.clipboard.writeText(awsCredentials.secretAccessKey)}
+                            className="copy-btn"
+                          >
+                            📋
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                        <button
+                          className="hide-credentials-btn"
+                          onClick={() => setAwsCredentials(null)}
+                        >
+                          Hide Credentials
+                        </button>
+                        <motion.button
+                          className="show-modal-btn"
+                          onClick={handleShowCyberModal}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          🎯 Show Challenge Modal
+                        </motion.button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              ) : (
+                <div className="no-credentials-message">
+                  <p>AWS credentials not available for this account.</p>
+                </div>
+              )}
             </div>
           </motion.section>
 
@@ -832,6 +937,49 @@ function Account({ theme, toggleTheme }) {
       </div>
 
       <Footer theme={theme} />
+
+      {showCredentialsModal && (
+        <div className="modal-overlay" onClick={() => setShowCredentialsModal(false)}>
+          <div className="credentials-modal" onClick={e => e.stopPropagation()}>
+            <h3>Enter Your Password</h3>
+            <p>Please enter your account password to reveal your AWS credentials.</p>
+            <form onSubmit={handleRevealCredentials}>
+              <input
+                type="password"
+                value={credentialsPassword}
+                onChange={(e) => setCredentialsPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                autoFocus
+              />
+              <div className="modal-actions">
+                <button type="submit" disabled={isLoadingCredentials}>
+                  {isLoadingCredentials ? 'Verifying...' : 'Reveal Credentials'}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setShowCredentialsModal(false);
+                    setCredentialsPassword('');
+                    setError('');
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <CyberChallengeModal
+        isOpen={showCyberModal}
+        onClose={() => setShowCyberModal(false)}
+        awsCredentials={currentUser?.awsAccessKeyId && currentUser?.awsSecretAccessKey ? {
+          accessKeyId: currentUser.awsAccessKeyId,
+          secretAccessKey: currentUser.awsSecretAccessKey
+        } : null}
+      />
     </div>
   );
 }

@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "npm rebuild sharp --platform=linux --arch=x64"
+    "postinstall": "npm rebuild sharp --platform=linux --arch=x64",
+    "cleanup-aws": "node scripts/cleanup-aws-credentials.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.500.0",

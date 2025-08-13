@@ -2,8 +2,8 @@ const AWS = require('aws-sdk');
 const crypto = require('crypto');
 
 AWS.config.update({
-  accessKeyId: process.env.AWS_ADMIN_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_ADMIN_SECRET_ACCESS_KEY,
+  accessKeyId: process.env.AWS_ADMIN_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_ADMIN_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY,
   region: 'us-east-1'
 });
 

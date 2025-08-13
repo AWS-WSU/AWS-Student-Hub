@@ -78,5 +78,7 @@ router.get('/search', checkJwt, authController.searchUsers);
 
 router.post('/refresh-token', authController.refreshToken);
 router.post('/logout', checkJwt, authController.logout);
+router.post('/aws-credentials', checkJwt, authController.getAwsCredentials);
+router.post('/mark-aws-credentials-viewed', checkJwt, authController.markAwsCredentialsViewed);
 
 module.exports = router;
