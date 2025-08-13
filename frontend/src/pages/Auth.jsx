@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { authAPI } from '../utils/api';
+import CyberChallengeModal from '../components/CyberChallengeModal';
 import './styles/Auth.css';
 
 const PasswordRequirements = ({ password, isVisible }) => {
@@ -114,6 +115,8 @@ function Auth({ theme }) {
     newPassword: false,
     confirmResetPassword: false
   });
+  const [showCyberModal, setShowCyberModal] = useState(false);
+  const [awsCredentials, setAwsCredentials] = useState(null);
   
   const { loginWithRedirect, isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
   const { user: authUser, login, signup, forceLogoutAndClearData } = useAuth();
@@ -173,7 +176,11 @@ function Auth({ theme }) {
       if (isLogin) {
         await Promise.race([login(authData), timeoutPromise]);
       } else {
-        await Promise.race([signup(authData), timeoutPromise]);
+        const signupResult = await Promise.race([signup(authData), timeoutPromise]);
+        if (signupResult && signupResult.awsCredentials) {
+          setAwsCredentials(signupResult.awsCredentials);
+          setShowCyberModal(true);
+        }
       }
       
       setIsLoading(false);
@@ -758,6 +765,12 @@ function Auth({ theme }) {
           </motion.div>
         )}
       </motion.div>
+      
+      <CyberChallengeModal
+        isOpen={showCyberModal}
+        onClose={() => setShowCyberModal(false)}
+        awsCredentials={awsCredentials}
+      />
     </div>
   );
 }

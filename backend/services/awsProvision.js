@@ -1,0 +1,151 @@
+const AWS = require('aws-sdk');
+const crypto = require('crypto');
+
+AWS.config.update({
+  accessKeyId: process.env.AWS_ADMIN_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_ADMIN_SECRET_ACCESS_KEY,
+  region: 'us-east-1'
+});
+
+const iam = new AWS.IAM();
+const s3 = new AWS.S3();
+
+const generateRandomPassword = (length = 12) => {
+  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += charset.charAt(Math.floor(Math.random() * charset.length));
+  }
+  return password;
+};
+
+const createIAMPolicy = (username) => {
+  return {
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Effect: 'Allow',
+        Action: 's3:GetObject',
+        Resource: `arn:aws:s3:::wayneaws-club-secrets/secrets/${username}.txt`
+      }
+    ]
+  };
+};
+
+const createChallengeUser = async (username) => {
+  try {
+    console.log(`Creating challenge user for: ${username}`);
+    
+    const iamUsername = `club_${username}`;
+    const challengePassword = generateRandomPassword(12);
+    
+    const createUserParams = {
+      UserName: iamUsername,
+      Tags: [
+        {
+          Key: 'Purpose',
+          Value: 'ChallengeParticipant'
+        },
+        {
+          Key: 'CreatedBy',
+          Value: 'StudentHubBackend'
+        }
+      ]
+    };
+    
+    console.log(`Creating IAM user: ${iamUsername}`);
+    const createUserResult = await iam.createUser(createUserParams).promise();
+    
+    const policyDocument = JSON.stringify(createIAMPolicy(username));
+    const policyName = `club_${username}_policy`;
+    
+    const createPolicyParams = {
+      PolicyName: policyName,
+      PolicyDocument: policyDocument,
+      Description: `S3 read access policy for challenge participant ${username}`
+    };
+    
+    console.log(`Creating IAM policy: ${policyName}`);
+    const createPolicyResult = await iam.createPolicy(createPolicyParams).promise();
+    
+    const attachPolicyParams = {
+      UserName: iamUsername,
+      PolicyArn: createPolicyResult.Policy.Arn
+    };
+    
+    console.log(`Attaching policy to user: ${iamUsername}`);
+    await iam.attachUserPolicy(attachPolicyParams).promise();
+    
+    const createAccessKeyParams = {
+      UserName: iamUsername
+    };
+    
+    console.log(`Creating access key for user: ${iamUsername}`);
+    const createAccessKeyResult = await iam.createAccessKey(createAccessKeyParams).promise();
+    
+    const s3Key = `secrets/${username}.txt`;
+    const s3Content = `next_password=${challengePassword}`;
+    
+    const s3Params = {
+      Bucket: 'wayneaws-club-secrets',
+      Key: s3Key,
+      Body: s3Content,
+      ContentType: 'text/plain'
+    };
+    
+    console.log(`Uploading secret file to S3: ${s3Key}`);
+    await s3.putObject(s3Params).promise();
+    
+    console.log(`Successfully created challenge user: ${username}`);
+    
+    return {
+      access_key: createAccessKeyResult.AccessKey.AccessKeyId,
+      secret_key: createAccessKeyResult.AccessKey.SecretAccessKey,
+      password: challengePassword
+    };
+    
+  } catch (error) {
+    console.error('Error creating challenge user:', error);
+    
+    try {
+      console.log(`Attempting cleanup for failed user creation: ${username}`);
+      const iamUsername = `club_${username}`;
+      
+      try {
+        const listPoliciesResult = await iam.listAttachedUserPolicies({ UserName: iamUsername }).promise();
+        for (const policy of listPoliciesResult.AttachedPolicies) {
+          await iam.detachUserPolicy({ UserName: iamUsername, PolicyArn: policy.PolicyArn }).promise();
+          if (policy.PolicyName.startsWith(`club_${username}_policy`)) {
+            await iam.deletePolicy({ PolicyArn: policy.PolicyArn }).promise();
+          }
+        }
+      } catch (cleanupError) {
+        console.error('Error during policy cleanup:', cleanupError);
+      }
+      
+      try {
+        const listAccessKeysResult = await iam.listAccessKeys({ UserName: iamUsername }).promise();
+        for (const accessKey of listAccessKeysResult.AccessKeyMetadata) {
+          await iam.deleteAccessKey({ UserName: iamUsername, AccessKeyId: accessKey.AccessKeyId }).promise();
+        }
+      } catch (cleanupError) {
+        console.error('Error during access key cleanup:', cleanupError);
+      }
+      
+      try {
+        await iam.deleteUser({ UserName: iamUsername }).promise();
+      } catch (cleanupError) {
+        console.error('Error during user cleanup:', cleanupError);
+      }
+      
+    } catch (cleanupError) {
+      console.error('Error during cleanup:', cleanupError);
+    }
+    
+    throw new Error(`Failed to create challenge user: ${error.message}`);
+  }
+};
+
+module.exports = {
+  createChallengeUser
+};

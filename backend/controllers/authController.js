@@ -2,6 +2,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const { sendResetCode } = require('../services/emailService');
+const { createChallengeUser } = require('../services/awsProvision');
 const Filter = require('bad-words');
 const crypto = require('crypto');
 
@@ -115,14 +116,37 @@ exports.signup = async (req, res) => {
     const { accessToken, refreshToken } = generateTokens(user, currentDeviceId);
 
     user.lastLogin = Date.now();
+    
+    let awsCredentials = null;
+    try {
+      console.log(`Creating AWS challenge user for: ${username}`);
+      const challengeUserResult = await createChallengeUser(username);
+      
+      user.nextChallengePassword = challengeUserResult.password;
+      awsCredentials = {
+        accessKeyId: challengeUserResult.access_key,
+        secretAccessKey: challengeUserResult.secret_key
+      };
+      
+      console.log(`Successfully created AWS challenge user for: ${username}`);
+    } catch (awsError) {
+      console.error(`Failed to create AWS challenge user for ${username}:`, awsError);
+    }
+    
     await user.save();
 
-    res.status(201).json({
+    const response = {
       accessToken,
       refreshToken,
       deviceId: currentDeviceId,
       user: user.toSafeObject()
-    });
+    };
+    
+    if (awsCredentials) {
+      response.awsCredentials = awsCredentials;
+    }
+
+    res.status(201).json(response);
 
   } catch (error) {
     console.error('Signup error:', error);

@@ -738,6 +738,68 @@ function Account({ theme, toggleTheme }) {
           </motion.section>
 
           <motion.section 
+            className="cyber-challenge-section"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+          >
+            <h2>🔐 Cyber Challenge #5 Info</h2>
+            
+            <div className="challenge-card">
+              <div className="challenge-header">
+                <div className="challenge-icon">🛡️</div>
+                <div className="challenge-title">
+                  <h3>AWS Cloud Security Challenge</h3>
+                  <p>Access your personalized AWS environment</p>
+                </div>
+              </div>
+              
+              <div className="challenge-status">
+                {currentUser?.nextChallengePassword ? (
+                  <div className="status-active">
+                    <span className="status-indicator active"></span>
+                    <span>Active - Challenge resources provisioned</span>
+                  </div>
+                ) : (
+                  <div className="status-pending">
+                    <span className="status-indicator pending"></span>
+                    <span>Pending - Challenge resources not yet available</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="challenge-info">
+                <div className="info-grid">
+                  <div className="info-item">
+                    <span className="info-label">S3 Bucket:</span>
+                    <code>wayneaws-club-secrets</code>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Your Secret File:</span>
+                    <code>secrets/{currentUser?.username}.txt</code>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">AWS Region:</span>
+                    <code>us-east-1</code>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">IAM User:</span>
+                    <code>club_{currentUser?.username}</code>
+                  </div>
+                </div>
+              </div>
+
+              <div className="challenge-note">
+                <div className="note-icon">💡</div>
+                <div className="note-content">
+                  <strong>Note:</strong> Your AWS credentials were provided once during signup. 
+                  If you need them again, please contact the administrators.
+                </div>
+              </div>
+            </div>
+          </motion.section>
+
+          <motion.section 
             className="preferences-section"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
