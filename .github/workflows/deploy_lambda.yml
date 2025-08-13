@@ -2,7 +2,7 @@ name: Deploy Lambda Backend
 
 on:
   push:
-    branches: [ master ]
+    branches: [ prod ]
     paths:
       - 'backend/**'
   workflow_dispatch: # manual trigger
