@@ -65,6 +65,37 @@ if [ -z "$S3_SECRET_ACCESS_KEY" ]; then
     exit 1
 fi
 
+# Add validation for all other required parameters
+if [ -z "$ADMIN_TOKEN" ]; then
+    echo "❌ Error: Admin Token required"
+    exit 1
+fi
+
+if [ -z "$AWS_ADMIN_ACCESS_KEY_ID" ]; then
+    echo "❌ Error: AWS Admin Access Key ID required"
+    exit 1
+fi
+
+if [ -z "$AWS_ADMIN_SECRET_ACCESS_KEY" ]; then
+    echo "❌ Error: AWS Admin Secret Access Key required"
+    exit 1
+fi
+
+if [ -z "$AWS_S3_BUCKET" ]; then
+    echo "❌ Error: AWS S3 Bucket required"
+    exit 1
+fi
+
+if [ -z "$DISCORD_BOT_TOKEN" ]; then
+    echo "❌ Error: Discord Bot Token required"
+    exit 1
+fi
+
+if [ -z "$AWS_CRED_ENCRYPTION_KEY" ]; then
+    echo "❌ Error: AWS Credential Encryption Key required"
+    exit 1
+fi
+
 echo "📋 Deployment Configuration:"
 echo "  Environment: $ENVIRONMENT"
 echo "  CORS Origin: $CORS_ORIGIN"
