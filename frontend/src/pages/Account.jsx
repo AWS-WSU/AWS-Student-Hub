@@ -791,20 +791,6 @@ function Account({ theme, toggleTheme }) {
                   <p>Access your personalized AWS environment</p>
                 </div>
               </div>
-              
-              <div className="challenge-status">
-                {currentUser?.nextChallengePassword ? (
-                  <div className="status-active">
-                    <span className="status-indicator active"></span>
-                    <span>Active - Challenge resources provisioned</span>
-                  </div>
-                ) : (
-                  <div className="status-pending">
-                    <span className="status-indicator pending"></span>
-                    <span>Pending - Challenge resources not yet available</span>
-                  </div>
-                )}
-              </div>
 
               <div className="challenge-info">
                 <div className="info-grid">
