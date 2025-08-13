@@ -636,7 +636,7 @@ function Landing({ theme, toggleTheme }) {
           <h3>What Our Members Say</h3>
           <div className="testimonials-slider">
             <div className="testimonial">
-              <p>Being the on the board for the AWS Cloud Club really pushed me out of my comfort zone.
+              <p>Being on the board for the AWS Cloud Club really pushed me out of my comfort zone.
                  As a finance major, I wasn’t fluent in technology terms at first but organizing events 
                  helped me pick up so many concepts I wouldn’t have learned in the classroom. 
                 It gave me the confidence to navigate technical conversations, which I rely on now in my role at Deloitte,
