@@ -17,7 +17,7 @@ function QuickSetup({ theme }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
-  const [profileImagePreview, setProfileImagePreview] = useState('/account.svg');
+  const [profileImagePreview, setProfileImagePreview] = useState('/avatar.jpg');
   const [formData, setFormData] = useState({
     bio: '',
     major: '',
@@ -50,7 +50,7 @@ function QuickSetup({ theme }) {
       programmingLanguages: user.programmingLanguages || []
     });
     
-    setProfileImagePreview(user.profilePicture || '/account.svg');
+    setProfileImagePreview(user.profilePicture || '/avatar.jpg');
   }, [user, navigate]);
 
   const handleInputChange = (e) => {
@@ -193,7 +193,7 @@ function QuickSetup({ theme }) {
               src={profileImagePreview} 
               alt="Profile preview" 
               onError={(e) => {
-                e.target.src = '/account.svg';
+                e.target.src = '/avatar.jpg';
               }}
             />
           </div>

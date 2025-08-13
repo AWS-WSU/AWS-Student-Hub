@@ -37,7 +37,7 @@ const userSchema = new mongoose.Schema({
   },
   profilePicture: {
     type: String,
-    default: '/account.svg'
+    default: '/avatar.jpg'
   },
   bio: {
     type: String,

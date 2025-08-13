@@ -9,7 +9,7 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [profileImage, setProfileImage] = useState('/account.svg');
+  const [profileImage, setProfileImage] = useState('/avatar.jpg');
   const navigate = useNavigate();
   
   const { logout: auth0Logout, isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
@@ -17,12 +17,12 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
 
   useEffect(() => {
     if (auth0User) {
-      setProfileImage(auth0User.picture || '/account.svg');
+      setProfileImage(auth0User.picture || '/avatar.jpg');
     } else if (authUser) {
-      const profilePic = authUser.profilePicture || '/account.svg';
+      const profilePic = authUser.profilePicture || '/avatar.jpg';
       setProfileImage(profilePic);
     } else {
-      setProfileImage('/account.svg');
+      setProfileImage('/avatar.jpg');
     }
   }, [auth0User, authUser]);
 
@@ -207,8 +207,8 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
                 className="account-icon"
                 onError={(e) => {
                   e.target.onerror = null;
-                  e.target.src = '/account.svg';
-                  setProfileImage('/account.svg');
+                  e.target.src = '/avatar.jpg';
+                  setProfileImage('/avatar.jpg');
                 }}
                 referrerPolicy="no-referrer"
                 initial={false}
@@ -244,7 +244,7 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
                     whileTap={{ scale: 0.98 }}
                   >
                     <img 
-                      src="/account.svg" 
+                      src="/avatar.jpg" 
                       alt="Profile" 
                       className="login-icon" 
                       style={{ filter: theme === 'dark' ? 'invert(100%)' : 'invert(0%)' }}
