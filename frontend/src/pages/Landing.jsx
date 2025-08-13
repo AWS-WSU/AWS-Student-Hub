@@ -22,6 +22,18 @@ function Landing({ theme, toggleTheme }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   
+  // Debug logging
+  useEffect(() => {
+    if (user) {
+      console.log('Landing page user data:', {
+        username: user.username,
+        hasAccessKey: !!user.awsAccessKeyId,
+        hasSecretKey: !!user.awsSecretAccessKey,
+        hasViewed: user.hasViewedAwsCredentials
+      });
+    }
+  }, [user]);
+  
   useEffect(() => {
     const observers = [];
     const sections = ['home', 'about', 'events', 'resources'];

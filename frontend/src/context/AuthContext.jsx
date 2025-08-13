@@ -407,7 +407,58 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const getAwsCredentials = async (password) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/aws-credentials`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({ password })
+      });
 
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to retrieve AWS credentials');
+      }
+
+      return data.awsCredentials;
+    } catch (error) {
+      console.error('Get AWS credentials error:', error);
+      throw error;
+    }
+  };
+
+  const markAwsCredentialsViewed = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/mark-aws-credentials-viewed`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to mark credentials as viewed');
+      }
+
+      // Update user state
+      setUser(prevUser => ({
+        ...prevUser,
+        hasViewedAwsCredentials: true
+      }));
+
+      return data;
+    } catch (error) {
+      console.error('Mark AWS credentials viewed error:', error);
+      throw error;
+    }
+  };
 
   const value = {
     user,
@@ -418,7 +469,9 @@ export const AuthProvider = ({ children }) => {
     updateUser,
     uploadProfilePicture,
     refreshTokens,
-    forceLogoutAndClearData
+    forceLogoutAndClearData,
+    getAwsCredentials,
+    markAwsCredentialsViewed
   };
 
   return (

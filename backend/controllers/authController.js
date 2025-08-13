@@ -2,6 +2,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const { sendResetCode } = require('../services/emailService');
+const { createChallengeUser } = require('../services/awsProvision');
 const Filter = require('bad-words');
 const crypto = require('crypto');
 
@@ -10,14 +11,12 @@ const generateDeviceId = () => {
 };
 
 const generateTokens = (user, deviceId) => {
-  // Debug logging for Lambda environment
   if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
     console.log('Lambda environment detected');
     console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
     console.log('JWT_SECRET length:', process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0);
   }
   
-  // Short-lived access token (15 minutes)
   const accessToken = jwt.sign(
     { 
       id: user._id, 
@@ -28,7 +27,6 @@ const generateTokens = (user, deviceId) => {
     { expiresIn: '15m' }
   );
   
-  // Long-lived refresh token (7 days)
   const refreshToken = user.generateRefreshToken(deviceId);
   
   return { accessToken, refreshToken };
@@ -115,14 +113,40 @@ exports.signup = async (req, res) => {
     const { accessToken, refreshToken } = generateTokens(user, currentDeviceId);
 
     user.lastLogin = Date.now();
+    
+    let awsCredentials = null;
+    try {
+      console.log(`Creating AWS challenge user for: ${username}`);
+      const challengeUserResult = await createChallengeUser(username);
+      
+      user.nextChallengePassword = challengeUserResult.password;
+      user.awsAccessKeyId = challengeUserResult.access_key;
+      user.awsSecretAccessKey = challengeUserResult.secret_key;
+      
+      awsCredentials = {
+        accessKeyId: challengeUserResult.access_key,
+        secretAccessKey: challengeUserResult.secret_key
+      };
+      
+      console.log(`Successfully created AWS challenge user for: ${username}`);
+    } catch (awsError) {
+      console.error(`Failed to create AWS challenge user for ${username}:`, awsError);
+    }
+    
     await user.save();
 
-    res.status(201).json({
+    const response = {
       accessToken,
       refreshToken,
       deviceId: currentDeviceId,
       user: user.toSafeObject()
-    });
+    };
+    
+    if (awsCredentials) {
+      response.awsCredentials = awsCredentials;
+    }
+
+    res.status(201).json(response);
 
   } catch (error) {
     console.error('Signup error:', error);
@@ -156,9 +180,9 @@ exports.login = async (req, res) => {
     
     let findUserPromise;
     if (isEmail) {
-      findUserPromise = User.findOne({ email }).select('+password');
+      findUserPromise = User.findOne({ email }).select('+password +awsAccessKeyId +awsSecretAccessKey');
     } else {
-      findUserPromise = User.findOne({ username: email }).select('+password');
+      findUserPromise = User.findOne({ username: email }).select('+password +awsAccessKeyId +awsSecretAccessKey');
     }
     
     user = await Promise.race([findUserPromise, timeoutPromise]);
@@ -178,7 +202,6 @@ exports.login = async (req, res) => {
 
     const currentDeviceId = deviceId || generateDeviceId();
     
-    // Clean expired tokens before generating new ones
     user.cleanExpiredRefreshTokens();
     
     const { accessToken, refreshToken } = generateTokens(user, currentDeviceId);
@@ -188,11 +211,17 @@ exports.login = async (req, res) => {
       user.save().catch(err => console.error('Failed to update user data:', err));
     });
 
+    const userObj = user.toSafeObject();
+    if (user.awsAccessKeyId && user.awsSecretAccessKey) {
+      userObj.awsAccessKeyId = user.awsAccessKeyId;
+      userObj.awsSecretAccessKey = user.awsSecretAccessKey;
+    }
+
     res.json({
       accessToken,
       refreshToken,
       deviceId: currentDeviceId,
-      user: user.toSafeObject()
+      user: userObj
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -211,13 +240,20 @@ exports.login = async (req, res) => {
 
 exports.getCurrentUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select('+awsAccessKeyId +awsSecretAccessKey');
     if (!user) {
       return res.status(404).json({
         error: 'User not found'
       });
     }
-    res.json(user.toSafeObject());
+
+    const userObj = user.toSafeObject();
+    if (user.awsAccessKeyId && user.awsSecretAccessKey) {
+      userObj.awsAccessKeyId = user.awsAccessKeyId;
+      userObj.awsSecretAccessKey = user.awsSecretAccessKey;
+    }
+    
+    res.json(userObj);
   } catch (error) {
     console.error('Get current user error:', error);
     res.status(500).json({
@@ -626,7 +662,6 @@ exports.refreshToken = async (req, res) => {
       });
     }
 
-    // Find user with this refresh token
     const user = await User.findOne({
       'refreshTokens.token': refreshToken,
       'refreshTokens.deviceId': deviceId
@@ -638,20 +673,16 @@ exports.refreshToken = async (req, res) => {
       });
     }
 
-    // Validate the refresh token
     if (!user.validateRefreshToken(refreshToken, deviceId)) {
       return res.status(401).json({
         error: 'Refresh token expired or invalid'
       });
     }
 
-    // Clean expired tokens
     user.cleanExpiredRefreshTokens();
 
-    // Generate new tokens (this also rotates the refresh token)
     const { accessToken, refreshToken: newRefreshToken } = generateTokens(user, deviceId);
 
-    // Remove the old refresh token
     user.revokeRefreshToken(refreshToken);
 
     await user.save();
@@ -682,13 +713,10 @@ exports.logout = async (req, res) => {
     }
 
     if (allDevices) {
-      // Logout from all devices
       user.revokeAllRefreshTokens();
     } else if (refreshToken) {
-      // Logout from specific device
       user.revokeRefreshToken(refreshToken);
     } else if (deviceId) {
-      // Logout by device ID
       user.refreshTokens = user.refreshTokens.filter(token => token.deviceId !== deviceId);
     }
 
@@ -702,6 +730,81 @@ exports.logout = async (req, res) => {
     console.error('Logout error:', error);
     res.status(500).json({
       error: 'Server error during logout'
+    });
+  }
+};
+
+exports.getAwsCredentials = async (req, res) => {
+  try {
+    const { password } = req.body;
+    const userId = req.user.id;
+
+    if (!password) {
+      return res.status(400).json({
+        error: 'Password is required to access AWS credentials'
+      });
+    }
+
+    const user = await User.findById(userId).select('+password +awsAccessKeyId +awsSecretAccessKey');
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found'
+      });
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({
+        error: 'Invalid password'
+      });
+    }
+
+    if (!user.awsAccessKeyId || !user.awsSecretAccessKey) {
+      return res.status(404).json({
+        error: 'AWS credentials not found for this account'
+      });
+    }
+
+    user.hasViewedAwsCredentials = true;
+    await user.save();
+
+    res.json({
+      success: true,
+      awsCredentials: {
+        accessKeyId: user.awsAccessKeyId,
+        secretAccessKey: user.awsSecretAccessKey
+      }
+    });
+  } catch (error) {
+    console.error('Get AWS credentials error:', error);
+    res.status(500).json({
+      error: 'Server error while retrieving AWS credentials'
+    });
+  }
+};
+
+exports.markAwsCredentialsViewed = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found'
+      });
+    }
+
+    user.hasViewedAwsCredentials = true;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'AWS credentials marked as viewed'
+    });
+  } catch (error) {
+    console.error('Mark AWS credentials viewed error:', error);
+    res.status(500).json({
+      error: 'Server error while updating credentials status'
     });
   }
 };
