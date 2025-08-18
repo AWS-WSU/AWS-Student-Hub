@@ -3,6 +3,8 @@ const User = require('../models/User');
 exports.verifyUser = async (req, res) => {
   try {
     const { username, secret } = req.body;
+    
+    // console.log('Received:', { username, secret }); 
 
     if (!username || !secret) {
       return res.json({
@@ -12,6 +14,11 @@ exports.verifyUser = async (req, res) => {
     }
 
     const user = await User.findOne({ username }).select('+nextChallengePassword');
+    
+    /* console.log('Found user:', user ? 'YES' : 'NO'); 
+    if (user) {
+      console.log('User nextChallengePassword:', user.nextChallengePassword); 
+    } */
 
     if (!user) {
       return res.json({
@@ -26,6 +33,8 @@ exports.verifyUser = async (req, res) => {
     }
 
     const isValid = user.nextChallengePassword === secret;
+    
+    // console.log('Password match:', isValid);
 
     res.json({
       valid: isValid
