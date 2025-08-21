@@ -51,12 +51,14 @@ const newsletterRoutes = require('./routes/newsletter');
 const uploadRoutes = require('./routes/upload');
 const discordInviteRoutes = require('./routes/discordInvite');
 const adminRoutes = require('./routes/admin');
+const verifyRoutes = require('./routes/verify');
 
 app.use('/auth', authRoutes);
 app.use('/newsletter', newsletterRoutes);
 app.use('/upload', uploadRoutes);
 app.use('/discord', discordInviteRoutes);
 app.use('/admin', adminRoutes);
+app.use('/api/verify', verifyRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ 
@@ -76,4 +78,4 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
-module.exports = app; 
+module.exports = app;
