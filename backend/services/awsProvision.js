@@ -38,7 +38,7 @@ const createChallengeUser = async (username) => {
     console.log('AWS Config check:', {
       hasAdminAccessKey: !!process.env.AWS_ADMIN_ACCESS_KEY_ID,
       hasAdminSecretKey: !!process.env.AWS_ADMIN_SECRET_ACCESS_KEY,
-      region: process.env.AWS_REGION || 'us-east-1',
+      region: process.env.CUSTOM_AWS_REGION || 'us-east-1',
       s3Bucket: process.env.AWS_S3_BUCKET
     });
     

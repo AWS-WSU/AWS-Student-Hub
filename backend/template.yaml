@@ -67,7 +67,7 @@ Parameters:
     Description: AWS admin secret access key for provisioning
     NoEcho: true
 
-  AwsDefaultRegion:
+  CustomAwsRegion:
     Type: String
     Default: us-east-1
     Description: AWS region for admin operations
@@ -147,7 +147,7 @@ Resources:
           S3_BUCKET_NAME: !Ref S3BucketName
           AWS_ADMIN_ACCESS_KEY_ID: !Ref AwsAdminAccessKeyId
           AWS_ADMIN_SECRET_ACCESS_KEY: !Ref AwsAdminSecretAccessKey
-          AWS_DEFAULT_REGION: !Ref AwsDefaultRegion
+          CUSTOM_AWS_REGION: !Ref CustomAwsRegion
           AWS_S3_BUCKET: !Ref AwsS3Bucket
           SMTP_HOST: !Ref SmtpHost
           SMTP_PORT: !Ref SmtpPort
