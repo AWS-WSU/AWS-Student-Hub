@@ -12,19 +12,19 @@ const SocialSection = () => {
       if (data.inviteUrl) {
         window.open(data.inviteUrl, "_blank", "noopener,noreferrer");
       } else {
-        // Fallback to hardcoded invite if API fails
+        // Fallback to AWS Cloud Club WSU Discord server
         console.warn("No invite URL returned, using fallback");
         window.open(
-          "https://discord.gg/your-fallback-invite",
+          "https://discord.gg/BX8nCQHU",
           "_blank",
           "noopener,noreferrer"
         );
       }
     } catch (err) {
       console.error("Failed to fetch Discord invite:", err);
-      // Fallback to hardcoded invite if API fails
+      // Fallback to AWS Cloud Club WSU Discord server
       window.open(
-        "https://discord.gg/your-fallback-invite",
+        "https://discord.gg/BX8nCQHU",
         "_blank",
         "noopener,noreferrer"
       );

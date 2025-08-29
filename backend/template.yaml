@@ -18,7 +18,7 @@ Parameters:
     AllowedValues: [dev, staging, prod]
     Description: Environment name
   
-  MongoDBURI:
+  MongoDbUri:
     Type: String
     Description: MongoDB connection string
     NoEcho: true
@@ -28,7 +28,7 @@ Parameters:
     Default: '*'
     Description: CORS allowed origins (comma-separated)
   
-  JWTSecret:
+  JwtSecret:
     Type: String
     Description: JWT secret key for token signing
     NoEcho: true
@@ -52,47 +52,6 @@ Parameters:
     Default: us-east-1
     Description: S3 bucket region
 
-  AdminToken:
-    Type: String
-    Description: Admin token for privileged operations
-    NoEcho: true
-    
-  AwsAdminAccessKeyId:
-    Type: String
-    Description: AWS admin access key for IAM operations
-    NoEcho: true
-    
-  AwsAdminSecretAccessKey:
-    Type: String
-    Description: AWS admin secret key for IAM operations
-    NoEcho: true
-    
-  AwsS3Bucket:
-    Type: String
-    Description: S3 bucket for storing secrets
-    
-  SmtpHost:
-    Type: String
-    Description: SMTP server host
-    
-  SmtpPort:
-    Type: String
-    Description: SMTP server port
-    
-  SmtpEncryption:
-    Type: String
-    Description: SMTP encryption method
-    
-  SmtpUser:
-    Type: String
-    Description: SMTP username
-    NoEcho: true
-    
-  SmtpPass:
-    Type: String
-    Description: SMTP password
-    NoEcho: true
-    
   DiscordBotToken:
     Type: String
     Description: Discord bot token
@@ -100,15 +59,27 @@ Parameters:
     
   DiscordGuildId:
     Type: String
-    Description: Discord guild ID
+    Description: Discord guild (server) ID
+    NoEcho: true
     
   DiscordChannelId:
     Type: String
-    Description: Discord channel ID
+    Description: Discord channel ID for invites
+    NoEcho: true
+    
+  SmtpUser:
+    Type: String
+    Description: SMTP username for email notifications
+    NoEcho: true
+    
+  SmtpPass:
+    Type: String
+    Description: SMTP password for email notifications
+    NoEcho: true
     
   AwsCredEncryptionKey:
     Type: String
-    Description: Encryption key for AWS credentials
+    Description: AWS credentials encryption key
     NoEcho: true
 
 Resources:
@@ -125,26 +96,19 @@ Resources:
       Description: "Student Hub API v2 - Fixed dependencies"
       Environment:
         Variables:
-          MONGODB_URI: !Ref MongoDBURI
+          MONGODB_URI: !Ref MongoDbUri
           CORS_ORIGIN: !Ref CorsOrigin
           NODE_ENV: !Ref Environment
-          JWT_SECRET: !Ref JWTSecret
+          JWT_SECRET: !Ref JwtSecret
           S3_BUCKET_NAME: !Ref S3BucketName
           S3_ACCESS_KEY_ID: !Ref S3AccessKeyId
           S3_SECRET_ACCESS_KEY: !Ref S3SecretAccessKey
           S3_REGION: !Ref S3Region
-          ADMIN_TOKEN: !Ref AdminToken
-          AWS_ADMIN_ACCESS_KEY_ID: !Ref AwsAdminAccessKeyId
-          AWS_ADMIN_SECRET_ACCESS_KEY: !Ref AwsAdminSecretAccessKey
-          AWS_S3_BUCKET: !Ref AwsS3Bucket
-          SMTP_HOST: !Ref SmtpHost
-          SMTP_PORT: !Ref SmtpPort
-          SMTP_ENCRYPTION: !Ref SmtpEncryption
-          SMTP_USER: !Ref SmtpUser
-          SMTP_PASS: !Ref SmtpPass
           DISCORD_BOT_TOKEN: !Ref DiscordBotToken
           DISCORD_GUILD_ID: !Ref DiscordGuildId
           DISCORD_CHANNEL_ID: !Ref DiscordChannelId
+          SMTP_USER: !Ref SmtpUser
+          SMTP_PASS: !Ref SmtpPass
           AWS_CRED_ENCRYPTION_KEY: !Ref AwsCredEncryptionKey
       Events:
         Api:
