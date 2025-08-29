@@ -52,6 +52,7 @@ Parameters:
     Default: us-east-1
     Description: S3 bucket region
 
+<<<<<<< Updated upstream
   AdminToken:
     Type: String
     Description: Admin token for privileged operations
@@ -93,6 +94,8 @@ Parameters:
     Description: SMTP password
     NoEcho: true
     
+=======
+>>>>>>> Stashed changes
   DiscordBotToken:
     Type: String
     Description: Discord bot token
@@ -100,6 +103,7 @@ Parameters:
     
   DiscordGuildId:
     Type: String
+<<<<<<< Updated upstream
     Description: Discord guild ID
     
   DiscordChannelId:
@@ -109,6 +113,29 @@ Parameters:
   AwsCredEncryptionKey:
     Type: String
     Description: Encryption key for AWS credentials
+=======
+    Description: Discord guild (server) ID
+    NoEcho: true
+    
+  DiscordChannelId:
+    Type: String
+    Description: Discord channel ID for invites
+    NoEcho: true
+    
+  SmtpUser:
+    Type: String
+    Description: SMTP username for email notifications
+    NoEcho: true
+    
+  SmtpPass:
+    Type: String
+    Description: SMTP password for email notifications
+    NoEcho: true
+    
+  AwsCredEncryptionKey:
+    Type: String
+    Description: AWS credentials encryption key
+>>>>>>> Stashed changes
     NoEcho: true
 
 Resources:
@@ -133,6 +160,7 @@ Resources:
           S3_ACCESS_KEY_ID: !Ref S3AccessKeyId
           S3_SECRET_ACCESS_KEY: !Ref S3SecretAccessKey
           S3_REGION: !Ref S3Region
+<<<<<<< Updated upstream
           ADMIN_TOKEN: !Ref AdminToken
           AWS_ADMIN_ACCESS_KEY_ID: !Ref AwsAdminAccessKeyId
           AWS_ADMIN_SECRET_ACCESS_KEY: !Ref AwsAdminSecretAccessKey
@@ -145,6 +173,13 @@ Resources:
           DISCORD_BOT_TOKEN: !Ref DiscordBotToken
           DISCORD_GUILD_ID: !Ref DiscordGuildId
           DISCORD_CHANNEL_ID: !Ref DiscordChannelId
+=======
+          DISCORD_BOT_TOKEN: !Ref DiscordBotToken
+          DISCORD_GUILD_ID: !Ref DiscordGuildId
+          DISCORD_CHANNEL_ID: !Ref DiscordChannelId
+          SMTP_USER: !Ref SmtpUser
+          SMTP_PASS: !Ref SmtpPass
+>>>>>>> Stashed changes
           AWS_CRED_ENCRYPTION_KEY: !Ref AwsCredEncryptionKey
       Events:
         Api:
