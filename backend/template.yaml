@@ -33,6 +33,11 @@ Parameters:
     Description: JWT secret key for token signing
     NoEcho: true
 
+  AdminToken:
+    Type: String
+    Description: Admin token for admin access
+    NoEcho: true
+
   S3BucketName:
     Type: String
     Description: S3 bucket name for file uploads
@@ -52,6 +57,50 @@ Parameters:
     Default: us-east-1
     Description: S3 bucket region
 
+  AwsAdminAccessKeyId:
+    Type: String
+    Description: AWS admin access key ID for provisioning
+    NoEcho: true
+
+  AwsAdminSecretAccessKey:
+    Type: String
+    Description: AWS admin secret access key for provisioning
+    NoEcho: true
+
+  AwsRegion:
+    Type: String
+    Default: us-east-1
+    Description: AWS region
+
+  AwsS3Bucket:
+    Type: String
+    Description: AWS S3 bucket for secrets
+    
+  SmtpHost:
+    Type: String
+    Default: smtp.gmail.com
+    Description: SMTP host for email notifications
+    
+  SmtpPort:
+    Type: String
+    Default: "587"
+    Description: SMTP port for email notifications
+    
+  SmtpEncryption:
+    Type: String
+    Default: STARTTLS
+    Description: SMTP encryption method
+    
+  SmtpUser:
+    Type: String
+    Description: SMTP username for email notifications
+    NoEcho: true
+    
+  SmtpPass:
+    Type: String
+    Description: SMTP password for email notifications
+    NoEcho: true
+
   DiscordBotToken:
     Type: String
     Description: Discord bot token
@@ -65,16 +114,6 @@ Parameters:
   DiscordChannelId:
     Type: String
     Description: Discord channel ID for invites
-    NoEcho: true
-    
-  SmtpUser:
-    Type: String
-    Description: SMTP username for email notifications
-    NoEcho: true
-    
-  SmtpPass:
-    Type: String
-    Description: SMTP password for email notifications
     NoEcho: true
     
   AwsCredEncryptionKey:
@@ -93,22 +132,31 @@ Resources:
       MemorySize: 1024
       Timeout: 30
       Role: !GetAtt StudentHubApiRole.Arn
-      Description: "Student Hub API v2 - Fixed dependencies"
+      Description: "Student Hub API v2 - Complete Environment Variables"
       Environment:
         Variables:
           MONGODB_URI: !Ref MongoDbUri
-          CORS_ORIGIN: !Ref CorsOrigin
-          NODE_ENV: !Ref Environment
+          ADMIN_TOKEN: !Ref AdminToken
           JWT_SECRET: !Ref JwtSecret
-          S3_BUCKET_NAME: !Ref S3BucketName
+          PORT: "5001"
+          NODE_ENV: !Ref Environment
+          CORS_ORIGIN: !Ref CorsOrigin
           S3_ACCESS_KEY_ID: !Ref S3AccessKeyId
           S3_SECRET_ACCESS_KEY: !Ref S3SecretAccessKey
           S3_REGION: !Ref S3Region
+          S3_BUCKET_NAME: !Ref S3BucketName
+          AWS_ADMIN_ACCESS_KEY_ID: !Ref AwsAdminAccessKeyId
+          AWS_ADMIN_SECRET_ACCESS_KEY: !Ref AwsAdminSecretAccessKey
+          AWS_REGION: !Ref AwsRegion
+          AWS_S3_BUCKET: !Ref AwsS3Bucket
+          SMTP_HOST: !Ref SmtpHost
+          SMTP_PORT: !Ref SmtpPort
+          SMTP_ENCRYPTION: !Ref SmtpEncryption
+          SMTP_USER: !Ref SmtpUser
+          SMTP_PASS: !Ref SmtpPass
           DISCORD_BOT_TOKEN: !Ref DiscordBotToken
           DISCORD_GUILD_ID: !Ref DiscordGuildId
           DISCORD_CHANNEL_ID: !Ref DiscordChannelId
-          SMTP_USER: !Ref SmtpUser
-          SMTP_PASS: !Ref SmtpPass
           AWS_CRED_ENCRYPTION_KEY: !Ref AwsCredEncryptionKey
       Events:
         Api:
