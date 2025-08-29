@@ -6,37 +6,57 @@ const SocialSection = () => {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
+  const isMobile = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
+  };
+
   const handleDiscordClick = async () => {
     try {
       console.log("Fetching fresh Discord invite...");
       const data = await discordAPI.getInvite();
       console.log("Discord API response:", data);
 
+      let inviteUrl = null;
       if (data && data.inviteUrl) {
-        console.log("Using fresh invite URL:", data.inviteUrl);
-        window.open(data.inviteUrl, "_blank", "noopener,noreferrer");
+        inviteUrl = data.inviteUrl;
       } else if (data && data.invite_url) {
-        // Check for alternative property name
-        console.log("Using fresh invite URL (alt property):", data.invite_url);
-        window.open(data.invite_url, "_blank", "noopener,noreferrer");
+        inviteUrl = data.invite_url;
       } else {
-        console.warn("No invite URL returned from API, response:", data);
-        console.warn("Using fallback Discord invite");
-        window.open(
-          "https://discord.gg/BX8nCQHU",
-          "_blank",
-          "noopener,noreferrer"
+        console.warn("No invite URL returned from API, using fallback");
+        inviteUrl = "https://discord.gg/BX8nCQHU";
+      }
+
+      // Handle mobile Discord links
+      if (isMobile()) {
+        const discordAppUrl = inviteUrl.replace(
+          "https://discord.gg/",
+          "discord://discord.com/invite/"
         );
+        window.location.href = discordAppUrl;
+
+        // Fallback to browser after delay if app doesn't open
+        setTimeout(() => {
+          window.open(inviteUrl, "_blank", "noopener,noreferrer");
+        }, 1500);
+      } else {
+        window.open(inviteUrl, "_blank", "noopener,noreferrer");
       }
     } catch (err) {
       console.error("Failed to fetch Discord invite:", err);
       console.error("Error details:", err.message, err.response?.data);
       console.warn("Using fallback Discord invite");
-      window.open(
-        "https://discord.gg/BX8nCQHU",
-        "_blank",
-        "noopener,noreferrer"
-      );
+
+      const fallbackUrl = "https://discord.gg/BX8nCQHU";
+      if (isMobile()) {
+        window.location.href = "discord://discord.com/invite/BX8nCQHU";
+        setTimeout(() => {
+          window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+        }, 1500);
+      } else {
+        window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+      }
     }
   };
 
