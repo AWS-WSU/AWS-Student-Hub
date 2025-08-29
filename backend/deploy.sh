@@ -24,7 +24,7 @@ S3_SECRET_ACCESS_KEY=${8:-""}
 S3_REGION=${9:-"us-east-1"}
 AWS_ADMIN_ACCESS_KEY_ID=${10:-""}
 AWS_ADMIN_SECRET_ACCESS_KEY=${11:-""}
-AWS_REGION=${12:-"us-east-1"}
+AWS_DEFAULT_REGION=${12:-"us-east-1"}
 AWS_S3_BUCKET=${13:-""}
 SMTP_HOST=${14:-"smtp.gmail.com"}
 SMTP_PORT=${15:-"587"}
@@ -48,7 +48,7 @@ echo "  Environment: $ENVIRONMENT"
 echo "  CORS Origin: $CORS_ORIGIN"
 echo "  S3 Bucket: $S3_BUCKET_NAME"
 echo "  S3 Region: $S3_REGION"
-echo "  AWS Region: $AWS_REGION"
+echo "  AWS Region: $AWS_DEFAULT_REGION"
 echo "  AWS S3 Bucket: $AWS_S3_BUCKET"
 echo "  SMTP Host: $SMTP_HOST"
 echo "  SMTP Port: $SMTP_PORT"
@@ -78,7 +78,7 @@ sam deploy \
     S3Region="$S3_REGION" \
     AwsAdminAccessKeyId="$AWS_ADMIN_ACCESS_KEY_ID" \
     AwsAdminSecretAccessKey="$AWS_ADMIN_SECRET_ACCESS_KEY" \
-    AwsRegion="$AWS_REGION" \
+    AwsDefaultRegion="$AWS_DEFAULT_REGION" \
     AwsS3Bucket="$AWS_S3_BUCKET" \
     SmtpHost="$SMTP_HOST" \
     SmtpPort="$SMTP_PORT" \
