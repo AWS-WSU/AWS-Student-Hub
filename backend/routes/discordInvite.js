@@ -13,11 +13,13 @@ router.get('/discord-invite', async (req, res) => {
       return res.status(500).json({ error: 'Discord integration not configured' });
     }
 
+    console.log('Creating Discord invite for channel:', DISCORD_CHANNEL_ID);
+
     const response = await axios.post(
       `https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/invites`,
       {
-        max_age: 0,
-        max_uses: 0,
+        max_age: 0, // Never expires
+        max_uses: 0, // Unlimited uses
         temporary: false,
         unique: true
       },
@@ -30,13 +32,25 @@ router.get('/discord-invite', async (req, res) => {
     );
 
     const invite = response.data;
-    console.log('Discord invite generated successfully');
-    return res.json({ inviteUrl: `https://discord.gg/${invite.code}` });
+    console.log('Discord invite generated successfully:', invite.code);
+    return res.json({ 
+      inviteUrl: `https://discord.gg/${invite.code}`,
+      success: true 
+    });
   } catch (error) {
     console.error('Error generating Discord invite:', error.response?.data || error.message);
+    
+    // More detailed error logging
+    if (error.response?.status === 403) {
+      console.error('Bot lacks permissions to create invites in the channel');
+    } else if (error.response?.status === 404) {
+      console.error('Channel not found or bot not in server');
+    }
+    
     return res.status(500).json({ 
       error: 'Failed to generate invite',
-      message: error.response?.data?.message || 'Discord API error'
+      message: error.response?.data?.message || 'Discord API error',
+      success: false
     });
   }
 });

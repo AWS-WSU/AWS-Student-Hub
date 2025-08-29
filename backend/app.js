@@ -56,7 +56,7 @@ const verifyRoutes = require('./routes/verify');
 app.use('/auth', authRoutes);
 app.use('/newsletter', newsletterRoutes);
 app.use('/upload', uploadRoutes);
-app.use('/discord', discordInviteRoutes);
+app.use('/', discordInviteRoutes);
 app.use('/admin', adminRoutes);
 app.use('/api/verify', verifyRoutes);
 

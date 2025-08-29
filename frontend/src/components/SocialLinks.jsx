@@ -8,12 +8,20 @@ const SocialSection = () => {
 
   const handleDiscordClick = async () => {
     try {
+      console.log("Fetching fresh Discord invite...");
       const data = await discordAPI.getInvite();
-      if (data.inviteUrl) {
+      console.log("Discord API response:", data);
+
+      if (data && data.inviteUrl) {
+        console.log("Using fresh invite URL:", data.inviteUrl);
         window.open(data.inviteUrl, "_blank", "noopener,noreferrer");
+      } else if (data && data.invite_url) {
+        // Check for alternative property name
+        console.log("Using fresh invite URL (alt property):", data.invite_url);
+        window.open(data.invite_url, "_blank", "noopener,noreferrer");
       } else {
-        // Fallback to AWS Cloud Club WSU Discord server
-        console.warn("No invite URL returned, using fallback");
+        console.warn("No invite URL returned from API, response:", data);
+        console.warn("Using fallback Discord invite");
         window.open(
           "https://discord.gg/BX8nCQHU",
           "_blank",
@@ -22,7 +30,8 @@ const SocialSection = () => {
       }
     } catch (err) {
       console.error("Failed to fetch Discord invite:", err);
-      // Fallback to AWS Cloud Club WSU Discord server
+      console.error("Error details:", err.message, err.response?.data);
+      console.warn("Using fallback Discord invite");
       window.open(
         "https://discord.gg/BX8nCQHU",
         "_blank",
