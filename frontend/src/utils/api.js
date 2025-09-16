@@ -443,4 +443,49 @@ export const adminAPI = {
   }
 };
 
+export const eventsAPI = {
+  listPublic: async (limit = 6) => {
+    return apiRequest(`/events/public?limit=${limit}`);
+  },
+  get: async (eventId) => {
+    return apiRequest(`/events/${eventId}`);
+  },
+  adminList: async (page = 1, limit = 20) => {
+    return apiRequest(`/events/admin?page=${page}&limit=${limit}`);
+  },
+  create: async (payload) => {
+    const token = localStorage.getItem('accessToken');
+    const form = new FormData();
+    Object.entries(payload).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) form.append(k, v);
+    });
+    const res = await fetch(`${API_BASE_URL}/events`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: form
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to create event');
+    return data;
+  },
+  update: async (eventId, payload) => {
+    const token = localStorage.getItem('accessToken');
+    const form = new FormData();
+    Object.entries(payload).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) form.append(k, v);
+    });
+    const res = await fetch(`${API_BASE_URL}/events/${eventId}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: form
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update event');
+    return data;
+  },
+  remove: async (eventId) => {
+    return apiRequest(`/events/${eventId}`, { method: 'DELETE' });
+  }
+};
+
 export { apiRequest };

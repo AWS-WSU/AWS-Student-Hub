@@ -51,6 +51,7 @@ const newsletterRoutes = require('./routes/newsletter');
 const uploadRoutes = require('./routes/upload');
 const discordInviteRoutes = require('./routes/discordInvite');
 const adminRoutes = require('./routes/admin');
+const eventRoutes = require('./routes/events');
 const verifyRoutes = require('./routes/verify');
 
 app.use('/auth', authRoutes);
@@ -58,6 +59,7 @@ app.use('/newsletter', newsletterRoutes);
 app.use('/upload', uploadRoutes);
 app.use('/', discordInviteRoutes);
 app.use('/admin', adminRoutes);
+app.use('/events', eventRoutes);
 app.use('/api/verify', verifyRoutes);
 
 app.get('/health', (req, res) => {

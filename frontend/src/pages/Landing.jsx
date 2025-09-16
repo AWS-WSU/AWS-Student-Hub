@@ -5,11 +5,15 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import SocialLinks from '../components/SocialLinks';
-import { authAPI } from '../utils/api';
+import { authAPI, eventsAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
 function Landing({ theme, toggleTheme }) {
   const [activeSection, setActiveSection] = useState('home');
+  const [events, setEvents] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [recentUsers, setRecentUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,6 +61,20 @@ function Landing({ theme, toggleTheme }) {
     return () => {
       observers.forEach(observer => observer.disconnect());
     };
+  }, []);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const res = await eventsAPI.listPublic(6);
+        setEvents(res.events || []);
+      } catch (e) {
+        setEvents([]);
+      } finally {
+        setEventsLoading(false);
+      }
+    };
+    fetchEvents();
   }, []);
 
   useEffect(() => {
@@ -145,6 +163,148 @@ function Landing({ theme, toggleTheme }) {
 
   const handleJoinClick = () => {
     navigate('/auth?mode=signup');
+  };
+  const isAdmin = user && (user.role === 'admin' || user.role === 'superuser');
+  const handleCreateEventClick = () => setShowCreateModal(true);
+  const closeCreateModal = () => setShowCreateModal(false);
+  const closeEventModal = () => setSelectedEvent(null);
+
+  const CreateEventModal = () => {
+    const [title, setTitle] = useState('');
+    const [date, setDate] = useState('');
+    const [time, setTime] = useState('');
+    const [isRemote, setIsRemote] = useState(true);
+    const [zoomLink, setZoomLink] = useState('');
+    const [address, setAddress] = useState('');
+    const [directions, setDirections] = useState('');
+    const [locationName, setLocationName] = useState('');
+    const [meetupUrl, setMeetupUrl] = useState('');
+    const [thumbnail, setThumbnail] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
+
+    const submit = async () => {
+      if (!title || !date || !time) return;
+      setSubmitting(true);
+      try {
+        const startTime = new Date(`${date}T${time}:00-04:00`).toISOString();
+        const payload = {
+          title,
+          startTime,
+          isRemote: String(isRemote),
+          meetupUrl
+        };
+        if (thumbnail) payload.thumbnail = thumbnail;
+        if (isRemote) {
+          payload.zoomLink = zoomLink;
+        } else {
+          payload.address = address;
+          payload.directions = directions;
+          payload.locationName = locationName;
+        }
+        const res = await eventsAPI.create(payload);
+        setEvents(prev => [res.event, ...prev].slice(0, 6));
+        setShowCreateModal(false);
+      } catch {
+      } finally {
+        setSubmitting(false);
+      }
+    };
+
+    return (
+      <div className="modal-overlay" onClick={closeCreateModal}>
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <h3>Create Event</h3>
+          <div className="form-row">
+            <label>Title</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Event title" />
+          </div>
+          <div className="form-row" style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <label>Date</label>
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label>Time</label>
+              <input type="time" value={time} onChange={e => setTime(e.target.value)} />
+            </div>
+          </div>
+          <div className="form-row">
+            <label>Location</label>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button className={isRemote ? 'selected' : ''} onClick={() => setIsRemote(true)}>Remote</button>
+              <button className={!isRemote ? 'selected' : ''} onClick={() => setIsRemote(false)}>In Person</button>
+            </div>
+          </div>
+          {isRemote ? (
+            <div className="form-row">
+              <label>Zoom/Webinar Link</label>
+              <input value={zoomLink} onChange={e => setZoomLink(e.target.value)} placeholder="https://..." />
+            </div>
+          ) : (
+            <>
+              <div className="form-row">
+                <label>Location Name</label>
+                <input value={locationName} onChange={e => setLocationName(e.target.value)} placeholder="Building/Room" />
+              </div>
+              <div className="form-row">
+                <label>Address</label>
+                <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Street, City, State" />
+              </div>
+              <div className="form-row">
+                <label>Directions (max 250)</label>
+                <textarea value={directions} onChange={e => setDirections(e.target.value.slice(0,250))} rows={3} />
+              </div>
+            </>
+          )}
+          <div className="form-row">
+            <label>Meetup Link</label>
+            <input value={meetupUrl} onChange={e => setMeetupUrl(e.target.value)} placeholder="https://www.meetup.com/..." />
+          </div>
+          <div className="form-row">
+            <label>Thumbnail</label>
+            <input type="file" accept="image/*" onChange={e => setThumbnail(e.target.files?.[0] || null)} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+            <button className="cta-secondary" onClick={closeCreateModal} disabled={submitting}>Cancel</button>
+            <button className="cta-primary" onClick={submit} disabled={submitting}>{submitting ? 'Creating...' : 'Create'}</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const EventModal = ({ event }) => {
+    if (!event) return null;
+    const dt = new Date(event.startTime);
+    const formatted = dt.toLocaleString('en-US', { timeZone: 'America/Detroit', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return (
+      <div className="modal-overlay" onClick={closeEventModal}>
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <h3>{event.title}</h3>
+          {event.thumbnailUrl && (
+            <img src={event.thumbnailUrl} alt={event.title} style={{ width: '100%', height: 'auto', borderRadius: 8, marginBottom: 12 }} />
+          )}
+          <div style={{ marginBottom: 8 }}>
+            <strong>{formatted}</strong>
+          </div>
+          {event.isRemote ? (
+            <a href={event.zoomLink} target="_blank" rel="noreferrer">Join webinar</a>
+          ) : (
+            <div>
+              {event.locationName && <div>{event.locationName}</div>}
+              {event.address && <div>{event.address}</div>}
+              {event.directions && <div style={{ marginTop: 6 }}>{event.directions}</div>}
+            </div>
+          )}
+          {event.meetupUrl && (
+            <a href={event.meetupUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#d62828', color: '#fff', padding: '10px 14px', borderRadius: 8, marginTop: 16 }}>
+              <img src="/meetup.svg" alt="Meetup" style={{ width: 20, height: 20 }} />
+              Reserve your spot at this event here!
+            </a>
+          )}
+        </div>
+      </div>
+    );
   };
 
   const handleUserClick = (username) => {
@@ -548,27 +708,71 @@ function Landing({ theme, toggleTheme }) {
             <span></span>
           </div>
         </div>
-        
-        <motion.div 
-          className="no-events-message"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true, amount: 0.3 }}
-          style={{
-            textAlign: 'center',
-            padding: '50px 20px',
-            fontSize: '1.2rem',
-            color: 'var(--text-secondary)',
-            fontStyle: 'italic'
-          }}
-        >
-          <div className="no-events-icon" style={{ fontSize: '3rem', marginBottom: '20px' }}>
-            🗓️
+        {isAdmin && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <button className="cta-secondary" onClick={handleCreateEventClick}>+ Create Event</button>
           </div>
-          <h3>Nothing to see here yet</h3>
-          <p>Stay tuned for our upcoming events!</p>
-        </motion.div>
+        )}
+
+        {eventsLoading ? (
+          <motion.div 
+            className="no-events-message"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true, amount: 0.3 }}
+            style={{ textAlign: 'center', padding: '40px 20px' }}
+          >
+            Loading events...
+          </motion.div>
+        ) : events.length === 0 ? (
+          <motion.div 
+            className="no-events-message"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true, amount: 0.3 }}
+            style={{
+              textAlign: 'center',
+              padding: '50px 20px',
+              fontSize: '1.2rem',
+              color: 'var(--text-secondary)',
+              fontStyle: 'italic'
+            }}
+          >
+            <div className="no-events-icon" style={{ fontSize: '3rem', marginBottom: '20px' }}>
+              🗓️
+            </div>
+            <h3>Nothing to see here yet</h3>
+            <p>Stay tuned for our upcoming events!</p>
+          </motion.div>
+        ) : (
+          <div className="events-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
+            {events.map(ev => {
+              const dt = new Date(ev.startTime);
+              const formatted = dt.toLocaleString('en-US', { timeZone: 'America/Detroit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+              return (
+                <motion.div key={ev._id} className="event-card" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true, amount: 0.2 }} onClick={() => setSelectedEvent(ev)} style={{ cursor: 'pointer', background: 'var(--card-bg)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                  {ev.thumbnailUrl && (
+                    <img src={ev.thumbnailUrl} alt={ev.title} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                  )}
+                  <div style={{ padding: 14 }}>
+                    <div style={{ fontWeight: 700 }}>{ev.title}</div>
+                    <div style={{ marginTop: 6, color: 'var(--text-secondary)' }}>{formatted}</div>
+                    {ev.meetupUrl && (
+                      <div style={{ marginTop: 12 }}>
+                        <a href={ev.meetupUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#d62828', color: '#fff', padding: '8px 12px', borderRadius: 8 }}>
+                          <img src="/meetup.svg" alt="Meetup" style={{ width: 18, height: 18 }} />
+                          Reserve your spot at this event here!
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
         
         <motion.div 
           className="view-all-container"
@@ -577,9 +781,12 @@ function Landing({ theme, toggleTheme }) {
           transition={{ duration: 0.5 }}
           viewport={{ once: true, amount: 0.1 }}
         >
-          <button className="view-all-button">View All Events</button>
+          <button className="view-all-button" onClick={() => navigate('/events')}>View All Events</button>
         </motion.div>
       </section>
+
+      {showCreateModal && isAdmin && <CreateEventModal />}
+      {selectedEvent && <EventModal event={selectedEvent} />}
 
       <section id="resources" className="resources-section" ref={el => sectionsRef.current.resources = el}>
         <div className="section-header">
