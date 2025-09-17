@@ -5,11 +5,15 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import SocialLinks from '../components/SocialLinks';
-import { authAPI } from '../utils/api';
+import { authAPI, eventsAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
 function Landing({ theme, toggleTheme }) {
   const [activeSection, setActiveSection] = useState('home');
+  const [events, setEvents] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [recentUsers, setRecentUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,6 +61,36 @@ function Landing({ theme, toggleTheme }) {
     return () => {
       observers.forEach(observer => observer.disconnect());
     };
+  }, []);
+
+  useEffect(() => {
+    const lock = showCreateModal || !!selectedEvent;
+    if (lock) {
+      const prev = document.body.style.overflow;
+      document.body.dataset.prevOverflow = prev;
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = document.body.dataset.prevOverflow || '';
+      delete document.body.dataset.prevOverflow;
+    }
+    return () => {
+      document.body.style.overflow = document.body.dataset.prevOverflow || '';
+      delete document.body.dataset.prevOverflow;
+    };
+  }, [showCreateModal, selectedEvent]);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const res = await eventsAPI.listPublic(6);
+        setEvents(res.events || []);
+      } catch {
+        setEvents([]);
+      } finally {
+        setEventsLoading(false);
+      }
+    };
+    fetchEvents();
   }, []);
 
   useEffect(() => {
@@ -145,6 +179,231 @@ function Landing({ theme, toggleTheme }) {
 
   const handleJoinClick = () => {
     navigate('/auth?mode=signup');
+  };
+  const isAdmin = user && (user.role === 'admin' || user.role === 'superuser');
+  const handleCreateEventClick = () => setShowCreateModal(true);
+  const closeCreateModal = () => setShowCreateModal(false);
+  const closeEventModal = () => setSelectedEvent(null);
+
+  const CreateEventModal = () => {
+    const [title, setTitle] = useState('');
+    const [date, setDate] = useState('');
+    const [time, setTime] = useState('');
+    const [isRemote, setIsRemote] = useState(true);
+    const [zoomLink, setZoomLink] = useState('');
+    const [address, setAddress] = useState('');
+    const [directions, setDirections] = useState('');
+    const [locationName, setLocationName] = useState('');
+    const [meetupUrl, setMeetupUrl] = useState('');
+    const [thumbnail, setThumbnail] = useState(null);
+    const [description, setDescription] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    const submit = async () => {
+      if (!title || !date || !time) return;
+      setSubmitting(true);
+      try {
+        const startTime = new Date(`${date}T${time}:00-04:00`).toISOString();
+        const payload = {
+          title,
+          startTime,
+          isRemote: String(isRemote),
+          meetupUrl
+        };
+        if (description) payload.description = description;
+        if (thumbnail) payload.thumbnail = thumbnail;
+        if (isRemote) {
+          payload.zoomLink = zoomLink;
+        } else {
+          payload.address = address;
+          payload.directions = directions;
+          payload.locationName = locationName;
+        }
+        const res = await eventsAPI.create(payload);
+        setEvents(prev => [res.event, ...prev].slice(0, 6));
+        setShowCreateModal(false);
+      } catch (error) {
+        console.error('Error creating event:', error);
+      } finally {
+        setSubmitting(false);
+      }
+    };
+
+    return (
+      <div className="hub-modal-overlay" onClick={closeCreateModal}>
+        <div className="hub-modal" onClick={e => e.stopPropagation()}>
+          <div className="hub-modal-header">Create Event</div>
+          <div className="hub-modal-content">
+          <div className="hub-form-row">
+            <label>Title</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Event title" />
+          </div>
+          <div className="hub-form-row hub-row-2">
+            <div style={{ flex: 1 }}>
+              <label>Date</label>
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label>Time</label>
+              <input type="time" value={time} onChange={e => setTime(e.target.value)} />
+            </div>
+          </div>
+          <div className="hub-form-row">
+            <label>Location</label>
+            <div className={`hub-toggle ${isRemote ? 'remote-selected' : 'inperson-selected'}`}>
+              <button className={`hub-toggle-btn ${isRemote ? 'active' : ''}`} onClick={() => setIsRemote(true)}>Remote</button>
+              <button className={`hub-toggle-btn ${!isRemote ? 'active' : ''}`} onClick={() => setIsRemote(false)}>In Person</button>
+            </div>
+          </div>
+          {isRemote ? (
+            <div className="hub-form-row">
+              <label>Zoom/Webinar Link</label>
+              <input value={zoomLink} onChange={e => setZoomLink(e.target.value)} placeholder="https://..." />
+            </div>
+          ) : (
+            <>
+              <div className="hub-form-row">
+                <label>Location Name</label>
+                <input value={locationName} onChange={e => setLocationName(e.target.value)} placeholder="Building/Room" />
+              </div>
+              <div className="hub-form-row">
+                <label>Address</label>
+                <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Street, City, State" />
+              </div>
+              <div className="hub-form-row">
+                <label>Directions (max 250)</label>
+                <textarea value={directions} onChange={e => setDirections(e.target.value.slice(0,250))} rows={3} />
+              </div>
+            </>
+          )}
+          <div className="hub-form-row">
+            <label>Description</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4} placeholder="Tell people what to expect" />
+          </div>
+          <div className="hub-form-row">
+            <label>Meetup Link</label>
+            <input value={meetupUrl} onChange={e => setMeetupUrl(e.target.value)} placeholder="https://www.meetup.com/..." />
+          </div>
+          <div className="hub-form-row">
+            <label>Thumbnail</label>
+            <div className="hub-file-upload" onClick={() => document.getElementById('thumbnail-upload').click()}>
+              <input 
+                id="thumbnail-upload"
+                type="file" 
+                accept="image/*" 
+                onChange={e => setThumbnail(e.target.files?.[0] || null)} 
+              />
+              <div className="hub-file-upload-icon">📁</div>
+              <div className="hub-file-info">
+                {thumbnail ? thumbnail.name : 'Click to select an image'}
+              </div>
+            </div>
+          </div>
+            <div className="hub-modal-actions">
+              <button className="hub-btn ghost" onClick={closeCreateModal} disabled={submitting}>Cancel</button>
+              <button className="hub-btn primary" onClick={submit} disabled={submitting}>{submitting ? 'Creating...' : 'Create'}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const EventModal = ({ event }) => {
+    if (!event) return null;
+    const dt = new Date(event.startTime);
+    const formatted = dt.toLocaleString('en-US', { timeZone: 'America/Detroit', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const isRemote = event.isRemote === true || event.isRemote === 'true';
+    return (
+      <div className="hub-modal-overlay" onClick={closeEventModal}>
+        <div className="hub-modal" onClick={e => e.stopPropagation()}>
+          <div className="hub-modal-header">{event.title}</div>
+          <div className="hub-modal-content">
+            {event.thumbnailUrl && (
+              <img src={event.thumbnailUrl} alt={event.title} className="hub-modal-image" />
+            )}
+            <div className="hub-event-details">
+            <div className="hub-detail-section">
+              <div className="hub-detail-item">
+                <span className="hub-detail-label">📅 Date & Time</span>
+                <strong className="hub-detail-value">{formatted}</strong>
+              </div>
+              
+              <div className="hub-detail-item">
+                <span className="hub-detail-label">📍 Location</span>
+                {isRemote ? (
+                  <div className="hub-detail-value">
+                    <strong>Remote Event</strong>
+                    {event.zoomLink ? (
+                      <div className="hub-zoom-link">
+                        <a href={event.zoomLink} target="_blank" rel="noreferrer" className="hub-btn link">
+                          🔗 Join Webinar
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="hub-address">Zoom link will be provided</div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="hub-detail-value">
+                    {event.locationName ? (
+                      <div><strong>{event.locationName}</strong></div>
+                    ) : (
+                      <div><strong>In-Person Event</strong></div>
+                    )}
+                    {event.address ? (
+                      <div className="hub-address">{event.address}</div>
+                    ) : (
+                      <div className="hub-address">Location details will be provided</div>
+                    )}
+                    {event.directions && <div className="hub-directions">{event.directions}</div>}
+                  </div>
+                )}
+              </div>
+
+              {event.description && (
+                <div className="hub-detail-item">
+                  <span className="hub-detail-label">📝 Description</span>
+                  <div className="hub-detail-value hub-description">{event.description}</div>
+                </div>
+              )}
+
+              <div className="hub-detail-item">
+                <span className="hub-detail-label">ℹ️ Event Info</span>
+                <div className="hub-detail-value">
+                  <div className="hub-event-meta">
+                    <span className="hub-meta-item">
+                      <strong>Event Type:</strong> {isRemote ? 'Remote' : 'In-Person'}
+                    </span>
+                    <span className="hub-meta-item">
+                      <strong>Status:</strong> {event.status === 'published' ? 'Published' : 'Draft'}
+                    </span>
+                    <span className="hub-meta-item">
+                      <strong>Created:</strong> {new Date(event.createdAt).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+            {event.meetupUrl && (
+              <div className="hub-action-buttons">
+                <div className="hub-meetup-section">
+                  <a href={event.meetupUrl} target="_blank" rel="noreferrer" className="hub-meetup-btn" title="Reserve your spot on Meetup">
+                    <img src="/meetup.svg" alt="Meetup" />
+                  </a>
+                  <span className="hub-meetup-label">Reserve your spot</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const handleUserClick = (username) => {
@@ -548,27 +807,70 @@ function Landing({ theme, toggleTheme }) {
             <span></span>
           </div>
         </div>
-        
-        <motion.div 
-          className="no-events-message"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true, amount: 0.3 }}
-          style={{
-            textAlign: 'center',
-            padding: '50px 20px',
-            fontSize: '1.2rem',
-            color: 'var(--text-secondary)',
-            fontStyle: 'italic'
-          }}
-        >
-          <div className="no-events-icon" style={{ fontSize: '3rem', marginBottom: '20px' }}>
-            🗓️
+        {isAdmin && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <button className="cta-secondary" onClick={handleCreateEventClick}>+ Create Event</button>
           </div>
-          <h3>Nothing to see here yet</h3>
-          <p>Stay tuned for our upcoming events!</p>
-        </motion.div>
+        )}
+
+        {eventsLoading ? (
+          <motion.div 
+            className="no-events-message"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true, amount: 0.3 }}
+            style={{ textAlign: 'center', padding: '40px 20px' }}
+          >
+            Loading events...
+          </motion.div>
+        ) : events.length === 0 ? (
+          <motion.div 
+            className="no-events-message"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true, amount: 0.3 }}
+            style={{
+              textAlign: 'center',
+              padding: '50px 20px',
+              fontSize: '1.2rem',
+              color: 'var(--text-secondary)',
+              fontStyle: 'italic'
+            }}
+          >
+            <div className="no-events-icon" style={{ fontSize: '3rem', marginBottom: '20px' }}>
+              🗓️
+            </div>
+            <h3>Nothing to see here yet</h3>
+            <p>Stay tuned for our upcoming events!</p>
+          </motion.div>
+        ) : (
+          <div className="events-grid" data-count={events.length}>
+            {events.map(ev => {
+              const dt = new Date(ev.startTime);
+              const formatted = dt.toLocaleString('en-US', { timeZone: 'America/Detroit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+              return (
+                <motion.div key={ev._id} className="event-card" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true, amount: 0.2 }} onClick={() => setSelectedEvent(ev)}>
+                  {ev.thumbnailUrl && (
+                    <img src={ev.thumbnailUrl} alt={ev.title} style={{ width: '100%', height: '200px', objectFit: 'cover', display: 'block' }} />
+                  )}
+                  <div style={{ padding: 14 }}>
+                    <div style={{ fontWeight: 700 }}>{ev.title}</div>
+                    <div style={{ marginTop: 6, color: 'var(--text-secondary)' }}>{formatted}</div>
+                    {ev.meetupUrl && (
+                      <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
+                        <a href={ev.meetupUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="event-meetup-btn" title="Reserve your spot on Meetup">
+                          <img src="/meetup.svg" alt="Meetup" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
         
         <motion.div 
           className="view-all-container"
@@ -577,9 +879,12 @@ function Landing({ theme, toggleTheme }) {
           transition={{ duration: 0.5 }}
           viewport={{ once: true, amount: 0.1 }}
         >
-          <button className="view-all-button">View All Events</button>
+          <button className="view-all-button" onClick={() => navigate('/events')}>View All Events</button>
         </motion.div>
       </section>
+
+      {showCreateModal && isAdmin && <CreateEventModal />}
+      {selectedEvent && <EventModal event={selectedEvent} />}
 
       <section id="resources" className="resources-section" ref={el => sectionsRef.current.resources = el}>
         <div className="section-header">

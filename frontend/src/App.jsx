@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { useState, useEffect } from 'react';
 import Landing from './pages/Landing';
+import Events from './pages/Events';
 import Auth from './pages/Auth';
 import Account from './pages/Account';
 import PublicProfile from './pages/PublicProfile';
@@ -56,6 +57,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Landing theme={theme} toggleTheme={toggleTheme} />} />
         <Route path="/auth" element={<Auth theme={theme} />} />
+        <Route path="/events" element={<Events theme={theme} toggleTheme={toggleTheme} />} />
         <Route path="/setup" element={<QuickSetup theme={theme} />} />
         <Route 
           path="/account" 
