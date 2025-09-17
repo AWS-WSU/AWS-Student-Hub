@@ -64,7 +64,8 @@ jobs:
           "${{ secrets.DISCORD_BOT_TOKEN }}" \
           "${{ secrets.DISCORD_GUILD_ID }}" \
           "${{ secrets.DISCORD_CHANNEL_ID }}" \
-          "${{ secrets.AWS_CRED_ENCRYPTION_KEY }}"
+          "${{ secrets.AWS_CRED_ENCRYPTION_KEY }}" \
+          "${{ secrets.AWS_HUB_EVENT_THUMBNAILS }}"
 
   deploy-prod:
     name: Deploy to Production
@@ -121,4 +122,5 @@ jobs:
           "${{ secrets.DISCORD_BOT_TOKEN }}" \
           "${{ secrets.DISCORD_GUILD_ID }}" \
           "${{ secrets.DISCORD_CHANNEL_ID }}" \
-          "${{ secrets.AWS_CRED_ENCRYPTION_KEY }}"
+          "${{ secrets.AWS_CRED_ENCRYPTION_KEY }}" \
+          "${{ secrets.AWS_HUB_EVENT_THUMBNAILS }}"

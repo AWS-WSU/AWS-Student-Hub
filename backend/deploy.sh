@@ -8,7 +8,7 @@ echo "🚀 Starting AWS Student Hub Lambda Deployment"
 
 if [ -z "$1" ]; then
     echo "❌ Error: Environment parameter required"
-    echo "Usage: ./deploy.sh [dev|staging|prod] [mongodb-uri] [admin-token] [jwt-secret] [cors-origin] [s3-bucket] [s3-access-key] [s3-secret-key] [s3-region] [aws-admin-access-key] [aws-admin-secret-key] [aws-region] [aws-s3-bucket] [smtp-host] [smtp-port] [smtp-encryption] [smtp-user] [smtp-pass] [discord-token] [discord-guild-id] [discord-channel-id] [aws-cred-key]"
+    echo "Usage: ./deploy.sh [dev|staging|prod] [mongodb-uri] [admin-token] [jwt-secret] [cors-origin] [s3-bucket] [s3-access-key] [s3-secret-key] [s3-region] [aws-admin-access-key] [aws-admin-secret-key] [aws-region] [aws-s3-bucket] [smtp-host] [smtp-port] [smtp-encryption] [smtp-user] [smtp-pass] [discord-token] [discord-guild-id] [discord-channel-id] [aws-cred-key] [aws-event-thumbnails-bucket]"
     echo "Example: ./deploy.sh dev 'mongodb://...' 'your-admin-token' 'your-jwt-secret' 'https://mydomain.com,http://localhost:3000' 'my-bucket' 'AKIAXXXXX' 'secret' 'us-east-1' 'discord-token' 'guild-id' 'channel-id' 'smtp@email.com' 'smtp-pass' 'encryption-key'"
     exit 1
 fi
@@ -35,6 +35,7 @@ DISCORD_BOT_TOKEN=${19:-""}
 DISCORD_GUILD_ID=${20:-""}
 DISCORD_CHANNEL_ID=${21:-""}
 AWS_CRED_ENCRYPTION_KEY=${22:-""}
+AWS_HUB_EVENT_THUMBNAILS=${23:-"aws-student-hub-event-thumbs"}
 
 # Validate required parameters
 if [ -z "$MONGODB_URI" ] || [ -z "$ADMIN_TOKEN" ] || [ -z "$JWT_SECRET" ] || [ -z "$S3_BUCKET_NAME" ] || [ -z "$S3_ACCESS_KEY_ID" ] || [ -z "$S3_SECRET_ACCESS_KEY" ] || [ -z "$AWS_ADMIN_ACCESS_KEY_ID" ] || [ -z "$AWS_ADMIN_SECRET_ACCESS_KEY" ] || [ -z "$AWS_S3_BUCKET" ] || [ -z "$SMTP_USER" ] || [ -z "$SMTP_PASS" ] || [ -z "$DISCORD_BOT_TOKEN" ] || [ -z "$DISCORD_GUILD_ID" ] || [ -z "$DISCORD_CHANNEL_ID" ] || [ -z "$AWS_CRED_ENCRYPTION_KEY" ]; then
@@ -88,7 +89,8 @@ sam deploy \
     DiscordBotToken="$DISCORD_BOT_TOKEN" \
     DiscordGuildId="$DISCORD_GUILD_ID" \
     DiscordChannelId="$DISCORD_CHANNEL_ID" \
-    AwsCredEncryptionKey="$AWS_CRED_ENCRYPTION_KEY"
+    AwsCredEncryptionKey="$AWS_CRED_ENCRYPTION_KEY" \
+    AwsHubEventThumbnails="$AWS_HUB_EVENT_THUMBNAILS"
 
 echo "✅ Deployment completed successfully!"
 echo ""

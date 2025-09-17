@@ -36,6 +36,11 @@ const eventSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  description: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   thumbnailUrl: {
     type: String,
     trim: true,

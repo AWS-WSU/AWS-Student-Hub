@@ -12,7 +12,7 @@ const s3Client = new S3Client({
 
 exports.createEvent = async (req, res) => {
   try {
-    const { title, startTime, isRemote, zoomLink, address, directions, locationName, meetupUrl, status } = req.body;
+    const { title, startTime, isRemote, zoomLink, address, directions, locationName, meetupUrl, status, description } = req.body;
 
     if (!title || !startTime || typeof isRemote === 'undefined') {
       return res.status(400).json({ success: false, error: 'Missing required fields' });
@@ -39,14 +39,17 @@ exports.createEvent = async (req, res) => {
       thumbnailUrl = result.Location;
     }
 
+    const isRemoteBool = String(isRemote) === 'true';
+    
     const event = await Event.create({
       title,
       startTime: new Date(startTime),
-      isRemote: Boolean(isRemote),
-      zoomLink: isRemote ? (zoomLink || '') : '',
-      address: !isRemote ? (address || '') : '',
-      directions: !isRemote ? (directions || '') : '',
-      locationName: !isRemote ? (locationName || '') : '',
+      isRemote: isRemoteBool,
+      zoomLink: isRemoteBool ? (zoomLink || '') : '',
+      address: !isRemoteBool ? (address || '') : '',
+      directions: !isRemoteBool ? (directions || '') : '',
+      locationName: !isRemoteBool ? (locationName || '') : '',
+      description: description || '',
       meetupUrl: meetupUrl || '',
       thumbnailUrl,
       status: status || 'published',
@@ -104,7 +107,7 @@ exports.adminList = async (req, res) => {
 
 exports.updateEvent = async (req, res) => {
   try {
-    const { title, startTime, isRemote, zoomLink, address, directions, locationName, meetupUrl, status } = req.body;
+    const { title, startTime, isRemote, zoomLink, address, directions, locationName, meetupUrl, status, description } = req.body;
 
     if (typeof isRemote !== 'undefined' && !isRemote && directions && directions.length > 250) {
       return res.status(400).json({ success: false, error: 'Directions must be at most 250 characters' });
@@ -113,12 +116,13 @@ exports.updateEvent = async (req, res) => {
     const update = {};
     if (title !== undefined) update.title = title;
     if (startTime !== undefined) update.startTime = new Date(startTime);
-    if (typeof isRemote !== 'undefined') update.isRemote = Boolean(isRemote);
+    if (typeof isRemote !== 'undefined') update.isRemote = String(isRemote) === 'true';
     if (meetupUrl !== undefined) update.meetupUrl = meetupUrl;
     if (status !== undefined) update.status = status;
+    if (description !== undefined) update.description = description;
 
     if (typeof isRemote !== 'undefined') {
-      if (isRemote) {
+      if (String(isRemote) === 'true') {
         update.zoomLink = zoomLink || '';
         update.address = '';
         update.directions = '';

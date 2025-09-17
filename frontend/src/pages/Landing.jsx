@@ -64,11 +64,27 @@ function Landing({ theme, toggleTheme }) {
   }, []);
 
   useEffect(() => {
+    const lock = showCreateModal || !!selectedEvent;
+    if (lock) {
+      const prev = document.body.style.overflow;
+      document.body.dataset.prevOverflow = prev;
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = document.body.dataset.prevOverflow || '';
+      delete document.body.dataset.prevOverflow;
+    }
+    return () => {
+      document.body.style.overflow = document.body.dataset.prevOverflow || '';
+      delete document.body.dataset.prevOverflow;
+    };
+  }, [showCreateModal, selectedEvent]);
+
+  useEffect(() => {
     const fetchEvents = async () => {
       try {
         const res = await eventsAPI.listPublic(6);
         setEvents(res.events || []);
-      } catch (e) {
+      } catch {
         setEvents([]);
       } finally {
         setEventsLoading(false);
@@ -180,6 +196,7 @@ function Landing({ theme, toggleTheme }) {
     const [locationName, setLocationName] = useState('');
     const [meetupUrl, setMeetupUrl] = useState('');
     const [thumbnail, setThumbnail] = useState(null);
+    const [description, setDescription] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
     const submit = async () => {
@@ -193,6 +210,7 @@ function Landing({ theme, toggleTheme }) {
           isRemote: String(isRemote),
           meetupUrl
         };
+        if (description) payload.description = description;
         if (thumbnail) payload.thumbnail = thumbnail;
         if (isRemote) {
           payload.zoomLink = zoomLink;
@@ -204,21 +222,23 @@ function Landing({ theme, toggleTheme }) {
         const res = await eventsAPI.create(payload);
         setEvents(prev => [res.event, ...prev].slice(0, 6));
         setShowCreateModal(false);
-      } catch {
+      } catch (error) {
+        console.error('Error creating event:', error);
       } finally {
         setSubmitting(false);
       }
     };
 
     return (
-      <div className="modal-overlay" onClick={closeCreateModal}>
-        <div className="modal-content" onClick={e => e.stopPropagation()}>
-          <h3>Create Event</h3>
-          <div className="form-row">
+      <div className="hub-modal-overlay" onClick={closeCreateModal}>
+        <div className="hub-modal" onClick={e => e.stopPropagation()}>
+          <div className="hub-modal-header">Create Event</div>
+          <div className="hub-modal-content">
+          <div className="hub-form-row">
             <label>Title</label>
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Event title" />
           </div>
-          <div className="form-row" style={{ display: 'flex', gap: '12px' }}>
+          <div className="hub-form-row hub-row-2">
             <div style={{ flex: 1 }}>
               <label>Date</label>
               <input type="date" value={date} onChange={e => setDate(e.target.value)} />
@@ -228,45 +248,61 @@ function Landing({ theme, toggleTheme }) {
               <input type="time" value={time} onChange={e => setTime(e.target.value)} />
             </div>
           </div>
-          <div className="form-row">
+          <div className="hub-form-row">
             <label>Location</label>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button className={isRemote ? 'selected' : ''} onClick={() => setIsRemote(true)}>Remote</button>
-              <button className={!isRemote ? 'selected' : ''} onClick={() => setIsRemote(false)}>In Person</button>
+            <div className={`hub-toggle ${isRemote ? 'remote-selected' : 'inperson-selected'}`}>
+              <button className={`hub-toggle-btn ${isRemote ? 'active' : ''}`} onClick={() => setIsRemote(true)}>Remote</button>
+              <button className={`hub-toggle-btn ${!isRemote ? 'active' : ''}`} onClick={() => setIsRemote(false)}>In Person</button>
             </div>
           </div>
           {isRemote ? (
-            <div className="form-row">
+            <div className="hub-form-row">
               <label>Zoom/Webinar Link</label>
               <input value={zoomLink} onChange={e => setZoomLink(e.target.value)} placeholder="https://..." />
             </div>
           ) : (
             <>
-              <div className="form-row">
+              <div className="hub-form-row">
                 <label>Location Name</label>
                 <input value={locationName} onChange={e => setLocationName(e.target.value)} placeholder="Building/Room" />
               </div>
-              <div className="form-row">
+              <div className="hub-form-row">
                 <label>Address</label>
                 <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Street, City, State" />
               </div>
-              <div className="form-row">
+              <div className="hub-form-row">
                 <label>Directions (max 250)</label>
                 <textarea value={directions} onChange={e => setDirections(e.target.value.slice(0,250))} rows={3} />
               </div>
             </>
           )}
-          <div className="form-row">
+          <div className="hub-form-row">
+            <label>Description</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4} placeholder="Tell people what to expect" />
+          </div>
+          <div className="hub-form-row">
             <label>Meetup Link</label>
             <input value={meetupUrl} onChange={e => setMeetupUrl(e.target.value)} placeholder="https://www.meetup.com/..." />
           </div>
-          <div className="form-row">
+          <div className="hub-form-row">
             <label>Thumbnail</label>
-            <input type="file" accept="image/*" onChange={e => setThumbnail(e.target.files?.[0] || null)} />
+            <div className="hub-file-upload" onClick={() => document.getElementById('thumbnail-upload').click()}>
+              <input 
+                id="thumbnail-upload"
+                type="file" 
+                accept="image/*" 
+                onChange={e => setThumbnail(e.target.files?.[0] || null)} 
+              />
+              <div className="hub-file-upload-icon">📁</div>
+              <div className="hub-file-info">
+                {thumbnail ? thumbnail.name : 'Click to select an image'}
+              </div>
+            </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-            <button className="cta-secondary" onClick={closeCreateModal} disabled={submitting}>Cancel</button>
-            <button className="cta-primary" onClick={submit} disabled={submitting}>{submitting ? 'Creating...' : 'Create'}</button>
+            <div className="hub-modal-actions">
+              <button className="hub-btn ghost" onClick={closeCreateModal} disabled={submitting}>Cancel</button>
+              <button className="hub-btn primary" onClick={submit} disabled={submitting}>{submitting ? 'Creating...' : 'Create'}</button>
+            </div>
           </div>
         </div>
       </div>
@@ -277,31 +313,94 @@ function Landing({ theme, toggleTheme }) {
     if (!event) return null;
     const dt = new Date(event.startTime);
     const formatted = dt.toLocaleString('en-US', { timeZone: 'America/Detroit', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const isRemote = event.isRemote === true || event.isRemote === 'true';
     return (
-      <div className="modal-overlay" onClick={closeEventModal}>
-        <div className="modal-content" onClick={e => e.stopPropagation()}>
-          <h3>{event.title}</h3>
-          {event.thumbnailUrl && (
-            <img src={event.thumbnailUrl} alt={event.title} style={{ width: '100%', height: 'auto', borderRadius: 8, marginBottom: 12 }} />
-          )}
-          <div style={{ marginBottom: 8 }}>
-            <strong>{formatted}</strong>
-          </div>
-          {event.isRemote ? (
-            <a href={event.zoomLink} target="_blank" rel="noreferrer">Join webinar</a>
-          ) : (
-            <div>
-              {event.locationName && <div>{event.locationName}</div>}
-              {event.address && <div>{event.address}</div>}
-              {event.directions && <div style={{ marginTop: 6 }}>{event.directions}</div>}
+      <div className="hub-modal-overlay" onClick={closeEventModal}>
+        <div className="hub-modal" onClick={e => e.stopPropagation()}>
+          <div className="hub-modal-header">{event.title}</div>
+          <div className="hub-modal-content">
+            {event.thumbnailUrl && (
+              <img src={event.thumbnailUrl} alt={event.title} className="hub-modal-image" />
+            )}
+            <div className="hub-event-details">
+            <div className="hub-detail-section">
+              <div className="hub-detail-item">
+                <span className="hub-detail-label">📅 Date & Time</span>
+                <strong className="hub-detail-value">{formatted}</strong>
+              </div>
+              
+              <div className="hub-detail-item">
+                <span className="hub-detail-label">📍 Location</span>
+                {isRemote ? (
+                  <div className="hub-detail-value">
+                    <strong>Remote Event</strong>
+                    {event.zoomLink ? (
+                      <div className="hub-zoom-link">
+                        <a href={event.zoomLink} target="_blank" rel="noreferrer" className="hub-btn link">
+                          🔗 Join Webinar
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="hub-address">Zoom link will be provided</div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="hub-detail-value">
+                    {event.locationName ? (
+                      <div><strong>{event.locationName}</strong></div>
+                    ) : (
+                      <div><strong>In-Person Event</strong></div>
+                    )}
+                    {event.address ? (
+                      <div className="hub-address">{event.address}</div>
+                    ) : (
+                      <div className="hub-address">Location details will be provided</div>
+                    )}
+                    {event.directions && <div className="hub-directions">{event.directions}</div>}
+                  </div>
+                )}
+              </div>
+
+              {event.description && (
+                <div className="hub-detail-item">
+                  <span className="hub-detail-label">📝 Description</span>
+                  <div className="hub-detail-value hub-description">{event.description}</div>
+                </div>
+              )}
+
+              <div className="hub-detail-item">
+                <span className="hub-detail-label">ℹ️ Event Info</span>
+                <div className="hub-detail-value">
+                  <div className="hub-event-meta">
+                    <span className="hub-meta-item">
+                      <strong>Event Type:</strong> {isRemote ? 'Remote' : 'In-Person'}
+                    </span>
+                    <span className="hub-meta-item">
+                      <strong>Status:</strong> {event.status === 'published' ? 'Published' : 'Draft'}
+                    </span>
+                    <span className="hub-meta-item">
+                      <strong>Created:</strong> {new Date(event.createdAt).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-          {event.meetupUrl && (
-            <a href={event.meetupUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#d62828', color: '#fff', padding: '10px 14px', borderRadius: 8, marginTop: 16 }}>
-              <img src="/meetup.svg" alt="Meetup" style={{ width: 20, height: 20 }} />
-              Reserve your spot at this event here!
-            </a>
-          )}
+          </div>
+            {event.meetupUrl && (
+              <div className="hub-action-buttons">
+                <div className="hub-meetup-section">
+                  <a href={event.meetupUrl} target="_blank" rel="noreferrer" className="hub-meetup-btn" title="Reserve your spot on Meetup">
+                    <img src="/meetup.svg" alt="Meetup" />
+                  </a>
+                  <span className="hub-meetup-label">Reserve your spot</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -747,23 +846,22 @@ function Landing({ theme, toggleTheme }) {
             <p>Stay tuned for our upcoming events!</p>
           </motion.div>
         ) : (
-          <div className="events-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
+          <div className="events-grid" data-count={events.length}>
             {events.map(ev => {
               const dt = new Date(ev.startTime);
               const formatted = dt.toLocaleString('en-US', { timeZone: 'America/Detroit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
               return (
-                <motion.div key={ev._id} className="event-card" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true, amount: 0.2 }} onClick={() => setSelectedEvent(ev)} style={{ cursor: 'pointer', background: 'var(--card-bg)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                <motion.div key={ev._id} className="event-card" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true, amount: 0.2 }} onClick={() => setSelectedEvent(ev)}>
                   {ev.thumbnailUrl && (
-                    <img src={ev.thumbnailUrl} alt={ev.title} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                    <img src={ev.thumbnailUrl} alt={ev.title} style={{ width: '100%', height: '200px', objectFit: 'cover', display: 'block' }} />
                   )}
                   <div style={{ padding: 14 }}>
                     <div style={{ fontWeight: 700 }}>{ev.title}</div>
                     <div style={{ marginTop: 6, color: 'var(--text-secondary)' }}>{formatted}</div>
                     {ev.meetupUrl && (
-                      <div style={{ marginTop: 12 }}>
-                        <a href={ev.meetupUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#d62828', color: '#fff', padding: '8px 12px', borderRadius: 8 }}>
-                          <img src="/meetup.svg" alt="Meetup" style={{ width: 18, height: 18 }} />
-                          Reserve your spot at this event here!
+                      <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
+                        <a href={ev.meetupUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="event-meetup-btn" title="Reserve your spot on Meetup">
+                          <img src="/meetup.svg" alt="Meetup" />
                         </a>
                       </div>
                     )}

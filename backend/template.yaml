@@ -121,6 +121,11 @@ Parameters:
     Description: AWS credentials encryption key
     NoEcho: true
 
+  AwsHubEventThumbnails:
+    Type: String
+    Description: S3 bucket name for event thumbnail uploads
+    Default: aws-student-hub-event-thumbs
+
 Resources:
   StudentHubApi:
     Type: AWS::Serverless::Function
@@ -158,6 +163,7 @@ Resources:
           DISCORD_GUILD_ID: !Ref DiscordGuildId
           DISCORD_CHANNEL_ID: !Ref DiscordChannelId
           AWS_CRED_ENCRYPTION_KEY: !Ref AwsCredEncryptionKey
+          AWS_HUB_EVENT_THUMBNAILS: !Ref AwsHubEventThumbnails
       Events:
         Api:
           Type: Api
