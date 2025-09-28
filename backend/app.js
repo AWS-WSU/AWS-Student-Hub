@@ -60,7 +60,7 @@ app.use('/upload', uploadRoutes);
 app.use('/', discordInviteRoutes);
 app.use('/admin', adminRoutes);
 app.use('/events', eventRoutes);
-app.use('/api/verify', verifyRoutes);
+app.use('/verify', verifyRoutes);  
 
 app.get('/health', (req, res) => {
   res.json({ 
