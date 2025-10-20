@@ -20,8 +20,15 @@ const corsOptions = {
     if (!origin) return callback(null, true);
     
     const allowedOrigins = process.env.CORS_ORIGIN ? 
-      process.env.CORS_ORIGIN.split(',').map(o => o.trim()) : 
-      ['https://wayneaws.dev', 'https://www.wayneaws.dev', 'http://localhost:5173', 'http://localhost:3000'];
+    process.env.CORS_ORIGIN.split(',').map(o => o.trim()) : 
+    [
+      'https://wayneaws.dev', 
+      'https://www.wayneaws.dev', 
+      'https://prizeversity.com',      
+      'https://www.prizeversity.com',  
+      'http://localhost:5173', 
+      'http://localhost:3000'
+    ];
     
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
