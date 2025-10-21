@@ -26,7 +26,10 @@ app.use((req, res, next) => {
       'http://localhost:3000'
     ];
     
-    if (allowedOrigins.includes(origin)) {
+    // Check for Amplify domains
+    const isAmplifyDomain = origin && origin.includes('.amplifyapp.com');
+    
+    if (allowedOrigins.includes(origin) || isAmplifyDomain) {
       res.header('Access-Control-Allow-Origin', origin);
     }
     
@@ -62,7 +65,10 @@ const corsOptions = {
       'http://localhost:3000'
     ];
     
-    if (allowedOrigins.includes(origin)) {
+    // Check for Amplify domains
+    const isAmplifyDomain = origin && origin.includes('.amplifyapp.com');
+    
+    if (allowedOrigins.includes(origin) || isAmplifyDomain) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
