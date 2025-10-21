@@ -31,6 +31,11 @@ module.exports.handler = async (event, context) => {
     request: (request, event, context) => {
     },
     response: (response, event, context) => {
+      // Ensure headers object exists
+      if (!response.headers) {
+        response.headers = {};
+      }
+      
       const origin = event.headers?.origin || event.headers?.Origin;
       const allowedOrigins = [
         'https://wayneaws.dev',
