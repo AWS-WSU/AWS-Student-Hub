@@ -7,6 +7,7 @@ if (!cached) {
 }
 
 const connectDB = async () => {
+  // Skip database connection for OPTIONS requests
   if (cached.conn) {
     console.log('🔄 Using cached MongoDB connection');
     return cached.conn;
@@ -14,10 +15,10 @@ const connectDB = async () => {
 
   if (!cached.promise) {
     const options = {
-      serverSelectionTimeoutMS: 5000, // Increased for Lambda cold starts
+      serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 10000,
-      maxPoolSize: process.env.AWS_LAMBDA_FUNCTION_NAME ? 1 : 5, // Limit connections in Lambda
-      minPoolSize: 0, // Allow closing connections in Lambda
+      maxPoolSize: process.env.AWS_LAMBDA_FUNCTION_NAME ? 1 : 5,
+      minPoolSize: 0,
       maxIdleTimeMS: 30000,
       retryWrites: true,
       w: 'majority',
@@ -28,14 +29,30 @@ const connectDB = async () => {
     };
 
     console.log('🔗 Creating new MongoDB connection...');
-    cached.promise = mongoose.connect(process.env.MONGODB_URI, options);
+    
+    // Don't await connection in Lambda cold start for OPTIONS
+    cached.promise = mongoose.connect(process.env.MONGODB_URI, options)
+      .then(conn => {
+        console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+        return conn;
+      })
+      .catch(error => {
+        console.error('❌ Database connection error:', error.message);
+        cached.promise = null;
+        // Re-throw only if not in Lambda or development
+        if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+          throw error;
+        }
+        // In local dev, warn but don't crash
+        console.log('⚠️ Running without database connection in development mode');
+        return null;
+      });
   }
 
   try {
     cached.conn = await cached.promise;
-    console.log(`✅ MongoDB Connected: ${cached.conn.connection.host}`);
     
-    if (!mongoose.connection._events || !mongoose.connection._events.error) {
+    if (cached.conn && (!mongoose.connection._events || !mongoose.connection._events.error)) {
       mongoose.connection.on('error', (err) => {
         console.error('❌ MongoDB connection error:', err);
         cached.conn = null;
@@ -55,8 +72,11 @@ const connectDB = async () => {
     cached.promise = null;
     
     if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+      console.log('⚠️ MongoDB connection failed in development');
       console.log('📧 Contact Akrm Al-Hakimi for MongoDB configuration');
-      process.exit(1);
+      console.log('⚠️ Server will continue running but database operations will fail');
+      // Don't exit in development - let the server run for testing OPTIONS
+      return null;
     }
     
     throw error;
