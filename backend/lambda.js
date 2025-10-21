@@ -39,7 +39,10 @@ module.exports.handler = async (event, context) => {
         'https://www.prizeversity.com'
       ];
       
-      if (origin && allowedOrigins.includes(origin)) {
+      // Check for Amplify domains
+      const isAmplifyDomain = origin && origin.includes('.amplifyapp.com');
+      
+      if (origin && (allowedOrigins.includes(origin) || isAmplifyDomain)) {
         response.headers['Access-Control-Allow-Origin'] = origin;
         response.headers['Access-Control-Allow-Credentials'] = 'true';
       }
