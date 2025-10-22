@@ -49,11 +49,10 @@ module.exports.handler = async (event, context) => {
       
       if (origin && (allowedOrigins.includes(origin) || isAmplifyDomain)) {
         response.headers['Access-Control-Allow-Origin'] = origin;
-        response.headers['Access-Control-Allow-Credentials'] = 'false';
-      } else {
-        // Allow all origins for now to fix the immediate issue
-        response.headers['Access-Control-Allow-Origin'] = '*';
-        response.headers['Access-Control-Allow-Credentials'] = 'false';
+        response.headers['Access-Control-Allow-Credentials'] = 'true';
+      } else if (origin) {
+        // For unknown origins, don't set CORS headers (let API Gateway handle it)
+        // This prevents CORS errors while maintaining security
       }
     }
   });

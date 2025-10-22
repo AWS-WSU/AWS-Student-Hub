@@ -184,10 +184,10 @@ Resources:
       Name: !Sub 'student-hub-api-gateway-${Environment}'
       StageName: !Ref Environment
       Cors:
-        AllowOrigin: "'*'"
+        AllowOrigin: "'https://wayneaws.dev,https://www.wayneaws.dev,https://prizeversity.com,https://www.prizeversity.com'"
         AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
         AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
-        AllowCredentials: false
+        AllowCredentials: true
         MaxAge: "'600'"
       BinaryMediaTypes:
         - 'multipart/form-data'
@@ -197,17 +197,17 @@ Resources:
         DEFAULT_4XX:
           ResponseParameters:
             Headers:
-              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Origin: "'https://wayneaws.dev,https://www.wayneaws.dev,https://prizeversity.com,https://www.prizeversity.com'"
               Access-Control-Allow-Headers: "'Content-Type,Authorization'"
               Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
-              Access-Control-Allow-Credentials: "'false'"
+              Access-Control-Allow-Credentials: "'true'"
         DEFAULT_5XX:
           ResponseParameters:
             Headers:
-              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Origin: "'https://wayneaws.dev,https://www.wayneaws.dev,https://prizeversity.com,https://www.prizeversity.com'"
               Access-Control-Allow-Headers: "'Content-Type,Authorization'"
               Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
-              Access-Control-Allow-Credentials: "'false'"
+              Access-Control-Allow-Credentials: "'true'"
 
   # Lambda execution role
   StudentHubApiRole:

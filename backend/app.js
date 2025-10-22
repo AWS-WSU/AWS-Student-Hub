@@ -31,14 +31,14 @@ app.use((req, res, next) => {
     
     if (allowedOrigins.includes(origin) || isAmplifyDomain) {
       res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
     } else {
-      // Allow all origins for now to fix the immediate issue
-      res.header('Access-Control-Allow-Origin', '*');
+      // For unknown origins, don't set CORS headers
+      return res.status(403).json({ message: 'CORS policy violation' });
     }
     
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Amz-Date, X-Api-Key, X-Amz-Security-Token');
-    res.header('Access-Control-Allow-Credentials', 'false');
     res.header('Access-Control-Max-Age', '86400');
     
     return res.status(204).end();
@@ -74,11 +74,10 @@ const corsOptions = {
     if (allowedOrigins.includes(origin) || isAmplifyDomain) {
       callback(null, true);
     } else {
-      // Allow all origins for now to fix the immediate issue
-      callback(null, true);
+      callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: false,
+  credentials: true,
   optionsSuccessStatus: 200
 };
 
