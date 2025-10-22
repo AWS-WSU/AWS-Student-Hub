@@ -1,9 +1,51 @@
 const serverless = require('serverless-http');
 const app = require('./app');
 
+// Handle CORS for OPTIONS requests directly
+const handleCors = (event, context) => {
+  const origin = event.headers?.origin || event.headers?.Origin;
+  const allowedOrigins = [
+    'https://wayneaws.dev',
+    'https://www.wayneaws.dev', 
+    'https://prizeversity.com',
+    'https://www.prizeversity.com'
+  ];
+  
+  // Check for Amplify domains
+  const isAmplifyDomain = origin && origin.includes('.amplifyapp.com');
+  
+  if (allowedOrigins.includes(origin) || isAmplifyDomain) {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Max-Age': '600'
+      },
+      body: ''
+    };
+  }
+  
+  return {
+    statusCode: 403,
+    headers: {
+      'Access-Control-Allow-Origin': origin || '*',
+      'Access-Control-Allow-Credentials': 'false'
+    },
+    body: JSON.stringify({ message: 'CORS policy violation' })
+  };
+};
+
 // Export the Lambda handler
 module.exports.handler = async (event, context) => {
   context.callbackWaitsForEmptyEventLoop = false;
+  
+  // Handle OPTIONS requests directly
+  if (event.httpMethod === 'OPTIONS') {
+    return handleCors(event, context);
+  }
   
   if (process.env.NODE_ENV !== 'production') {
     console.log('Lambda Event:', JSON.stringify(event, null, 2));
