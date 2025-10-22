@@ -48,11 +48,11 @@ module.exports.handler = async (event, context) => {
       const isAmplifyDomain = origin && origin.includes('.amplifyapp.com');
       
       if (origin && (allowedOrigins.includes(origin) || isAmplifyDomain)) {
+        // Override API Gateway CORS with specific origin
         response.headers['Access-Control-Allow-Origin'] = origin;
         response.headers['Access-Control-Allow-Credentials'] = 'true';
-      } else if (origin) {
-        // For unknown origins, don't set CORS headers (let API Gateway handle it)
-        // This prevents CORS errors while maintaining security
+        response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS';
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token';
       }
     }
   });
