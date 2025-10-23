@@ -11,40 +11,8 @@ if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
   app.set('trust proxy', true);
 }
 
-// Handle OPTIONS preflight IMMEDIATELY - before any other middleware
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS request for:', req.path);
-    
-    const origin = req.headers.origin;
-    const allowedOrigins = [
-      'https://wayneaws.dev',
-      'https://www.wayneaws.dev',
-      'https://prizeversity.com',
-      'https://www.prizeversity.com',
-      'http://localhost:5173',
-      'http://localhost:3000'
-    ];
-    
-    // Check for Amplify domains
-    const isAmplifyDomain = origin && origin.includes('.amplifyapp.com');
-    
-    if (allowedOrigins.includes(origin) || isAmplifyDomain) {
-      res.header('Access-Control-Allow-Origin', origin);
-      res.header('Access-Control-Allow-Credentials', 'true');
-    } else {
-      // For unknown origins, don't set CORS headers
-      return res.status(403).json({ message: 'CORS policy violation' });
-    }
-    
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Amz-Date, X-Api-Key, X-Amz-Security-Token');
-    res.header('Access-Control-Max-Age', '86400');
-    
-    return res.status(204).end();
-  }
-  next();
-});
+// OPTIONS requests are handled directly in lambda.js before reaching Express
+// This ensures consistent CORS behavior across all routes
 
 // Only connect to database for non-OPTIONS requests
 const connectDB = require('./config/database');
@@ -125,8 +93,7 @@ app.use((req, res) => {
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.header('Access-Control-Allow-Origin', 'https://www.prizeversity.com');
-  res.header('Access-Control-Allow-Credentials', 'true');
+  // CORS headers are handled by lambda.js response hook
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
