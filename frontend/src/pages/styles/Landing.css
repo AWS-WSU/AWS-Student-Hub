@@ -2582,88 +2582,32 @@ body.modal-open {
   font-size: 1rem;
 }
 
-.referral-link-container {
-  margin-top: 2rem;
+/* Input Error Styles */
+.input-error {
+  border: 2px solid #ff4444 !important;
+  background-color: rgba(255, 68, 68, 0.05) !important;
 }
 
-.referral-link {
-  color: var(--accent);
-  cursor: pointer;
-  font-weight: 600;
-  text-decoration: underline;
-  transition: all 0.3s ease;
+.error-message {
+  display: block;
+  color: #ff4444;
+  font-size: 0.85rem;
+  margin-top: 4px;
+  font-weight: 500;
 }
 
-.referral-link:hover {
-  color: rgba(var(--accent-rgb), 0.8);
+.hub-form-row {
+  position: relative;
 }
 
-.copied-message {
-  display: inline-block;
-  margin-left: 1rem;
-  color: #10b981;
-  font-weight: 600;
-  font-size: 0.9rem;
-  animation: fadeInOut 3s ease-in-out;
+.hub-form-row label::after {
+  content: none;
 }
 
-@keyframes fadeInOut {
-  0% { opacity: 0; transform: translateY(10px); }
-  20% { opacity: 1; transform: translateY(0); }
-  80% { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(-10px); }
+.hub-form-row label:has(+ input.input-error)::before,
+.hub-form-row label:has(+ .hub-row-2)::before {
+  content: none;
 }
 
-/* Mobile responsiveness for friend search */
-@media (max-width: 768px) {
-  .friend-search-section {
-    padding: 40px 0;
-  }
-  
-  .search-input-container {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .search-input, .search-button {
-    width: 100%;
-  }
-  
-  .search-results-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
-  }
-  
-  .search-result-card {
-    padding: 1rem;
-  }
-  
-  .search-result-card .user-avatar {
-    width: 50px;
-    height: 50px;
-  }
-  
-  .no-results-message {
-    padding: 2rem 1rem;
-    margin: 0 1rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .search-results-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .search-result-card .user-name {
-    font-size: 1rem;
-  }
-  
-  .no-results-message h3 {
-    font-size: 1.3rem;
-  }
-  
-  .no-results-message p {
-    font-size: 0.9rem;
-  }
-}
+/* ...existing code... */
 

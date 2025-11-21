@@ -1,4 +1,3 @@
-
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://0jqaxbqaa2.execute-api.us-east-1.amazonaws.com/prod';
 
 const getAuthHeaders = () => {
@@ -483,7 +482,7 @@ export const eventsAPI = {
     if (!res.ok) throw new Error(data.error || 'Failed to update event');
     return data;
   },
-  remove: async (eventId) => {
+  delete: async (eventId) => {
     return apiRequest(`/events/${eventId}`, { method: 'DELETE' });
   }
 };
