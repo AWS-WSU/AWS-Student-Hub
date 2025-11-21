@@ -195,12 +195,103 @@ function Landing({ theme, toggleTheme }) {
     const [directions, setDirections] = useState('');
     const [locationName, setLocationName] = useState('');
     const [meetupUrl, setMeetupUrl] = useState('');
-    const [thumbnail, setThumbnail] = useState(null);
+    const [thumbnail] = useState(null);
     const [description, setDescription] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [errors, setErrors] = useState({});
+    
+    // Cropping state
+    const [cropSrc, setCropSrc] = useState(null);
+    const [drawingRect, setDrawingRect] = useState(null);
+    const [isDrawing, setIsDrawing] = useState(false);
+    const [croppedBlob, setCroppedBlob] = useState(null);
+    const imageRef = useRef(null);
+    const containerRef = useRef(null);
+    const fileInputRef = useRef(null);
+
+    const onFileChange = (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      const url = URL.createObjectURL(f);
+      setCropSrc({ url, file: f });
+      setDrawingRect(null);
+      setCroppedBlob(null);
+    };
+
+    const startDraw = (e) => {
+      if (!imageRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setIsDrawing(true);
+      setDrawingRect({ x, y, w: 0, h: 0 });
+    };
+
+    const moveDraw = (e) => {
+      if (!isDrawing || !drawingRect) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const nx = Math.min(Math.max(x, 0), rect.width);
+      const ny = Math.min(Math.max(y, 0), rect.height);
+      const sx = drawingRect.x;
+      const sy = drawingRect.y;
+      const w = Math.abs(nx - sx);
+      const h = Math.abs(ny - sy);
+      const nx0 = nx < sx ? nx : sx;
+      const ny0 = ny < sy ? ny : sy;
+      setDrawingRect({ x: nx0, y: ny0, w, h });
+    };
+
+    const endDraw = () => {
+      setIsDrawing(false);
+    };
+
+    const doCrop = async () => {
+      if (!drawingRect || !imageRef.current) return null;
+      const img = imageRef.current;
+      const naturalW = img.naturalWidth;
+      const naturalH = img.naturalHeight;
+      const dispW = img.clientWidth;
+      const dispH = img.clientHeight;
+      const scaleX = naturalW / dispW;
+      const scaleY = naturalH / dispH;
+      const sx = Math.round(drawingRect.x * scaleX);
+      const sy = Math.round(drawingRect.y * scaleY);
+      const sw = Math.max(1, Math.round(drawingRect.w * scaleX));
+      const sh = Math.max(1, Math.round(drawingRect.h * scaleY));
+      const canvas = document.createElement('canvas');
+      canvas.width = sw;
+      canvas.height = sh;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+      return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+          resolve(blob);
+        }, 'image/jpeg', 0.9);
+      });
+    };
+
+    const saveCropped = async () => {
+      const blob = await doCrop();
+      if (!blob) return;
+      setCroppedBlob(blob);
+      setCropSrc(null);
+      setDrawingRect(null);
+    };
+
+    const validateForm = () => {
+      const newErrors = {};
+      if (!title.trim()) newErrors.title = 'Title is required';
+      if (!date) newErrors.date = 'Date is required';
+      if (!time) newErrors.time = 'Time is required';
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
 
     const submit = async () => {
-      if (!title || !date || !time) return;
+      if (!validateForm()) return;
+      
       setSubmitting(true);
       try {
         const startTime = new Date(`${date}T${time}:00-04:00`).toISOString();
@@ -211,7 +302,9 @@ function Landing({ theme, toggleTheme }) {
           meetupUrl
         };
         if (description) payload.description = description;
-        if (thumbnail) payload.thumbnail = thumbnail;
+        if (croppedBlob) payload.thumbnail = croppedBlob;
+        else if (thumbnail) payload.thumbnail = thumbnail;
+        
         if (isRemote) {
           payload.zoomLink = zoomLink;
         } else {
@@ -235,17 +328,44 @@ function Landing({ theme, toggleTheme }) {
           <div className="hub-modal-header">Create Event</div>
           <div className="hub-modal-content">
           <div className="hub-form-row">
-            <label>Title</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Event title" />
+            <label>Title *</label>
+            <input 
+              value={title} 
+              onChange={e => {
+                setTitle(e.target.value);
+                if (errors.title) setErrors(prev => ({ ...prev, title: '' }));
+              }} 
+              placeholder="Event title" 
+              className={errors.title ? 'input-error' : ''}
+            />
+            {errors.title && <span className="error-message">{errors.title}</span>}
           </div>
           <div className="hub-form-row hub-row-2">
             <div style={{ flex: 1 }}>
-              <label>Date</label>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+              <label>Date *</label>
+              <input 
+                type="date" 
+                value={date} 
+                onChange={e => {
+                  setDate(e.target.value);
+                  if (errors.date) setErrors(prev => ({ ...prev, date: '' }));
+                }} 
+                className={errors.date ? 'input-error' : ''}
+              />
+              {errors.date && <span className="error-message">{errors.date}</span>}
             </div>
             <div style={{ flex: 1 }}>
-              <label>Time</label>
-              <input type="time" value={time} onChange={e => setTime(e.target.value)} />
+              <label>Time *</label>
+              <input 
+                type="time" 
+                value={time} 
+                onChange={e => {
+                  setTime(e.target.value);
+                  if (errors.time) setErrors(prev => ({ ...prev, time: '' }));
+                }} 
+                className={errors.time ? 'input-error' : ''}
+              />
+              {errors.time && <span className="error-message">{errors.time}</span>}
             </div>
           </div>
           <div className="hub-form-row">
@@ -286,18 +406,79 @@ function Landing({ theme, toggleTheme }) {
           </div>
           <div className="hub-form-row">
             <label>Thumbnail</label>
-            <div className="hub-file-upload" onClick={() => document.getElementById('thumbnail-upload').click()}>
-              <input 
-                id="thumbnail-upload"
-                type="file" 
-                accept="image/*" 
-                onChange={e => setThumbnail(e.target.files?.[0] || null)} 
-              />
-              <div className="hub-file-upload-icon">📁</div>
-              <div className="hub-file-info">
-                {thumbnail ? thumbnail.name : 'Click to select an image'}
+            {croppedBlob && (
+              <div style={{ marginBottom: 12 }}>
+                <img 
+                  src={URL.createObjectURL(croppedBlob)} 
+                  alt="Cropped preview" 
+                  style={{ width: '100%', maxHeight: 200, objectFit: 'contain', display: 'block', borderRadius: 8 }} 
+                />
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setCroppedBlob(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }} 
+                  className="hub-btn ghost"
+                  style={{ marginTop: 8 }}
+                >
+                  Remove Image
+                </button>
               </div>
-            </div>
+            )}
+            {!croppedBlob && !cropSrc && (
+              <div className="hub-file-upload" onClick={() => fileInputRef.current?.click()}>
+                <input 
+                  ref={fileInputRef}
+                  id="thumbnail-upload"
+                  type="file" 
+                  accept="image/*" 
+                  onChange={onFileChange}
+                  style={{ display: 'none' }}
+                />
+                <div className="hub-file-upload-icon">📁</div>
+                <div className="hub-file-info">Click to select an image</div>
+              </div>
+            )}
+            {cropSrc && (
+              <div style={{ position: 'relative', border: '1px solid rgba(0,0,0,0.08)', marginTop: 12 }}>
+                <div 
+                  ref={containerRef} 
+                  style={{ position: 'relative', width: '100%', height: 360, overflow: 'hidden', background: '#111', cursor: 'crosshair' }}
+                  onMouseDown={startDraw} 
+                  onMouseMove={moveDraw} 
+                  onMouseUp={endDraw} 
+                  onMouseLeave={endDraw}
+                >
+                  <img 
+                    ref={imageRef} 
+                    src={cropSrc.url} 
+                    alt="to crop" 
+                    style={{ display: 'block', maxWidth: '100%', maxHeight: '100%', margin: '0 auto', pointerEvents: 'none' }} 
+                  />
+                  {drawingRect && (
+                    <div style={{
+                      position: 'absolute',
+                      left: drawingRect.x,
+                      top: drawingRect.y,
+                      width: drawingRect.w,
+                      height: drawingRect.h,
+                      border: '2px dashed #fff',
+                      background: 'rgba(255,255,255,0.05)',
+                      boxSizing: 'border-box'
+                    }} />
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <button type="button" onClick={saveCropped} className="hub-btn">Crop & Save</button>
+                  <button type="button" onClick={() => { 
+                    setCropSrc(null); 
+                    setDrawingRect(null);
+                    if (fileInputRef.current) fileInputRef.current.value = ''; 
+                  }} className="hub-btn ghost">Cancel</button>
+                </div>
+              </div>
+            )}
           </div>
             <div className="hub-modal-actions">
               <button className="hub-btn ghost" onClick={closeCreateModal} disabled={submitting}>Cancel</button>
@@ -310,14 +491,230 @@ function Landing({ theme, toggleTheme }) {
   };
 
   const EventModal = ({ event }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [editForm, setEditForm] = useState({
+      title: event.title,
+      date: new Date(event.startTime).toISOString().split('T')[0],
+      time: new Date(event.startTime).toTimeString().slice(0, 5),
+      isRemote: event.isRemote === true || event.isRemote === 'true',
+      zoomLink: event.zoomLink || '',
+      address: event.address || '',
+      directions: event.directions || '',
+      locationName: event.locationName || '',
+      meetupUrl: event.meetupUrl || '',
+      description: event.description || '',
+    });
+    const [updating, setUpdating] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [errors, setErrors] = useState({});
+
     if (!event) return null;
+
+    const validateEditForm = () => {
+      const newErrors = {};
+      if (!editForm.title.trim()) newErrors.title = 'Title is required';
+      if (!editForm.date) newErrors.date = 'Date is required';
+      if (!editForm.time) newErrors.time = 'Time is required';
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
+
+    const handleUpdate = async () => {
+      if (!validateEditForm()) return;
+      
+      setUpdating(true);
+      try {
+        const startTime = new Date(`${editForm.date}T${editForm.time}:00-04:00`).toISOString();
+        const payload = {
+          title: editForm.title,
+          startTime,
+          isRemote: String(editForm.isRemote),
+          meetupUrl: editForm.meetupUrl,
+          description: editForm.description,
+        };
+        
+        if (editForm.isRemote) {
+          payload.zoomLink = editForm.zoomLink;
+        } else {
+          payload.address = editForm.address;
+          payload.directions = editForm.directions;
+          payload.locationName = editForm.locationName;
+        }
+
+        const res = await eventsAPI.update(event._id, payload);
+        setEvents(prev => prev.map(ev => ev._id === event._id ? res.event : ev));
+        setSelectedEvent(res.event);
+        setIsEditing(false);
+      } catch (error) {
+        console.error('Error updating event:', error);
+      } finally {
+        setUpdating(false);
+      }
+    };
+
+    const handleDelete = async () => {
+      setDeleting(true);
+      try {
+        await eventsAPI.delete(event._id);
+        setEvents(prev => prev.filter(ev => ev._id !== event._id));
+        setSelectedEvent(null);
+      } catch (error) {
+        console.error('Error deleting event:', error);
+      } finally {
+        setDeleting(false);
+      }
+    };
+
     const dt = new Date(event.startTime);
     const formatted = dt.toLocaleString('en-US', { timeZone: 'America/Detroit', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
     const isRemote = event.isRemote === true || event.isRemote === 'true';
+
+    if (showDeleteConfirm) {
+      return (
+        <div className="hub-modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="hub-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="hub-modal-header">Delete Event?</div>
+            <div className="hub-modal-content">
+              <p style={{ fontSize: '1.1rem', marginBottom: '2rem', color: 'var(--text-secondary)' }}>
+                Are you sure you want to delete "<strong>{event.title}</strong>"? This action cannot be undone.
+              </p>
+              <div className="hub-modal-actions">
+                <button className="hub-btn ghost" onClick={() => setShowDeleteConfirm(false)} disabled={deleting}>
+                  Cancel
+                </button>
+                <button 
+                  className="hub-btn" 
+                  onClick={handleDelete} 
+                  disabled={deleting}
+                  style={{ background: '#dc2626', color: 'white' }}
+                >
+                  {deleting ? 'Deleting...' : 'Delete Event'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (isEditing) {
+      return (
+        <div className="hub-modal-overlay" onClick={() => setIsEditing(false)}>
+          <div className="hub-modal" onClick={e => e.stopPropagation()}>
+            <div className="hub-modal-header">Edit Event</div>
+            <div className="hub-modal-content">
+              <div className="hub-form-row">
+                <label>Title *</label>
+                <input 
+                  value={editForm.title} 
+                  onChange={e => {
+                    setEditForm(prev => ({ ...prev, title: e.target.value }));
+                    if (errors.title) setErrors(prev => ({ ...prev, title: '' }));
+                  }}
+                  placeholder="Event title"
+                  className={errors.title ? 'input-error' : ''}
+                />
+                {errors.title && <span className="error-message">{errors.title}</span>}
+              </div>
+              <div className="hub-form-row hub-row-2">
+                <div style={{ flex: 1 }}>
+                  <label>Date *</label>
+                  <input 
+                    type="date" 
+                    value={editForm.date}
+                    onChange={e => {
+                      setEditForm(prev => ({ ...prev, date: e.target.value }));
+                      if (errors.date) setErrors(prev => ({ ...prev, date: '' }));
+                    }}
+                    className={errors.date ? 'input-error' : ''}
+                  />
+                  {errors.date && <span className="error-message">{errors.date}</span>}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label>Time *</label>
+                  <input 
+                    type="time" 
+                    value={editForm.time}
+                    onChange={e => {
+                      setEditForm(prev => ({ ...prev, time: e.target.value }));
+                      if (errors.time) setErrors(prev => ({ ...prev, time: '' }));
+                    }}
+                    className={errors.time ? 'input-error' : ''}
+                  />
+                  {errors.time && <span className="error-message">{errors.time}</span>}
+                </div>
+              </div>
+              <div className="hub-form-row">
+                <label>Location</label>
+                <div className={`hub-toggle ${editForm.isRemote ? 'remote-selected' : 'inperson-selected'}`}>
+                  <button className={`hub-toggle-btn ${editForm.isRemote ? 'active' : ''}`} onClick={() => setEditForm(prev => ({ ...prev, isRemote: true }))}>Remote</button>
+                  <button className={`hub-toggle-btn ${!editForm.isRemote ? 'active' : ''}`} onClick={() => setEditForm(prev => ({ ...prev, isRemote: false }))}>In Person</button>
+                </div>
+              </div>
+              {editForm.isRemote ? (
+                <div className="hub-form-row">
+                  <label>Zoom/Webinar Link</label>
+                  <input value={editForm.zoomLink} onChange={e => setEditForm(prev => ({ ...prev, zoomLink: e.target.value }))} placeholder="https://..." />
+                </div>
+              ) : (
+                <>
+                  <div className="hub-form-row">
+                    <label>Location Name</label>
+                    <input value={editForm.locationName} onChange={e => setEditForm(prev => ({ ...prev, locationName: e.target.value }))} placeholder="Building/Room" />
+                  </div>
+                  <div className="hub-form-row">
+                    <label>Address</label>
+                    <input value={editForm.address} onChange={e => setEditForm(prev => ({ ...prev, address: e.target.value }))} placeholder="Street, City, State" />
+                  </div>
+                  <div className="hub-form-row">
+                    <label>Directions (max 250)</label>
+                    <textarea value={editForm.directions} onChange={e => setEditForm(prev => ({ ...prev, directions: e.target.value.slice(0,250) }))} rows={3} />
+                  </div>
+                </>
+              )}
+              <div className="hub-form-row">
+                <label>Description</label>
+                <textarea value={editForm.description} onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))} rows={4} placeholder="Tell people what to expect" />
+              </div>
+              <div className="hub-form-row">
+                <label>Meetup Link</label>
+                <input value={editForm.meetupUrl} onChange={e => setEditForm(prev => ({ ...prev, meetupUrl: e.target.value }))} placeholder="https://www.meetup.com/..." />
+              </div>
+              <div className="hub-modal-actions">
+                <button className="hub-btn ghost" onClick={() => setIsEditing(false)} disabled={updating}>Cancel</button>
+                <button className="hub-btn primary" onClick={handleUpdate} disabled={updating}>{updating ? 'Updating...' : 'Update Event'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="hub-modal-overlay" onClick={closeEventModal}>
         <div className="hub-modal" onClick={e => e.stopPropagation()}>
-          <div className="hub-modal-header">{event.title}</div>
+          <div className="hub-modal-header">
+            {event.title}
+            {isAdmin && (
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                <button 
+                  className="hub-btn ghost" 
+                  onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
+                  style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
+                >
+                  ✏️ Edit
+                </button>
+                <button 
+                  className="hub-btn ghost" 
+                  onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
+                  style={{ padding: '0.5rem 1rem', fontSize: '0.9rem', borderColor: '#dc2626', color: '#dc2626' }}
+                >
+                  🗑️ Delete
+                </button>
+              </div>
+            )}
+          </div>
           <div className="hub-modal-content">
             {event.thumbnailUrl && (
               <img src={event.thumbnailUrl} alt={event.title} className="hub-modal-image" />

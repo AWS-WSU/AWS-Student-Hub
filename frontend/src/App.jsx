@@ -34,7 +34,7 @@ function AppContent() {
   }, [location.pathname, location.hash]);
 
   useEffect(() => {
-    const validPaths = ['/', '/auth', '/account', '/admin', '/setup'];
+    const validPaths = ['/', '/auth', '/account', '/admin', '/setup', '/events'];
     const isValidProfilePath = location.pathname.startsWith('/profile/');
     const isValidPath = validPaths.includes(location.pathname) || isValidProfilePath;
     
