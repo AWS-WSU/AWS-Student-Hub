@@ -9,6 +9,46 @@ import { authAPI, eventsAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import Cropper from 'react-easy-crop';
 
+const getEasternDateTime = (utcDate) => {
+  const date = new Date(utcDate);
+  const eastern = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Detroit',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).formatToParts(date);
+  
+  const parts = {};
+  eastern.forEach(p => { parts[p.type] = p.value; });
+  
+  return {
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    time: `${parts.hour}:${parts.minute}`
+  };
+};
+
+const easternToISO = (dateStr, timeStr) => {
+  const testDate = new Date(`${dateStr}T12:00:00`);
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Detroit',
+    timeZoneName: 'shortOffset'
+  });
+  const parts = formatter.formatToParts(testDate);
+  const offsetPart = parts.find(p => p.type === 'timeZoneName');
+  // offsetPart.value will be like "GMT-5" or "GMT-4"
+  const offsetMatch = offsetPart?.value?.match(/GMT([+-]?\d+)/);
+  const offsetHours = offsetMatch ? parseInt(offsetMatch[1]) : -5;
+  // Format as -05:00 or -04:00
+  const sign = offsetHours >= 0 ? '+' : '-';
+  const absHours = Math.abs(offsetHours).toString().padStart(2, '0');
+  const offsetStr = `${sign}${absHours}:00`;
+  
+  return new Date(`${dateStr}T${timeStr}:00${offsetStr}`).toISOString();
+};
+
 function Landing({ theme, toggleTheme }) {
   const [activeSection, setActiveSection] = useState('home');
   const [events, setEvents] = useState([]);
@@ -279,7 +319,7 @@ function Landing({ theme, toggleTheme }) {
       setSubmitting(true);
       setEmailStatus(null);
       try {
-        const startTime = new Date(`${date}T${time}:00-04:00`).toISOString();
+        const startTime = easternToISO(date, time);
         const payload = {
           title,
           startTime,
@@ -590,10 +630,11 @@ function Landing({ theme, toggleTheme }) {
   const EventModal = ({ event }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const easternDT = getEasternDateTime(event.startTime);
     const [editForm, setEditForm] = useState({
       title: event.title,
-      date: new Date(event.startTime).toISOString().split('T')[0],
-      time: new Date(event.startTime).toTimeString().slice(0, 5),
+      date: easternDT.date,
+      time: easternDT.time,
       isRemote: event.isRemote === true || event.isRemote === 'true',
       zoomLink: event.zoomLink || '',
       address: event.address || '',
@@ -622,7 +663,7 @@ function Landing({ theme, toggleTheme }) {
       
       setUpdating(true);
       try {
-        const startTime = new Date(`${editForm.date}T${editForm.time}:00-04:00`).toISOString();
+        const startTime = easternToISO(editForm.date, editForm.time);
         const payload = {
           title: editForm.title,
           startTime,

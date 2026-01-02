@@ -55,12 +55,14 @@ const sendResetCode = async (email, code, fullName) => {
 const sendEventNotification = async (email, fullName, event) => {
   const eventDate = new Date(event.startTime);
   const formattedDate = eventDate.toLocaleDateString('en-US', { 
+    timeZone: 'America/Detroit',
     weekday: 'long',
     year: 'numeric', 
     month: 'long', 
     day: 'numeric' 
   });
   const formattedTime = eventDate.toLocaleTimeString('en-US', { 
+    timeZone: 'America/Detroit',
     hour: 'numeric', 
     minute: '2-digit',
     timeZoneName: 'short'
