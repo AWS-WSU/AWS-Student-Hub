@@ -18,8 +18,8 @@ router.get('/discord-invite', async (req, res) => {
     const response = await axios.post(
       `https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/invites`,
       {
-        max_age: 0, // Never expires
-        max_uses: 0, // Unlimited uses
+        max_age: 0, 
+        max_uses: 0, 
         temporary: false,
         unique: true
       },
@@ -40,7 +40,6 @@ router.get('/discord-invite', async (req, res) => {
   } catch (error) {
     console.error('Error generating Discord invite:', error.response?.data || error.message);
     
-    // More detailed error logging
     if (error.response?.status === 403) {
       console.error('Bot lacks permissions to create invites in the channel');
     } else if (error.response?.status === 404) {

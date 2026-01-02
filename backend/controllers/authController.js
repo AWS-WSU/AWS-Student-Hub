@@ -141,7 +141,6 @@ exports.signup = async (req, res) => {
         code: awsError.code,
         stack: awsError.stack
       });
-      // Don't fail the signup if AWS provisioning fails
     }
     
     await user.save();
