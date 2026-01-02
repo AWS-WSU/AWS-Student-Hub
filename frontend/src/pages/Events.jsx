@@ -1,7 +1,8 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { eventsAPI } from '../utils/api';
+import Cropper from 'react-easy-crop';
 
 function Events({ theme, toggleTheme }) {
   const [events, setEvents] = useState([]);
@@ -22,10 +23,9 @@ function Events({ theme, toggleTheme }) {
 
   const fileInputRef = useRef(null);
   const [cropSrc, setCropSrc] = useState(null);
-  const [drawingRect, setDrawingRect] = useState(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const imageRef = useRef(null);
-  const containerRef = useRef(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
   useEffect(() => {
     if (selected) {
@@ -44,67 +44,51 @@ function Events({ theme, toggleTheme }) {
     if (!f) return;
     const url = URL.createObjectURL(f);
     setCropSrc({ url, file: f });
-    setDrawingRect(null);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
   };
 
-  const startDraw = (e) => {
-    if (!imageRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setIsDrawing(true);
-    setDrawingRect({ x, y, w: 0, h: 0 });
-  };
+  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
 
-  const moveDraw = (e) => {
-    if (!isDrawing || !drawingRect) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const nx = Math.min(Math.max(x, 0), rect.width);
-    const ny = Math.min(Math.max(y, 0), rect.height);
-    const sx = drawingRect.x;
-    const sy = drawingRect.y;
-    const w = Math.abs(nx - sx);
-    const h = Math.abs(ny - sy);
-    const nx0 = nx < sx ? nx : sx;
-    const ny0 = ny < sy ? ny : sy;
-    setDrawingRect({ x: nx0, y: ny0, w, h });
-  };
+  const createCroppedImage = async (imageSrc, pixelCrop) => {
+    const image = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.addEventListener('load', () => resolve(img));
+      img.addEventListener('error', reject);
+      img.src = imageSrc;
+    });
 
-  const endDraw = () => {
-    setIsDrawing(false);
-  };
-
-  const doCrop = async () => {
-    if (!drawingRect || !imageRef.current) return;
-    const img = imageRef.current;
-    const naturalW = img.naturalWidth;
-    const naturalH = img.naturalHeight;
-    const dispW = img.clientWidth;
-    const dispH = img.clientHeight;
-    const scaleX = naturalW / dispW;
-    const scaleY = naturalH / dispH;
-    const sx = Math.round(drawingRect.x * scaleX);
-    const sy = Math.round(drawingRect.y * scaleY);
-    const sw = Math.max(1, Math.round(drawingRect.w * scaleX));
-    const sh = Math.max(1, Math.round(drawingRect.h * scaleY));
     const canvas = document.createElement('canvas');
-    canvas.width = sw;
-    canvas.height = sh;
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      pixelCrop.width,
+      pixelCrop.height
+    );
+
     return new Promise((resolve) => {
       canvas.toBlob((blob) => {
         if (!blob) return resolve(null);
         const blobUrl = URL.createObjectURL(blob);
         resolve({ blob, blobUrl });
-      }, 'image/jpeg', 0.9);
+      }, 'image/jpeg', 0.95);
     });
   };
 
   const saveCropped = async () => {
-    const result = await doCrop();
+    if (!croppedAreaPixels || !cropSrc) return;
+    const result = await createCroppedImage(cropSrc.url, croppedAreaPixels);
     if (!result) return;
     const { blobUrl } = result;
     const updated = { ...selected, thumbnailUrl: blobUrl };
@@ -137,24 +121,33 @@ function Events({ theme, toggleTheme }) {
             </div>
 
             {cropSrc && (
-              <div style={{ position: 'relative', border: '1px solid rgba(0,0,0,0.08)', marginTop: 12 }}>
-                <div ref={containerRef} style={{ position: 'relative', width: '100%', height: 360, overflow: 'hidden', background: '#111' }}
-                  onMouseDown={startDraw} onMouseMove={moveDraw} onMouseUp={endDraw} onMouseLeave={endDraw}>
-                  <img ref={imageRef} src={cropSrc.url} alt="to crop" style={{ display: 'block', maxWidth: '100%', maxHeight: '100%', margin: '0 auto', pointerEvents: 'none' }} />
-                  {drawingRect && (
-                    <div style={{
-                      position: 'absolute',
-                      left: drawingRect.x,
-                      top: drawingRect.y,
-                      width: drawingRect.w,
-                      height: drawingRect.h,
-                      border: '2px dashed #fff',
-                      background: 'rgba(255,255,255,0.05)',
-                      boxSizing: 'border-box'
-                    }} />
-                  )}
+              <div style={{ marginTop: 12 }}>
+                <div style={{ position: 'relative', width: '100%', height: 400, background: '#000' }}>
+                  <Cropper
+                    image={cropSrc.url}
+                    crop={crop}
+                    zoom={zoom}
+                    aspect={16 / 9}
+                    onCropChange={setCrop}
+                    onZoomChange={setZoom}
+                    onCropComplete={onCropComplete}
+                  />
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <div style={{ marginTop: 12, marginBottom: 12 }}>
+                  <label style={{ display: 'block', marginBottom: 8, fontSize: 14 }}>
+                    Zoom: {zoom.toFixed(1)}x
+                  </label>
+                  <input
+                    type="range"
+                    min={1}
+                    max={3}
+                    step={0.1}
+                    value={zoom}
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={saveCropped} className="hub-btn">Crop & Save</button>
                   <button onClick={() => { setCropSrc(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="hub-btn ghost">Cancel</button>
                 </div>
