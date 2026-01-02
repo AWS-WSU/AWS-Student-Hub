@@ -199,6 +199,8 @@ function Landing({ theme, toggleTheme }) {
     const [description, setDescription] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
+    const [sendEmailNotification, setSendEmailNotification] = useState(false);
+    const [emailStatus, setEmailStatus] = useState(null);
     
     const [cropSrc, setCropSrc] = useState(null);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -275,6 +277,7 @@ function Landing({ theme, toggleTheme }) {
       if (!validateForm()) return;
       
       setSubmitting(true);
+      setEmailStatus(null);
       try {
         const startTime = new Date(`${date}T${time}:00-04:00`).toISOString();
         const payload = {
@@ -296,7 +299,25 @@ function Landing({ theme, toggleTheme }) {
         }
         const res = await eventsAPI.create(payload);
         setEvents(prev => [res.event, ...prev].slice(0, 6));
-        setShowCreateModal(false);
+
+        if (sendEmailNotification && res.event?._id) {
+          setEmailStatus('sending');
+          try {
+            const emailRes = await eventsAPI.sendNotification(res.event._id);
+            setEmailStatus({ 
+              success: true, 
+              sent: emailRes.emailsSent, 
+              failed: emailRes.emailsFailed 
+            });
+            setTimeout(() => setShowCreateModal(false), 2000);
+          } catch (emailError) {
+            console.error('Error sending email notifications:', emailError);
+            setEmailStatus({ success: false, error: emailError.message });
+            setTimeout(() => setShowCreateModal(false), 3000);
+          }
+        } else {
+          setShowCreateModal(false);
+        }
       } catch (error) {
         console.error('Error creating event:', error);
       } finally {
@@ -385,6 +406,103 @@ function Landing({ theme, toggleTheme }) {
           <div className="hub-form-row">
             <label>Meetup Link</label>
             <input value={meetupUrl} onChange={e => setMeetupUrl(e.target.value)} placeholder="https://www.meetup.com/..." />
+          </div>
+          <div className="hub-form-row">
+            <label>Email Notification</label>
+            <div 
+              className="email-toggle-container"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                background: sendEmailNotification ? 'rgba(34, 197, 94, 0.1)' : 'var(--bg-secondary)',
+                borderRadius: '10px',
+                border: sendEmailNotification ? '2px solid #22c55e' : '2px solid transparent',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onClick={() => setSendEmailNotification(!sendEmailNotification)}
+            >
+              <div 
+                style={{
+                  width: '48px',
+                  height: '26px',
+                  borderRadius: '13px',
+                  background: sendEmailNotification ? '#22c55e' : 'var(--text-tertiary)',
+                  position: 'relative',
+                  transition: 'background 0.2s ease'
+                }}
+              >
+                <div 
+                  style={{
+                    width: '22px',
+                    height: '22px',
+                    borderRadius: '50%',
+                    background: 'white',
+                    position: 'absolute',
+                    top: '2px',
+                    left: sendEmailNotification ? '24px' : '2px',
+                    transition: 'left 0.2s ease',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                  {sendEmailNotification ? '📧 Email notifications enabled' : '📧 Send email to all members'}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  {sendEmailNotification 
+                    ? 'All registered members will receive an email about this event' 
+                    : 'Toggle to notify all registered members about this event'}
+                </div>
+              </div>
+            </div>
+            {emailStatus === 'sending' && (
+              <div style={{ 
+                marginTop: '12px', 
+                padding: '12px', 
+                background: 'rgba(59, 130, 246, 0.1)', 
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                color: '#3b82f6'
+              }}>
+                <div className="loading-dots" style={{ display: 'flex', gap: '4px' }}>
+                  <span style={{ animation: 'pulse 1s infinite' }}>●</span>
+                  <span style={{ animation: 'pulse 1s infinite 0.2s' }}>●</span>
+                  <span style={{ animation: 'pulse 1s infinite 0.4s' }}>●</span>
+                </div>
+                Sending email notifications...
+              </div>
+            )}
+            {emailStatus && emailStatus.success && (
+              <div style={{ 
+                marginTop: '12px', 
+                padding: '12px', 
+                background: 'rgba(34, 197, 94, 0.1)', 
+                borderRadius: '8px',
+                color: '#22c55e',
+                fontWeight: 500
+              }}>
+                ✅ Successfully sent {emailStatus.sent} emails! 
+                {emailStatus.failed > 0 && ` (${emailStatus.failed} failed)`}
+              </div>
+            )}
+            {emailStatus && emailStatus.success === false && (
+              <div style={{ 
+                marginTop: '12px', 
+                padding: '12px', 
+                background: 'rgba(239, 68, 68, 0.1)', 
+                borderRadius: '8px',
+                color: '#ef4444',
+                fontWeight: 500
+              }}>
+                ❌ Failed to send emails: {emailStatus.error}
+              </div>
+            )}
           </div>
           <div className="hub-form-row">
             <label>Thumbnail</label>
