@@ -184,18 +184,13 @@ exports.login = async (req, res) => {
     let user;
     const isEmail = email.includes('@');
     
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Database timeout')), 3000)
-    );
-    
-    let findUserPromise;
+    // Remove timeout race condition - let MongoDB handle its own timeouts
+    // The database middleware ensures connection is ready before this runs
     if (isEmail) {
-      findUserPromise = User.findOne({ email }).select('+password +awsAccessKeyId +awsSecretAccessKey');
+      user = await User.findOne({ email }).select('+password +awsAccessKeyId +awsSecretAccessKey');
     } else {
-      findUserPromise = User.findOne({ username: email }).select('+password +awsAccessKeyId +awsSecretAccessKey');
+      user = await User.findOne({ username: email }).select('+password +awsAccessKeyId +awsSecretAccessKey');
     }
-    
-    user = await Promise.race([findUserPromise, timeoutPromise]);
 
     if (!user) {
       return res.status(401).json({
@@ -236,7 +231,8 @@ exports.login = async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     
-    if (error.message === 'Database timeout') {
+    // Check if it's a MongoDB connection error
+    if (error.name === 'MongoServerSelectionError' || error.name === 'MongoNetworkError' || error.message?.includes('connection')) {
       return res.status(503).json({
         error: 'Service temporarily unavailable. Please try again.'
       });
@@ -563,6 +559,13 @@ exports.getRecentUsers = async (req, res) => {
     });
   } catch (error) {
     console.error('Get recent users error:', error);
+    // Check if it's a MongoDB connection error
+    if (error.name === 'MongoServerSelectionError' || error.name === 'MongoNetworkError' || error.message?.includes('connection')) {
+      return res.status(503).json({
+        success: false,
+        error: 'Service temporarily unavailable. Please try again.'
+      });
+    }
     res.status(500).json({
       success: false,
       error: 'Server error while fetching recent users'

@@ -7,15 +7,23 @@ if (!cached) {
 }
 
 const connectDB = async () => {
-  if (cached.conn) {
+  // Check if connection is ready and healthy
+  if (cached.conn && mongoose.connection.readyState === 1) {
     console.log('🔄 Using cached MongoDB connection');
     return cached.conn;
   }
 
+  // If connection exists but is not ready, clear it
+  if (cached.conn && mongoose.connection.readyState !== 1) {
+    console.log('⚠️ Cached connection is not ready, reconnecting...');
+    cached.conn = null;
+    cached.promise = null;
+  }
+
   if (!cached.promise) {
     const options = {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 10000, // Increased from 5000
+      socketTimeoutMS: 15000, // Increased from 10000
       maxPoolSize: process.env.AWS_LAMBDA_FUNCTION_NAME ? 1 : 5,
       minPoolSize: 0,
       maxIdleTimeMS: 30000,
@@ -23,7 +31,7 @@ const connectDB = async () => {
       w: 'majority',
       ssl: true,
       tlsAllowInvalidCertificates: false,
-      connectTimeoutMS: 10000,
+      connectTimeoutMS: 15000, // Increased from 10000
       heartbeatFrequencyMS: 10000,
     };
 
@@ -37,6 +45,7 @@ const connectDB = async () => {
       .catch(error => {
         console.error('Database connection error:', error.message);
         cached.promise = null;
+        cached.conn = null;
         if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
           throw error;
         }
@@ -66,6 +75,7 @@ const connectDB = async () => {
   } catch (error) {
     console.error('Database connection error:', error.message);
     cached.promise = null;
+    cached.conn = null;
     
     if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
       console.log('MongoDB connection failed in development');
@@ -78,4 +88,25 @@ const connectDB = async () => {
   }
 };
 
+// Health check function
+const checkConnection = async () => {
+  try {
+    const readyState = mongoose.connection.readyState;
+    // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+    if (readyState === 1) {
+      // Ping the database to ensure connection is alive
+      if (mongoose.connection.db && mongoose.connection.db.admin) {
+        await mongoose.connection.db.admin().ping();
+        return true;
+      }
+      return true; // Connection ready but db object not available yet
+    }
+    return false;
+  } catch (error) {
+    console.error('Database health check failed:', error.message);
+    return false;
+  }
+};
+
 module.exports = connectDB;
+module.exports.checkConnection = checkConnection;

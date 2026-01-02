@@ -74,6 +74,10 @@ exports.listPublicEvents = async (req, res) => {
     res.json({ success: true, events });
   } catch (error) {
     console.error('List events error:', error);
+    // Check if it's a MongoDB connection error
+    if (error.name === 'MongoServerSelectionError' || error.name === 'MongoNetworkError' || error.message?.includes('connection')) {
+      return res.status(503).json({ success: false, error: 'Service temporarily unavailable. Please try again.' });
+    }
     res.status(500).json({ success: false, error: 'Error fetching events' });
   }
 };
