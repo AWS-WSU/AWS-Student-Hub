@@ -127,7 +127,6 @@ function Auth({ theme }) {
     if ((authUser || (isAuth0Authenticated && auth0User)) && !isLoading) {
       const currentUser = auth0User || authUser;
       
-      // For new signups with AWS credentials that haven't been viewed
       if (currentUser && 
           currentUser.awsAccessKeyId && 
           currentUser.awsSecretAccessKey &&
@@ -144,10 +143,9 @@ function Auth({ theme }) {
           secretAccessKey: currentUser.awsSecretAccessKey
         });
         setShowCyberModal(true);
-        return; // Don't navigate yet, let them see the modal first
+        return;
       }
       
-      // Normal navigation flow
       if (currentUser && !currentUser.profileSetupCompleted) {
         navigate('/setup', { replace: true });
       } else {
@@ -156,7 +154,6 @@ function Auth({ theme }) {
     }
   }, [authUser, isAuth0Authenticated, auth0User, navigate, isLoading, showCyberModal]);
 
-  // Debug logging
   useEffect(() => {
     console.log('Auth useEffect - State check:', {
       authUser: !!authUser,
@@ -212,7 +209,6 @@ function Auth({ theme }) {
         const loginResult = await Promise.race([login(authData), timeoutPromise]);
         console.log('Login result:', loginResult);
         
-        // Check if user has AWS credentials but hasn't viewed them
         if (loginResult && 
             loginResult.user && 
             loginResult.user.awsAccessKeyId && 
@@ -225,7 +221,7 @@ function Auth({ theme }) {
           });
           setShowCyberModal(true);
           setIsLoading(false);
-          return; // Don't navigate yet
+          return;
         }
         
         setIsLoading(false);
@@ -239,7 +235,7 @@ function Auth({ theme }) {
           setAwsCredentials(signupResult.awsCredentials);
           setShowCyberModal(true);
           setIsLoading(false);
-          return; // Don't navigate yet, show modal first
+          return;
         }
         
         setIsLoading(false);

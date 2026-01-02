@@ -6,7 +6,7 @@ import './styles/Footer.css';
 function Footer({ theme }) {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState({ text: '', type: '' }); // type: 'success', 'error', ''
+  const [message, setMessage] = useState({ text: '', type: '' });
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,7 +24,7 @@ function Footer({ theme }) {
       
       if (response.success) {
         setMessage({ text: response.message, type: 'success' });
-        setEmail(''); // Clear the input on success
+        setEmail('');
       } else {
         setMessage({ text: response.message || 'Something went wrong', type: 'error' });
       }
@@ -37,7 +37,6 @@ function Footer({ theme }) {
     } finally {
       setIsLoading(false);
       
-      // Clear message after 5 seconds
       setTimeout(() => {
         setMessage({ text: '', type: '' });
       }, 5000);
