@@ -1,6 +1,8 @@
 const Event = require('../models/Event');
+const User = require('../models/User');
 const { Upload } = require('@aws-sdk/lib-storage');
 const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { sendBulkEventNotification } = require('../services/emailService');
 
 const s3Client = new S3Client({
   credentials: {
@@ -184,6 +186,43 @@ exports.deleteEvent = async (req, res) => {
   } catch (error) {
     console.error('Delete event error:', error);
     res.status(500).json({ success: false, error: 'Error deleting event' });
+  }
+};
+
+exports.sendEventNotification = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ success: false, error: 'Event not found' });
+    }
+
+    const users = await User.find({ 
+      status: 'active' 
+    }).select('email fullName');
+
+    if (users.length === 0) {
+      return res.json({ 
+        success: true, 
+        message: 'No active users to notify',
+        emailsSent: 0,
+        emailsFailed: 0
+      });
+    }
+
+    const results = await sendBulkEventNotification(users, event);
+
+    res.json({ 
+      success: true, 
+      message: `Event notification sent successfully`,
+      emailsSent: results.sent,
+      emailsFailed: results.failed,
+      totalRecipients: users.length
+    });
+  } catch (error) {
+    console.error('Send event notification error:', error);
+    res.status(500).json({ success: false, error: 'Error sending event notifications' });
   }
 };
 

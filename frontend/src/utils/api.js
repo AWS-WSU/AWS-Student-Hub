@@ -484,6 +484,9 @@ export const eventsAPI = {
   },
   delete: async (eventId) => {
     return apiRequest(`/events/${eventId}`, { method: 'DELETE' });
+  },
+  sendNotification: async (eventId) => {
+    return apiRequest(`/events/${eventId}/notify`, { method: 'POST' });
   }
 };
 
