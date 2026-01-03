@@ -14,10 +14,6 @@ export const useAuth = () => {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://0jqaxbqaa2.execute-api.us-east-1.amazonaws.com/prod';
 
-const getStorage = () => {
-  const rememberMe = localStorage.getItem('rememberMe') === 'true';
-  return rememberMe ? localStorage : sessionStorage;
-};
 
 const getStoredItem = (key) => {
   return localStorage.getItem(key) || sessionStorage.getItem(key);

@@ -192,6 +192,7 @@ exports.deleteEvent = async (req, res) => {
 exports.sendEventNotification = async (req, res) => {
   try {
     const { eventId } = req.params;
+    const { customMessage } = req.body || {};
     
     const event = await Event.findById(eventId);
     if (!event) {
@@ -211,7 +212,7 @@ exports.sendEventNotification = async (req, res) => {
       });
     }
 
-    const results = await sendBulkEventNotification(users, event);
+    const results = await sendBulkEventNotification(users, event, customMessage);
 
     res.json({ 
       success: true, 

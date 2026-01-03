@@ -53,7 +53,7 @@ const sendResetCode = async (email, code, fullName) => {
   await transporter.sendMail(mailOptions);
 };
 
-const sendEventNotification = async (email, fullName, event) => {
+const sendEventNotification = async (email, fullName, event, customMessage = '') => {
   const eventDate = new Date(event.startTime);
   const formattedDate = eventDate.toLocaleDateString('en-US', { 
     timeZone: 'America/Detroit',
@@ -303,6 +303,13 @@ const sendEventNotification = async (email, fullName, event) => {
           <div class="content">
             <p class="greeting">Hey ${fullName}! 👋</p>
             
+            ${customMessage ? `
+            <div class="description-box" style="margin-bottom: 25px;">
+              <h4>💬 Message from the Team</h4>
+              <p>${customMessage.replace(/\n/g, '<br>')}</p>
+            </div>
+            ` : ''}
+            
             <p>Great news! We have a new event coming up that you won't want to miss:</p>
             
             <div class="event-card">
@@ -423,7 +430,7 @@ const queueFailedEmail = async (email, fullName, event, error) => {
   }
 };
 
-const sendBulkEventNotification = async (users, event) => {
+const sendBulkEventNotification = async (users, event, customMessage = '') => {
   const results = {
     sent: 0,
     failed: 0,
@@ -433,7 +440,7 @@ const sendBulkEventNotification = async (users, event) => {
 
   for (const user of users) {
     try {
-      await sendEventNotification(user.email, user.fullName, event);
+      await sendEventNotification(user.email, user.fullName, event, customMessage);
       results.sent++;
       // Small delay to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 100));
