@@ -14,11 +14,35 @@ export const useAuth = () => {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://0jqaxbqaa2.execute-api.us-east-1.amazonaws.com/prod';
 
+
+const getStoredItem = (key) => {
+  return localStorage.getItem(key) || sessionStorage.getItem(key);
+};
+
+const setStoredItem = (key, value, rememberMe = null) => {
+  const shouldRemember = rememberMe !== null ? rememberMe : localStorage.getItem('rememberMe') === 'true';
+  const storage = shouldRemember ? localStorage : sessionStorage;
+  
+  if (shouldRemember) {
+    sessionStorage.removeItem(key);
+  } else {
+    localStorage.removeItem(key);
+  }
+  
+  storage.setItem(key, value);
+};
+
+const clearStoredItem = (key) => {
+  localStorage.removeItem(key);
+  sessionStorage.removeItem(key);
+};
+
 // Generate device ID for this browser
 const generateDeviceId = () => {
-  let deviceId = localStorage.getItem('deviceId');
+  let deviceId = getStoredItem('deviceId');
   if (!deviceId) {
     deviceId = crypto.randomUUID();
+    // Device ID always goes in localStorage for persistence
     localStorage.setItem('deviceId', deviceId);
   }
   return deviceId;
@@ -27,9 +51,9 @@ const generateDeviceId = () => {
 // Helper to get initial user state from cache
 const getInitialUserState = () => {
   try {
-    const accessToken = localStorage.getItem('accessToken');
-    const refreshToken = localStorage.getItem('refreshToken');
-    const cachedUser = localStorage.getItem('cachedUser');
+    const accessToken = getStoredItem('accessToken');
+    const refreshToken = getStoredItem('refreshToken');
+    const cachedUser = getStoredItem('cachedUser');
     
     if (accessToken && refreshToken && cachedUser) {
       return JSON.parse(cachedUser);
@@ -42,9 +66,9 @@ const getInitialUserState = () => {
 
 // Helper to get initial loading state
 const getInitialLoadingState = () => {
-  const accessToken = localStorage.getItem('accessToken');
-  const refreshToken = localStorage.getItem('refreshToken');
-  const cachedUser = localStorage.getItem('cachedUser');
+  const accessToken = getStoredItem('accessToken');
+  const refreshToken = getStoredItem('refreshToken');
+  const cachedUser = getStoredItem('cachedUser');
   
   // If we have valid cached data, don't show loading
   return !(accessToken && refreshToken && cachedUser);
@@ -59,7 +83,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(async (allDevices = false) => {
     try {
-      const refreshToken = localStorage.getItem('refreshToken');
+      const refreshToken = getStoredItem('refreshToken');
       
       if (refreshToken) {
         // Attempt to logout on server
@@ -67,7 +91,7 @@ export const AuthProvider = ({ children }) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+            'Authorization': `Bearer ${getStoredItem('accessToken')}`
           },
           body: JSON.stringify({
             refreshToken,
@@ -81,12 +105,13 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      // Always clear local storage
+      // Clear all auth data from both storages
       setUser(null);
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('cachedUser');
-      localStorage.removeItem('deviceId');
+      clearStoredItem('accessToken');
+      clearStoredItem('refreshToken');
+      clearStoredItem('cachedUser');
+      clearStoredItem('deviceId');
+      localStorage.removeItem('rememberMe');
       
       // Clear refresh promise
       if (refreshPromiseRef.current) {
@@ -116,7 +141,7 @@ export const AuthProvider = ({ children }) => {
       return refreshPromiseRef.current;
     }
 
-    const refreshToken = localStorage.getItem('refreshToken');
+    const refreshToken = getStoredItem('refreshToken');
     if (!refreshToken) {
       logout();
       return;
@@ -141,10 +166,10 @@ export const AuthProvider = ({ children }) => {
 
         const data = await response.json();
         
-        // Update stored tokens
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        localStorage.setItem('cachedUser', JSON.stringify(data.user));
+        // Update stored tokens using appropriate storage
+        setStoredItem('accessToken', data.accessToken);
+        setStoredItem('refreshToken', data.refreshToken);
+        setStoredItem('cachedUser', JSON.stringify(data.user));
         
         setUser(data.user);
         return data;
@@ -163,7 +188,7 @@ export const AuthProvider = ({ children }) => {
   // Auto-refresh token before expiration
   useEffect(() => {
     const setupTokenRefresh = () => {
-      const accessToken = localStorage.getItem('accessToken');
+      const accessToken = getStoredItem('accessToken');
       if (!accessToken) return;
 
       try {
@@ -196,8 +221,8 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkExistingSession = async () => {
       try {
-        const accessToken = localStorage.getItem('accessToken');
-        const refreshToken = localStorage.getItem('refreshToken');
+        const accessToken = getStoredItem('accessToken');
+        const refreshToken = getStoredItem('refreshToken');
         
         if (accessToken && refreshToken) {
           setLoading(false);
@@ -206,7 +231,7 @@ export const AuthProvider = ({ children }) => {
           try {
             const userData = await authAPI.getCurrentUser();
             setUser(userData);
-            localStorage.setItem('cachedUser', JSON.stringify(userData));
+            setStoredItem('cachedUser', JSON.stringify(userData));
           } catch (verifyError) {
             console.error('Token verification failed:', verifyError);
             
@@ -255,14 +280,17 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       
+      const { rememberMe, ...restCredentials } = credentials;
+      
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...credentials,
-          deviceId
+          ...restCredentials,
+          deviceId,
+          rememberMe: !!rememberMe
         }),
       });
       
@@ -279,10 +307,13 @@ export const AuthProvider = ({ children }) => {
 
       const data = await response.json();
 
+      // Store rememberMe preference in localStorage (always)
+      localStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
+      
       setUser(data.user);
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
-      localStorage.setItem('cachedUser', JSON.stringify(data.user));
+      setStoredItem('accessToken', data.accessToken, !!rememberMe);
+      setStoredItem('refreshToken', data.refreshToken, !!rememberMe);
+      setStoredItem('cachedUser', JSON.stringify(data.user), !!rememberMe);
 
       setLoading(false); 
       return data;
@@ -296,14 +327,17 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       
+      const { rememberMe, ...restUserData } = userData;
+      
       const response = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...userData,
-          deviceId
+          ...restUserData,
+          deviceId,
+          rememberMe: !!rememberMe
         }),
       });
 
@@ -320,10 +354,14 @@ export const AuthProvider = ({ children }) => {
 
       const data = await response.json();
 
+      // Store rememberMe preference in localStorage (always)
+      localStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
+      
+      // Store tokens in appropriate storage based on rememberMe
       setUser(data.user);
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
-      localStorage.setItem('cachedUser', JSON.stringify(data.user));
+      setStoredItem('accessToken', data.accessToken, !!rememberMe);
+      setStoredItem('refreshToken', data.refreshToken, !!rememberMe);
+      setStoredItem('cachedUser', JSON.stringify(data.user), !!rememberMe);
 
       setLoading(false);
       return data;
@@ -339,7 +377,7 @@ export const AuthProvider = ({ children }) => {
     setUser(response.user);
     
     // Update cached user data
-    localStorage.setItem('cachedUser', JSON.stringify(response.user));
+    setStoredItem('cachedUser', JSON.stringify(response.user));
     
     return response;
   };
@@ -351,7 +389,7 @@ export const AuthProvider = ({ children }) => {
     const response = await fetch(`${API_BASE_URL}/upload/profile-picture`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        'Authorization': `Bearer ${getStoredItem('accessToken')}`
       },
       body: formData,
     });
@@ -367,7 +405,7 @@ export const AuthProvider = ({ children }) => {
           const retryResponse = await fetch(`${API_BASE_URL}/upload/profile-picture`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+              'Authorization': `Bearer ${getStoredItem('accessToken')}`
             },
             body: formData,
           });
@@ -381,7 +419,7 @@ export const AuthProvider = ({ children }) => {
             };
             
             setUser(updatedUser);
-            localStorage.setItem('cachedUser', JSON.stringify(updatedUser));
+            setStoredItem('cachedUser', JSON.stringify(updatedUser));
             
             return retryData;
           } else {
@@ -402,7 +440,7 @@ export const AuthProvider = ({ children }) => {
     };
     
     setUser(updatedUser);
-    localStorage.setItem('cachedUser', JSON.stringify(updatedUser));
+    setStoredItem('cachedUser', JSON.stringify(updatedUser));
 
     return data;
   };
@@ -413,7 +451,7 @@ export const AuthProvider = ({ children }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          'Authorization': `Bearer ${getStoredItem('accessToken')}`
         },
         body: JSON.stringify({ password })
       });
@@ -437,7 +475,7 @@ export const AuthProvider = ({ children }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          'Authorization': `Bearer ${getStoredItem('accessToken')}`
         }
       });
 

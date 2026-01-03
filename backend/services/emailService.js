@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const EmailQueue = require('../models/EmailQueue');
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -52,7 +53,7 @@ const sendResetCode = async (email, code, fullName) => {
   await transporter.sendMail(mailOptions);
 };
 
-const sendEventNotification = async (email, fullName, event) => {
+const sendEventNotification = async (email, fullName, event, customMessage = '') => {
   const eventDate = new Date(event.startTime);
   const formattedDate = eventDate.toLocaleDateString('en-US', { 
     timeZone: 'America/Detroit',
@@ -302,6 +303,13 @@ const sendEventNotification = async (email, fullName, event) => {
           <div class="content">
             <p class="greeting">Hey ${fullName}! 👋</p>
             
+            ${customMessage ? `
+            <div class="description-box" style="margin-bottom: 25px;">
+              <h4>💬 Message from the Team</h4>
+              <p>${customMessage.replace(/\n/g, '<br>')}</p>
+            </div>
+            ` : ''}
+            
             <p>Great news! We have a new event coming up that you won't want to miss:</p>
             
             <div class="event-card">
@@ -377,30 +385,214 @@ const sendEventNotification = async (email, fullName, event) => {
   await transporter.sendMail(mailOptions);
 };
 
-const sendBulkEventNotification = async (users, event) => {
+const getNextRetryTime = (attempts) => {
+  // Backoff: 1min, 5min, 15min, 1hr, 4hr
+  const delays = [60, 300, 900, 3600, 14400];
+  const delaySeconds = delays[Math.min(attempts, delays.length - 1)];
+  return new Date(Date.now() + delaySeconds * 1000);
+};
+
+// Create event snapshot for queue storage
+const createEventSnapshot = (event) => ({
+  title: event.title,
+  startTime: event.startTime,
+  isRemote: event.isRemote,
+  zoomLink: event.zoomLink || '',
+  address: event.address || '',
+  directions: event.directions || '',
+  locationName: event.locationName || '',
+  description: event.description || '',
+  thumbnailUrl: event.thumbnailUrl || '',
+  meetupUrl: event.meetupUrl || ''
+});
+
+// Queue a failed email for retry
+const queueFailedEmail = async (email, fullName, event, error) => {
+  try {
+    await EmailQueue.findOneAndUpdate(
+      { email, eventId: event._id },
+      {
+        email,
+        fullName,
+        eventId: event._id,
+        eventSnapshot: createEventSnapshot(event),
+        status: 'pending',
+        $inc: { attempts: 1 },
+        lastAttempt: new Date(),
+        lastError: error.message || String(error),
+        nextAttempt: getNextRetryTime(1)
+      },
+      { upsert: true, new: true }
+    );
+    console.log(`Queued failed email for retry: ${email}`);
+  } catch (queueError) {
+    console.error(`Failed to queue email for ${email}:`, queueError);
+  }
+};
+
+const sendBulkEventNotification = async (users, event, customMessage = '') => {
   const results = {
     sent: 0,
     failed: 0,
+    queued: 0,
     errors: []
   };
 
   for (const user of users) {
     try {
-      await sendEventNotification(user.email, user.fullName, event);
+      await sendEventNotification(user.email, user.fullName, event, customMessage);
       results.sent++;
       // Small delay to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       results.failed++;
       results.errors.push({ email: user.email, error: error.message });
+      await queueFailedEmail(user.email, user.fullName, event, error);
+      results.queued++;
     }
   }
 
   return results;
 };
 
+// Process pending emails in the queue
+const processEmailQueue = async (batchSize = 10) => {
+  const results = {
+    processed: 0,
+    succeeded: 0,
+    failed: 0,
+    permanentlyFailed: 0
+  };
+
+  try {
+    const pendingEmails = await EmailQueue.find({
+      status: 'pending',
+      nextAttempt: { $lte: new Date() }
+    })
+      .sort({ nextAttempt: 1 })
+      .limit(batchSize);
+
+    for (const queuedEmail of pendingEmails) {
+      results.processed++;
+      
+      queuedEmail.status = 'processing';
+      await queuedEmail.save();
+
+      try {
+        // Use the stored event snapshot
+        await sendEventNotification(
+          queuedEmail.email, 
+          queuedEmail.fullName, 
+          queuedEmail.eventSnapshot
+        );
+
+        queuedEmail.status = 'completed';
+        queuedEmail.completedAt = new Date();
+        await queuedEmail.save();
+        results.succeeded++;
+        console.log(`Successfully sent queued email to ${queuedEmail.email}`);
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        queuedEmail.attempts += 1;
+        queuedEmail.lastAttempt = new Date();
+        queuedEmail.lastError = error.message || String(error);
+
+        if (queuedEmail.attempts >= queuedEmail.maxAttempts) {
+          queuedEmail.status = 'failed';
+          results.permanentlyFailed++;
+          console.error(`Email to ${queuedEmail.email} permanently failed after ${queuedEmail.attempts} attempts`);
+        } else {
+          queuedEmail.status = 'pending';
+          queuedEmail.nextAttempt = getNextRetryTime(queuedEmail.attempts);
+          results.failed++;
+          console.log(`Email to ${queuedEmail.email} failed, retry scheduled for ${queuedEmail.nextAttempt}`);
+        }
+
+        await queuedEmail.save();
+      }
+    }
+  } catch (error) {
+    console.error('Error processing email queue:', error);
+  }
+
+  return results;
+};
+
+// Get queue statistics
+const getQueueStats = async () => {
+  const [pending, processing, completed, failed] = await Promise.all([
+    EmailQueue.countDocuments({ status: 'pending' }),
+    EmailQueue.countDocuments({ status: 'processing' }),
+    EmailQueue.countDocuments({ status: 'completed' }),
+    EmailQueue.countDocuments({ status: 'failed' })
+  ]);
+
+  const oldestPending = await EmailQueue.findOne({ status: 'pending' })
+    .sort({ createdAt: 1 })
+    .select('createdAt nextAttempt');
+
+  return {
+    pending,
+    processing,
+    completed,
+    failed,
+    total: pending + processing + completed + failed,
+    oldestPending: oldestPending ? {
+      createdAt: oldestPending.createdAt,
+      nextAttempt: oldestPending.nextAttempt
+    } : null
+  };
+};
+
+// Get detailed queue entries for admin view
+const getQueueEntries = async (status = null, page = 1, limit = 20) => {
+  const query = status ? { status } : {};
+  const skip = (page - 1) * limit;
+
+  const [entries, total] = await Promise.all([
+    EmailQueue.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .select('-eventSnapshot'),
+    EmailQueue.countDocuments(query)
+  ]);
+
+  return {
+    entries,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
+};
+
+const retryFailedEmail = async (queueId) => {
+  const queuedEmail = await EmailQueue.findById(queueId);
+  if (!queuedEmail) {
+    throw new Error('Queue entry not found');
+  }
+
+  if (queuedEmail.status !== 'failed' && queuedEmail.status !== 'pending') {
+    throw new Error('Email is not in a retryable state');
+  }
+
+  queuedEmail.status = 'pending';
+  queuedEmail.nextAttempt = new Date();
+  await queuedEmail.save();
+
+  return processEmailQueue(1);
+};
+
 module.exports = {
   sendResetCode,
   sendEventNotification,
-  sendBulkEventNotification
+  sendBulkEventNotification,
+  processEmailQueue,
+  getQueueStats,
+  getQueueEntries,
+  retryFailedEmail
 };

@@ -240,6 +240,7 @@ function Landing({ theme, toggleTheme }) {
     const [submitting, setSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
     const [sendEmailNotification, setSendEmailNotification] = useState(false);
+    const [emailCustomMessage, setEmailCustomMessage] = useState('');
     const [emailStatus, setEmailStatus] = useState(null);
     
     const [cropSrc, setCropSrc] = useState(null);
@@ -343,7 +344,7 @@ function Landing({ theme, toggleTheme }) {
         if (sendEmailNotification && res.event?._id) {
           setEmailStatus('sending');
           try {
-            const emailRes = await eventsAPI.sendNotification(res.event._id);
+            const emailRes = await eventsAPI.sendNotification(res.event._id, emailCustomMessage);
             setEmailStatus({ 
               success: true, 
               sent: emailRes.emailsSent, 
@@ -499,6 +500,40 @@ function Landing({ theme, toggleTheme }) {
                 </div>
               </div>
             </div>
+            {sendEmailNotification && (
+              <div style={{ marginTop: '12px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontSize: '0.9rem', 
+                  fontWeight: 500,
+                  color: 'var(--text-primary)' 
+                }}>
+                  Custom Message (optional)
+                </label>
+                <textarea
+                  value={emailCustomMessage}
+                  onChange={(e) => setEmailCustomMessage(e.target.value)}
+                  placeholder="Add a personal message to include in the email notification..."
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.9rem',
+                    resize: 'vertical',
+                    fontFamily: 'inherit'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  This message will appear at the top of the email, before the event details.
+                </div>
+              </div>
+            )}
             {emailStatus === 'sending' && (
               <div style={{ 
                 marginTop: '12px', 
@@ -527,7 +562,7 @@ function Landing({ theme, toggleTheme }) {
                 color: '#22c55e',
                 fontWeight: 500
               }}>
-                ✅ Successfully sent {emailStatus.sent} emails! 
+                Successfully sent {emailStatus.sent} emails! 
                 {emailStatus.failed > 0 && ` (${emailStatus.failed} failed)`}
               </div>
             )}
@@ -540,7 +575,7 @@ function Landing({ theme, toggleTheme }) {
                 color: '#ef4444',
                 fontWeight: 500
               }}>
-                ❌ Failed to send emails: {emailStatus.error}
+                Failed to send emails: {emailStatus.error}
               </div>
             )}
           </div>
@@ -1388,7 +1423,7 @@ function Landing({ theme, toggleTheme }) {
               return (
                 <motion.div key={ev._id} className="event-card" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true, amount: 0.2 }} onClick={() => setSelectedEvent(ev)}>
                   {ev.thumbnailUrl && (
-                    <img src={ev.thumbnailUrl} alt={ev.title} style={{ width: '100%', height: '200px', objectFit: 'cover', display: 'block' }} />
+                    <img src={ev.thumbnailUrl} alt={ev.title} style={{ width: '100%', height: 'auto', objectFit: 'contain', display: 'block' }} />
                   )}
                   <div style={{ padding: 14 }}>
                     <div style={{ fontWeight: 700 }}>{ev.title}</div>
