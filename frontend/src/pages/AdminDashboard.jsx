@@ -57,6 +57,16 @@ function AdminDashboard({ theme, toggleTheme }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [banReason, setBanReason] = useState('');
   const [newRole, setNewRole] = useState('');
+  
+  // Email Queue state
+  const [queueStats, setQueueStats] = useState(null);
+  const [queueEntries, setQueueEntries] = useState([]);
+  const [queueLoading, setQueueLoading] = useState(false);
+  const [queueStatusFilter, setQueueStatusFilter] = useState('');
+  const [queuePage, setQueuePage] = useState(1);
+  const [queueTotalPages, setQueueTotalPages] = useState(1);
+  const [processingQueue, setProcessingQueue] = useState(false);
+  const [retryingId, setRetryingId] = useState(null);
 
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -120,6 +130,69 @@ function AdminDashboard({ theme, toggleTheme }) {
       loadUsers();
     }
   }, [activeTab, loadUsers]);
+
+  // Load email queue data
+  const loadQueueStats = useCallback(async () => {
+    try {
+      const response = await adminAPI.getEmailQueueStats();
+      setQueueStats(response.stats);
+    } catch (err) {
+      console.error('Failed to load queue stats:', err);
+    }
+  }, []);
+
+  const loadQueueEntries = useCallback(async () => {
+    setQueueLoading(true);
+    try {
+      const response = await adminAPI.getEmailQueueEntries(
+        queueStatusFilter || null,
+        queuePage,
+        20
+      );
+      setQueueEntries(response.entries || []);
+      setQueueTotalPages(response.pagination?.totalPages || 1);
+    } catch {
+      showToast('Failed to load queue entries', 'error');
+    } finally {
+      setQueueLoading(false);
+    }
+  }, [queueStatusFilter, queuePage, showToast]);
+
+  useEffect(() => {
+    if (activeTab === 'queue') {
+      loadQueueStats();
+      loadQueueEntries();
+    }
+  }, [activeTab, loadQueueStats, loadQueueEntries]);
+
+  const handleRetryEmail = async (queueId) => {
+    setRetryingId(queueId);
+    try {
+      await adminAPI.retryQueuedEmail(queueId);
+      showToast('Email retry initiated', 'success');
+      loadQueueEntries();
+      loadQueueStats();
+    } catch (err) {
+      showToast(err.message || 'Failed to retry email', 'error');
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
+  const handleProcessQueue = async () => {
+    setProcessingQueue(true);
+    try {
+      const response = await adminAPI.processEmailQueue(10);
+      const result = response.result || {};
+      showToast(`Processed ${result.processed || 0} emails (${result.succeeded || 0} succeeded, ${result.failed || 0} failed)`, 'success');
+      loadQueueEntries();
+      loadQueueStats();
+    } catch (err) {
+      showToast(err.message || 'Failed to process queue', 'error');
+    } finally {
+      setProcessingQueue(false);
+    }
+  };
 
   const handleRoleUpdate = async () => {
     try {
@@ -222,6 +295,16 @@ function AdminDashboard({ theme, toggleTheme }) {
             <AccountIcon className="tab-icon" />
             User Management
           </button>
+          {(user?.role === 'admin' || user?.role === 'superuser') && (
+            <button 
+              className={`tab-button ${activeTab === 'queue' ? 'active' : ''}`}
+              data-tab="queue"
+              onClick={() => setActiveTab('queue')}
+            >
+              <GmailIcon className="tab-icon" />
+              Email Queue
+            </button>
+          )}
         </div>
 
         {activeTab === 'dashboard' && (
@@ -451,6 +534,147 @@ function AdminDashboard({ theme, toggleTheme }) {
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages}
+                      className="pagination-btn"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </motion.div>
+        )}
+
+        {activeTab === 'queue' && (
+          <motion.div 
+            className="queue-content"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            {/* Queue Stats */}
+            {queueStats && (
+              <div className="queue-stats-grid">
+                <div className="queue-stat-card" data-type="pending">
+                  <div className="queue-stat-value">{queueStats.pending || 0}</div>
+                  <div className="queue-stat-label">Pending</div>
+                </div>
+                <div className="queue-stat-card" data-type="processing">
+                  <div className="queue-stat-value">{queueStats.processing || 0}</div>
+                  <div className="queue-stat-label">Processing</div>
+                </div>
+                <div className="queue-stat-card" data-type="completed">
+                  <div className="queue-stat-value">{queueStats.completed || 0}</div>
+                  <div className="queue-stat-label">Completed</div>
+                </div>
+                <div className="queue-stat-card" data-type="failed">
+                  <div className="queue-stat-value">{queueStats.failed || 0}</div>
+                  <div className="queue-stat-label">Failed</div>
+                </div>
+              </div>
+            )}
+
+            {/* Queue Actions */}
+            <div className="queue-actions">
+              <button 
+                className="process-queue-btn"
+                onClick={handleProcessQueue}
+                disabled={processingQueue}
+              >
+                {processingQueue ? 'Processing...' : `Process Queue (${queueStats?.pending || 0} emails)`}
+              </button>
+              
+              <select
+                value={queueStatusFilter}
+                onChange={(e) => {
+                  setQueueStatusFilter(e.target.value);
+                  setQueuePage(1);
+                }}
+                className="filter-select"
+              >
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+
+            {/* Queue Entries Table */}
+            {queueLoading ? (
+              <div className="loading-users">Loading queue entries...</div>
+            ) : queueEntries.length === 0 ? (
+              <div className="empty-queue">
+                <GmailIcon className="empty-icon" />
+                <p>No emails in queue</p>
+              </div>
+            ) : (
+              <>
+                <div className="queue-table">
+                  <div className="table-header">
+                    <div>Recipient</div>
+                    <div>Event</div>
+                    <div>Status</div>
+                    <div>Attempts</div>
+                    <div>Created</div>
+                    <div>Actions</div>
+                  </div>
+                  
+                  {queueEntries.map((entry) => (
+                    <div key={entry._id} className="table-row">
+                      <div className="queue-recipient">
+                        <div className="recipient-name">{entry.fullName}</div>
+                        <div className="recipient-email">{entry.email}</div>
+                      </div>
+                      
+                      <div className="queue-event">
+                        {entry.eventSnapshot?.title || 'N/A'}
+                      </div>
+                      
+                      <div className="queue-status" data-status={entry.status}>
+                        {entry.status}
+                      </div>
+                      
+                      <div className="queue-attempts">
+                        {entry.attempts || 0}
+                      </div>
+                      
+                      <div className="queue-date">
+                        {new Date(entry.createdAt).toLocaleString()}
+                      </div>
+                      
+                      <div className="queue-entry-actions">
+                        {(entry.status === 'failed' || entry.status === 'pending') && (
+                          <button
+                            onClick={() => handleRetryEmail(entry._id)}
+                            className="action-btn retry-btn"
+                            disabled={retryingId === entry._id}
+                          >
+                            {retryingId === entry._id ? 'Retrying...' : 'Retry'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {queueTotalPages > 1 && (
+                  <div className="pagination">
+                    <button
+                      onClick={() => setQueuePage(prev => Math.max(prev - 1, 1))}
+                      disabled={queuePage === 1}
+                      className="pagination-btn"
+                    >
+                      Previous
+                    </button>
+                    
+                    <span className="page-info">
+                      Page {queuePage} of {queueTotalPages}
+                    </span>
+                    
+                    <button
+                      onClick={() => setQueuePage(prev => Math.min(prev + 1, queueTotalPages))}
+                      disabled={queuePage === queueTotalPages}
                       className="pagination-btn"
                     >
                       Next

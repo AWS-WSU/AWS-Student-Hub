@@ -555,7 +555,7 @@ const getQueueEntries = async (status = null, page = 1, limit = 20) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select('-eventSnapshot'),
+      .select('email fullName eventId eventSnapshot.title status attempts lastAttempt nextAttempt lastError createdAt'),
     EmailQueue.countDocuments(query)
   ]);
 
