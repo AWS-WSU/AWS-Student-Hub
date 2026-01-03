@@ -178,6 +178,35 @@ Resources:
             Method: ANY
             RestApiId: !Ref StudentHubApiGateway
 
+  # Scheduled Email Queue Processor
+  EmailQueueProcessor:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'student-hub-email-queue-${Environment}'
+      CodeUri: ./
+      Handler: lambda.processEmailQueueHandler
+      Runtime: nodejs20.x
+      MemorySize: 512
+      Timeout: 60
+      Role: !GetAtt StudentHubApiRole.Arn
+      Description: "Scheduled email queue processor - retries failed emails"
+      Environment:
+        Variables:
+          MONGODB_URI: !Ref MongoDbUri
+          NODE_ENV: !Ref Environment
+          SMTP_HOST: !Ref SmtpHost
+          SMTP_PORT: !Ref SmtpPort
+          SMTP_ENCRYPTION: !Ref SmtpEncryption
+          SMTP_USER: !Ref SmtpUser
+          SMTP_PASS: !Ref SmtpPass
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
+            Description: Process email queue every 5 minutes
+            Enabled: true
+
   StudentHubApiGateway:
     Type: AWS::Serverless::Api
     Properties:
@@ -248,3 +277,9 @@ Outputs:
     Value: !GetAtt StudentHubApi.Arn
     Export:
       Name: !Sub '${AWS::StackName}-function-arn'
+  
+  EmailQueueProcessorFunction:
+    Description: Email Queue Processor Lambda Function ARN
+    Value: !GetAtt EmailQueueProcessor.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-email-queue-function-arn'

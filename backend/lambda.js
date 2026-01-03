@@ -1,5 +1,7 @@
 const serverless = require('serverless-http');
 const app = require('./app');
+const connectDB = require('./config/database');
+const { processEmailQueue } = require('./services/emailService');
 
 // Handle CORS for OPTIONS requests directly
 const handleCors = (event, context) => {
@@ -100,4 +102,41 @@ module.exports.handler = async (event, context) => {
   });
 
   return handler(event, context);
+};
+
+// Scheduled handler for processing email queue
+// Triggered by CloudWatch Events/EventBridge (e.g., every 5 minutes)
+module.exports.processEmailQueueHandler = async (event, context) => {
+  context.callbackWaitsForEmptyEventLoop = false;
+  
+  console.log('Starting scheduled email queue processing...');
+  
+  try {
+    // Ensure database connection
+    await connectDB();
+    
+    // Process up to 20 emails per invocation
+    const result = await processEmailQueue(20);
+    
+    console.log('Email queue processing completed:', result);
+    
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        success: true,
+        message: 'Email queue processed',
+        result
+      })
+    };
+  } catch (error) {
+    console.error('Email queue processing error:', error);
+    
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        success: false,
+        error: error.message
+      })
+    };
+  }
 };

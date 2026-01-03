@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Newsletter = require('../models/Newsletter');
+const { getQueueStats, getQueueEntries, retryFailedEmail, processEmailQueue } = require('../services/emailService');
 
 exports.getDashboardStats = async (req, res) => {
   try {
@@ -283,6 +284,77 @@ exports.getUserDetails = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Error fetching user details'
+    });
+  }
+};
+
+// Email Queue Management
+
+exports.getEmailQueueStats = async (req, res) => {
+  try {
+    const stats = await getQueueStats();
+    res.json({
+      success: true,
+      stats
+    });
+  } catch (error) {
+    console.error('Get email queue stats error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error fetching email queue stats'
+    });
+  }
+};
+
+exports.getEmailQueueEntries = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 20 } = req.query;
+    const result = await getQueueEntries(status || null, parseInt(page), parseInt(limit));
+    res.json({
+      success: true,
+      ...result
+    });
+  } catch (error) {
+    console.error('Get email queue entries error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error fetching email queue entries'
+    });
+  }
+};
+
+exports.retryQueuedEmail = async (req, res) => {
+  try {
+    const { queueId } = req.params;
+    const result = await retryFailedEmail(queueId);
+    res.json({
+      success: true,
+      message: 'Email retry initiated',
+      result
+    });
+  } catch (error) {
+    console.error('Retry queued email error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error retrying email'
+    });
+  }
+};
+
+exports.processQueue = async (req, res) => {
+  try {
+    const batchSize = parseInt(req.query.batchSize) || 10;
+    const result = await processEmailQueue(batchSize);
+    res.json({
+      success: true,
+      message: 'Queue processing completed',
+      result
+    });
+  } catch (error) {
+    console.error('Process queue error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error processing email queue'
     });
   }
 }; 

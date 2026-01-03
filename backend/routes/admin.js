@@ -18,4 +18,10 @@ router.put('/users/:userId/ban', requireModerator, canManageUser, adminControlle
 router.put('/users/:userId/unban', requireModerator, canManageUser, adminController.unbanUser);
 router.delete('/users/:userId', requireAdmin, canManageUser, adminController.deleteUser);
 
+// Email Queue management (admin only)
+router.get('/email-queue/stats', requireAdmin, adminController.getEmailQueueStats);
+router.get('/email-queue/entries', requireAdmin, adminController.getEmailQueueEntries);
+router.post('/email-queue/:queueId/retry', requireAdmin, adminController.retryQueuedEmail);
+router.post('/email-queue/process', requireAdmin, adminController.processQueue);
+
 module.exports = router; 

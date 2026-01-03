@@ -439,6 +439,67 @@ export const adminAPI = {
     }
     
     return response.json();
+  },
+
+  // Email Queue Management
+  getEmailQueueStats: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/email-queue/stats`, {
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch email queue stats');
+    }
+    
+    return response.json();
+  },
+
+  getEmailQueueEntries: async (status = null, page = 1, limit = 20) => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      ...(status && { status })
+    });
+    
+    const response = await fetch(`${API_BASE_URL}/admin/email-queue/entries?${params}`, {
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch email queue entries');
+    }
+    
+    return response.json();
+  },
+
+  retryQueuedEmail: async (queueId) => {
+    const response = await fetch(`${API_BASE_URL}/admin/email-queue/${queueId}/retry`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to retry email');
+    }
+    
+    return response.json();
+  },
+
+  processEmailQueue: async (batchSize = 10) => {
+    const response = await fetch(`${API_BASE_URL}/admin/email-queue/process?batchSize=${batchSize}`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to process email queue');
+    }
+    
+    return response.json();
   }
 };
 
