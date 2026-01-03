@@ -218,10 +218,12 @@ userSchema.methods.clearResetToken = function() {
   this.resetPasswordExpires = undefined;
 };
 
-userSchema.methods.generateRefreshToken = function(deviceId) {
+userSchema.methods.generateRefreshToken = function(deviceId, rememberMe = false) {
   const crypto = require('crypto');
   const refreshToken = crypto.randomBytes(64).toString('hex');
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+  // 30 days if rememberMe, otherwise 7 days
+  const expirationDays = rememberMe ? 30 : 7;
+  const expiresAt = new Date(Date.now() + expirationDays * 24 * 60 * 60 * 1000);
   
   // Clean up old tokens for this device
   this.refreshTokens = this.refreshTokens.filter(

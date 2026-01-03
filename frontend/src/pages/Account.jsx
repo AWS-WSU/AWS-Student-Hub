@@ -9,6 +9,8 @@ import './styles/Account.css';
 import { validateImageFile, compressImage } from '../utils/imageUtils';
 import CyberChallengeModal from '../components/CyberChallengeModal';
 
+const getStoredItem = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
+
 const programmingLanguages = [
   'JavaScript', 'Python', 'Java', 'C++', 'C#', 'React', 'Node.js', 'PHP', 
   'Ruby', 'Go', 'Rust', 'TypeScript', 'Swift', 'Kotlin', 'HTML/CSS', 'SQL'
@@ -250,7 +252,7 @@ function Account({ theme, toggleTheme }) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+            'Authorization': `Bearer ${getStoredItem('accessToken')}`
           },
           body: JSON.stringify({ username: formData.username })
         });

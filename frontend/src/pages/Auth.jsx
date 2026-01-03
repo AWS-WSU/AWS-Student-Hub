@@ -107,7 +107,8 @@ function Auth({ theme }) {
     fullName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    rememberMe: false
   });
   const [showPassword, setShowPassword] = useState({
     password: false,
@@ -167,9 +168,10 @@ function Auth({ theme }) {
   console.log('Auth render - showCyberModal:', showCyberModal, 'awsCredentials:', !!awsCredentials);
 
   const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: type === 'checkbox' ? checked : value
     });
     setError('');
   };
@@ -199,7 +201,8 @@ function Auth({ theme }) {
         throw new Error('Passwords do not match');
       }
 
-      const { confirmPassword: _, ...authData } = formData;
+      const { confirmPassword: _, rememberMe, ...authData } = formData;
+      authData.rememberMe = rememberMe;
       
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Connection timeout - backend may be starting up')), 5000)
@@ -728,6 +731,16 @@ function Auth({ theme }) {
               </AnimatePresence>
 
               <div className="form-options">
+                <label className="remember-me-label">
+                  <input
+                    type="checkbox"
+                    name="rememberMe"
+                    checked={formData.rememberMe}
+                    onChange={handleInputChange}
+                    className="remember-me-checkbox"
+                  />
+                  <span className="remember-me-text">Remember me</span>
+                </label>
                 {isLogin && (
                   <button 
                     type="button"

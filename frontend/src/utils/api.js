@@ -1,7 +1,18 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://0jqaxbqaa2.execute-api.us-east-1.amazonaws.com/prod';
 
+// Get item from either storage (check both for backwards compatibility)
+const getStoredItem = (key) => {
+  return localStorage.getItem(key) || sessionStorage.getItem(key);
+};
+
+// Clear item from both storages
+const clearStoredItem = (key) => {
+  localStorage.removeItem(key);
+  sessionStorage.removeItem(key);
+};
+
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('accessToken');
+  const token = getStoredItem('accessToken');
   return {
     'Content-Type': 'application/json',
     ...(token && { 'Authorization': `Bearer ${token}` })
@@ -11,7 +22,7 @@ const getAuthHeaders = () => {
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
   
-  const token = localStorage.getItem('accessToken');
+  const token = getStoredItem('accessToken');
   
   const defaultOptions = {
     headers: {
@@ -34,12 +45,12 @@ const apiRequest = async (endpoint, options = {}) => {
     
     // If unauthorized and we have a refresh token, try to refresh
     if (response.status === 401) {
-      const refreshToken = localStorage.getItem('refreshToken');
+      const refreshToken = getStoredItem('refreshToken');
       if (refreshToken) {
         try {
           await refreshTokens();
           // Retry the original request with the new token
-          finalOptions.headers.Authorization = `Bearer ${localStorage.getItem('accessToken')}`;
+          finalOptions.headers.Authorization = `Bearer ${getStoredItem('accessToken')}`;
           const retryResponse = await fetch(url, finalOptions);
           
           const contentType = retryResponse.headers.get('content-type');
@@ -58,9 +69,9 @@ const apiRequest = async (endpoint, options = {}) => {
           return data;
         } catch {
           // Refresh failed, logout user
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('cachedUser');
+          clearStoredItem('accessToken');
+          clearStoredItem('refreshToken');
+          clearStoredItem('cachedUser');
           throw new Error('Session expired. Please log in again.');
         }
       }
@@ -89,9 +100,24 @@ const apiRequest = async (endpoint, options = {}) => {
   }
 };
 
+// Set item to appropriate storage based on rememberMe
+const setStoredItem = (key, value) => {
+  const shouldRemember = localStorage.getItem('rememberMe') === 'true';
+  const storage = shouldRemember ? localStorage : sessionStorage;
+  
+  // Clear from the other storage
+  if (shouldRemember) {
+    sessionStorage.removeItem(key);
+  } else {
+    localStorage.removeItem(key);
+  }
+  
+  storage.setItem(key, value);
+};
+
 const refreshTokens = async () => {
-  const refreshToken = localStorage.getItem('refreshToken');
-  const deviceId = localStorage.getItem('deviceId');
+  const refreshToken = getStoredItem('refreshToken');
+  const deviceId = getStoredItem('deviceId') || localStorage.getItem('deviceId');
   
   if (!refreshToken || !deviceId) {
     throw new Error('No refresh token available');
@@ -113,9 +139,9 @@ const refreshTokens = async () => {
   }
 
   const data = await response.json();
-  localStorage.setItem('accessToken', data.accessToken);
-  localStorage.setItem('refreshToken', data.refreshToken);
-  localStorage.setItem('cachedUser', JSON.stringify(data.user));
+  setStoredItem('accessToken', data.accessToken);
+  setStoredItem('refreshToken', data.refreshToken);
+  setStoredItem('cachedUser', JSON.stringify(data.user));
   
   return data;
 };
@@ -233,7 +259,7 @@ export const authAPI = {
     const formData = new FormData();
     formData.append('profilePicture', file);
 
-    const token = localStorage.getItem('accessToken');
+    const token = getStoredItem('accessToken');
     const response = await fetch(`${API_BASE_URL}/upload/profile-picture`, {
       method: 'POST',
       headers: {
@@ -514,7 +540,7 @@ export const eventsAPI = {
     return apiRequest(`/events/admin?page=${page}&limit=${limit}`);
   },
   create: async (payload) => {
-    const token = localStorage.getItem('accessToken');
+    const token = getStoredItem('accessToken');
     const form = new FormData();
     Object.entries(payload).forEach(([k, v]) => {
       if (v !== undefined && v !== null) form.append(k, v);
@@ -529,7 +555,7 @@ export const eventsAPI = {
     return data;
   },
   update: async (eventId, payload) => {
-    const token = localStorage.getItem('accessToken');
+    const token = getStoredItem('accessToken');
     const form = new FormData();
     Object.entries(payload).forEach(([k, v]) => {
       if (v !== undefined && v !== null) form.append(k, v);

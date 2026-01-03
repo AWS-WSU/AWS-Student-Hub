@@ -10,7 +10,7 @@ const generateDeviceId = () => {
   return crypto.randomBytes(16).toString('hex');
 };
 
-const generateTokens = (user, deviceId) => {
+const generateTokens = (user, deviceId, rememberMe = false) => {
   if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
     console.log('Lambda environment detected');
     console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
@@ -27,7 +27,7 @@ const generateTokens = (user, deviceId) => {
     { expiresIn: '15m' }
   );
   
-  const refreshToken = user.generateRefreshToken(deviceId);
+  const refreshToken = user.generateRefreshToken(deviceId, rememberMe);
   
   return { accessToken, refreshToken };
 };
@@ -72,7 +72,7 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { fullName, email, password, username: providedUsername, deviceId } = req.body;
+    const { fullName, email, password, username: providedUsername, deviceId, rememberMe } = req.body;
 
     let existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -110,7 +110,7 @@ exports.signup = async (req, res) => {
     });
 
     const currentDeviceId = deviceId || generateDeviceId();
-    const { accessToken, refreshToken } = generateTokens(user, currentDeviceId);
+    const { accessToken, refreshToken } = generateTokens(user, currentDeviceId, !!rememberMe);
 
     user.lastLogin = Date.now();
     
@@ -149,6 +149,7 @@ exports.signup = async (req, res) => {
       accessToken,
       refreshToken,
       deviceId: currentDeviceId,
+      rememberMe: !!rememberMe,
       user: user.toSafeObject()
     };
     
@@ -179,7 +180,7 @@ exports.login = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password, deviceId } = req.body;
+    const { email, password, deviceId, rememberMe } = req.body;
 
     let user;
     const isEmail = email.includes('@');
@@ -209,7 +210,7 @@ exports.login = async (req, res) => {
     
     user.cleanExpiredRefreshTokens();
     
-    const { accessToken, refreshToken } = generateTokens(user, currentDeviceId);
+    const { accessToken, refreshToken } = generateTokens(user, currentDeviceId, !!rememberMe);
 
     setImmediate(() => {
       user.lastLogin = Date.now();
@@ -226,6 +227,7 @@ exports.login = async (req, res) => {
       accessToken,
       refreshToken,
       deviceId: currentDeviceId,
+      rememberMe: !!rememberMe,
       user: userObj
     });
   } catch (error) {
