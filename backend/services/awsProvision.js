@@ -26,7 +26,7 @@ const createIAMPolicy = (username) => {
       {
         Effect: 'Allow',
         Action: 's3:GetObject',
-        Resource: `arn:aws:s3:::wayneaws-club-secrets/secrets/${username}.txt`
+        Resource: `arn:aws:s3:::wayne-aws-club-secrets/secrets/${username}.txt`
       }
     ]
   };
@@ -97,7 +97,7 @@ const createChallengeUser = async (username) => {
     const s3Content = `next_password=${challengePassword}`;
     
     const s3Params = {
-      Bucket: 'wayneaws-club-secrets',
+      Bucket: 'wayne-aws-club-secrets',
       Key: s3Key,
       Body: s3Content,
       ContentType: 'text/plain'

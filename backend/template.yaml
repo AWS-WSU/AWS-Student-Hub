@@ -124,7 +124,7 @@ Parameters:
   AwsHubEventThumbnails:
     Type: String
     Description: S3 bucket name for event thumbnail uploads
-    Default: aws-student-hub-event-thumbs
+    Default: aws-student-hub-event-thumbnails
 
 Resources:
   StudentHubApi:

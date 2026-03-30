@@ -797,7 +797,7 @@ function Account({ theme, toggleTheme }) {
                 <div className="info-grid">
                   <div className="info-item">
                     <span className="info-label">S3 Bucket:</span>
-                    <code>wayneaws-club-secrets</code>
+                    <code>wayne-aws-club-secrets</code>
                   </div>
                   <div className="info-item">
                     <span className="info-label">Your Secret File:</span>

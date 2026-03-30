@@ -35,7 +35,7 @@ DISCORD_BOT_TOKEN=${19:-""}
 DISCORD_GUILD_ID=${20:-""}
 DISCORD_CHANNEL_ID=${21:-""}
 AWS_CRED_ENCRYPTION_KEY=${22:-""}
-AWS_HUB_EVENT_THUMBNAILS=${23:-"aws-student-hub-event-thumbs"}
+AWS_HUB_EVENT_THUMBNAILS=${23:-"aws-student-hub-event-thumbnails"}
 
 # Validate required parameters
 if [ -z "$MONGODB_URI" ] || [ -z "$ADMIN_TOKEN" ] || [ -z "$JWT_SECRET" ] || [ -z "$S3_BUCKET_NAME" ] || [ -z "$S3_ACCESS_KEY_ID" ] || [ -z "$S3_SECRET_ACCESS_KEY" ] || [ -z "$AWS_ADMIN_ACCESS_KEY_ID" ] || [ -z "$AWS_ADMIN_SECRET_ACCESS_KEY" ] || [ -z "$AWS_S3_BUCKET" ] || [ -z "$SMTP_USER" ] || [ -z "$SMTP_PASS" ] || [ -z "$DISCORD_BOT_TOKEN" ] || [ -z "$DISCORD_GUILD_ID" ] || [ -z "$DISCORD_CHANNEL_ID" ] || [ -z "$AWS_CRED_ENCRYPTION_KEY" ]; then

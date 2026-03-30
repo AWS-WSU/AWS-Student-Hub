@@ -35,7 +35,7 @@ const displayWarning = () => {
   console.log(chalk.yellow('• Delete ALL IAM users starting with "club_"'));
   console.log(chalk.yellow('• Delete ALL associated IAM policies'));
   console.log(chalk.yellow('• Delete ALL access keys for these users'));
-  console.log(chalk.yellow('• Delete ALL secret files in S3 bucket "wayneaws-club-secrets"'));
+  console.log(chalk.yellow('• Delete ALL secret files in S3 bucket "wayne-aws-club-secrets"'));
   console.log(chalk.yellow('• This action is IRREVERSIBLE'));
   console.log('\n' + chalk.red.bold('USE ONLY IN DEVELOPMENT ENVIRONMENT!'));
   console.log('='.repeat(80) + '\n');
@@ -80,7 +80,7 @@ const getS3SecretFiles = async () => {
     
     do {
       const params = {
-        Bucket: 'wayneaws-club-secrets',
+        Bucket: 'wayne-aws-club-secrets',
         Prefix: 'secrets/',
         MaxKeys: 1000,
         ...(continuationToken && { ContinuationToken: continuationToken })
@@ -197,7 +197,7 @@ const deleteS3Objects = async (objects) => {
       const batch = objects.slice(i, i + batchSize);
       
       const deleteParams = {
-        Bucket: 'wayneaws-club-secrets',
+        Bucket: 'wayne-aws-club-secrets',
         Delete: {
           Objects: batch.map(obj => ({ Key: obj.Key })),
           Quiet: false

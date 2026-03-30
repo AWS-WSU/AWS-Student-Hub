@@ -118,7 +118,7 @@ CORS_ORIGIN=http://localhost:5173,http://localhost:3000
 AWS_ACCESS_KEY_ID=your-aws-access-key-id
 AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
 AWS_REGION=us-east-1
-AWS_S3_BUCKET=aws-student-hub
+AWS_S3_BUCKET=wayne-aws-club-secrets
 
 # SMTP configuration for email
 SMTP_HOST=smtp.gmail.com

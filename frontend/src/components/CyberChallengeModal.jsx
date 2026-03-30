@@ -111,7 +111,7 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }) {
                 </div>
                 <div className="step">
                   <span className="step-number">2</span>
-                  <p>Find your secret file in the S3 bucket: <code>wayneaws-club-secrets</code></p>
+                  <p>Find your secret file in the S3 bucket: <code>wayne-aws-club-secrets</code></p>
                 </div>
                 <div className="step">
                   <span className="step-number">3</span>
