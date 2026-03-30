@@ -248,7 +248,7 @@ function Account({ theme, toggleTheme }) {
 
     try {
       if (field === 'username') {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://0jqaxbqaa2.execute-api.us-east-1.amazonaws.com/prod'}/auth/check-username`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://cxj1v57w5d.execute-api.us-east-1.amazonaws.com/prod'}/auth/check-username`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

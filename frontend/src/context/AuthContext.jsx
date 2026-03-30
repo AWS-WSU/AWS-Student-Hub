@@ -12,7 +12,7 @@ export const useAuth = () => {
   return context;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://0jqaxbqaa2.execute-api.us-east-1.amazonaws.com/prod';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://cxj1v57w5d.execute-api.us-east-1.amazonaws.com/prod';
 
 
 const getStoredItem = (key) => {
