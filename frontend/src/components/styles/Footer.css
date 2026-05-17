@@ -75,7 +75,9 @@
 .footer-section ul li a {
   color: var(--text-secondary);
   text-decoration: none;
-  transition: color 0.3s ease, padding-left 0.3s ease;
+  transition:
+    color 0.3s ease,
+    padding-left 0.3s ease;
   display: inline-block;
   font-size: 0.95rem;
 }
@@ -218,7 +220,7 @@
   .landing-footer {
     padding: 3rem 1.5rem 1rem;
   }
-  
+
   .footer-content {
     gap: 2rem;
   }
@@ -226,7 +228,7 @@
   .footer-aws-logo {
     height: 80px; /* More reasonable reduction from 125px */
   }
-  
+
   .footer-logo h3 {
     font-size: 1.2rem;
   }
@@ -234,11 +236,11 @@
   .footer-section {
     flex: 1 1 300px;
   }
-  
+
   .social-links {
     justify-content: flex-start;
   }
-  
+
   .newsletter-form {
     max-width: 100%;
   }

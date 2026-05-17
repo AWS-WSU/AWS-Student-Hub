@@ -25,12 +25,12 @@ const initDB = async () => {
   if (dbInitialized) {
     return;
   }
-  
+
   // If initialization is already in progress, wait for it
   if (dbInitPromise) {
     return dbInitPromise;
   }
-  
+
   dbInitPromise = (async () => {
     try {
       await connectDB();
@@ -43,18 +43,18 @@ const initDB = async () => {
       throw err;
     }
   })();
-  
+
   return dbInitPromise;
 };
 
 // Initialize DB immediately (non-blocking)
 if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
-  initDB().catch(err => {
+  initDB().catch((err) => {
     console.error('Failed to initialize database:', err);
   });
 } else {
   // For local development, connect synchronously
-  connectDB().catch(err => {
+  connectDB().catch((err) => {
     console.error('Database connection failed:', err);
   });
 }
@@ -62,21 +62,21 @@ if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    
-    const allowedOrigins = process.env.CORS_ORIGIN ? 
-    process.env.CORS_ORIGIN.split(',').map(o => o.trim()) : 
-    [
-      'https://wayneaws.dev', 
-      'https://www.wayneaws.dev', 
-      'https://prizeversity.com',      
-      'https://www.prizeversity.com',  
-      'http://localhost:5173', 
-      'http://localhost:3000'
-    ];
-    
+
+    const allowedOrigins = process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+      : [
+          'https://wayneaws.dev',
+          'https://www.wayneaws.dev',
+          'https://prizeversity.com',
+          'https://www.prizeversity.com',
+          'http://localhost:5173',
+          'http://localhost:3000',
+        ];
+
     // Check for Amplify domains
     const isAmplifyDomain = origin && origin.includes('.amplifyapp.com');
-    
+
     if (allowedOrigins.includes(origin) || isAmplifyDomain) {
       callback(null, true);
     } else {
@@ -84,7 +84,7 @@ const corsOptions = {
     }
   },
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
 };
 
 app.use(cors(corsOptions));
@@ -112,7 +112,7 @@ app.use(async (req, res, next) => {
       if (mongoose.connection.readyState === 1) {
         return next();
       }
-      
+
       // Connection not ready, try to initialize/reconnect
       if (!dbInitialized) {
         await initDB();
@@ -124,21 +124,21 @@ app.use(async (req, res, next) => {
           await initDB();
         }
       }
-      
+
       // Final check
       const finalCheck = await checkConnection();
       if (!finalCheck) {
         console.error('Database not available after initialization attempt');
         return res.status(503).json({
           error: 'Service temporarily unavailable. Please try again.',
-          message: 'Database connection unavailable'
+          message: 'Database connection unavailable',
         });
       }
     } catch (error) {
       console.error('Database initialization error:', error);
       return res.status(503).json({
         error: 'Service temporarily unavailable. Please try again.',
-        message: 'Database connection failed'
+        message: 'Database connection failed',
       });
     }
   }
@@ -160,14 +160,14 @@ app.use('/upload', uploadRoutes);
 app.use('/', discordInviteRoutes);
 app.use('/admin', adminRoutes);
 app.use('/events', eventRoutes);
-app.use('/verify', verifyRoutes);  
+app.use('/verify', verifyRoutes);
 
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     message: 'AWS Student Hub Backend is running on Lambda',
     timestamp: new Date().toISOString(),
-    environment: process.env.AWS_LAMBDA_FUNCTION_NAME ? 'lambda' : 'local'
+    environment: process.env.AWS_LAMBDA_FUNCTION_NAME ? 'lambda' : 'local',
   });
 });
 

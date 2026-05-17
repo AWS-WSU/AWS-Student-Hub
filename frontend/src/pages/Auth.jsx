@@ -12,20 +12,20 @@ const PasswordRequirements = ({ password, isVisible }) => {
   const requirements = [
     {
       test: (pwd) => pwd.length >= 6,
-      text: 'At least 6 characters long'
+      text: 'At least 6 characters long',
     },
     {
       test: (pwd) => /\d/.test(pwd),
-      text: 'Contains at least one number'
+      text: 'Contains at least one number',
     },
     {
       test: (pwd) => /[A-Z]/.test(pwd),
-      text: 'Contains at least one uppercase letter'
+      text: 'Contains at least one uppercase letter',
     },
     {
       test: (pwd) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pwd),
-      text: 'Contains at least one special character'
-    }
+      text: 'Contains at least one special character',
+    },
   ];
 
   if (!isVisible) return null;
@@ -41,13 +41,8 @@ const PasswordRequirements = ({ password, isVisible }) => {
       <div className="requirements-title">Password must:</div>
       <ul className="requirements-list">
         {requirements.map((req, index) => (
-          <li 
-            key={index} 
-            className={`requirement ${req.test(password) ? 'met' : 'unmet'}`}
-          >
-            <span className="requirement-icon">
-              {req.test(password) ? '✓' : '○'}
-            </span>
+          <li key={index} className={`requirement ${req.test(password) ? 'met' : 'unmet'}`}>
+            <span className="requirement-icon">{req.test(password) ? '✓' : '○'}</span>
             {req.text}
           </li>
         ))}
@@ -56,12 +51,24 @@ const PasswordRequirements = ({ password, isVisible }) => {
   );
 };
 
-const PasswordInput = ({ name, placeholder, value, onChange, onFocus, onBlur, required = false, minLength, showField, showPassword, togglePasswordVisibility }) => {
+const PasswordInput = ({
+  name,
+  placeholder,
+  value,
+  onChange,
+  onFocus,
+  onBlur,
+  required = false,
+  minLength,
+  showField,
+  showPassword,
+  togglePasswordVisibility,
+}) => {
   const fieldKey = showField || name;
   return (
     <div className="form-group password-input-container">
       <input
-        type={showPassword[fieldKey] ? "text" : "password"}
+        type={showPassword[fieldKey] ? 'text' : 'password'}
         name={name}
         placeholder={placeholder}
         value={value}
@@ -75,11 +82,11 @@ const PasswordInput = ({ name, placeholder, value, onChange, onFocus, onBlur, re
         type="button"
         className="password-toggle"
         onClick={() => togglePasswordVisibility(fieldKey)}
-        aria-label={showPassword[fieldKey] ? "Hide password" : "Show password"}
+        aria-label={showPassword[fieldKey] ? 'Hide password' : 'Show password'}
       >
         <img
-          src={showPassword[fieldKey] ? "/eye-closed.svg" : "/eye-open.svg"}
-          alt={showPassword[fieldKey] ? "Hide" : "Show"}
+          src={showPassword[fieldKey] ? '/eye-closed.svg' : '/eye-open.svg'}
+          alt={showPassword[fieldKey] ? 'Hide' : 'Show'}
         />
       </button>
     </div>
@@ -100,7 +107,7 @@ function Auth({ theme }) {
     newPassword: '',
     confirmPassword: '',
     censoredEmail: '',
-    needsEmailVerification: false
+    needsEmailVerification: false,
   });
   const [formData, setFormData] = useState({
     username: '',
@@ -108,45 +115,53 @@ function Auth({ theme }) {
     email: '',
     password: '',
     confirmPassword: '',
-    rememberMe: false
+    rememberMe: false,
   });
   const [showPassword, setShowPassword] = useState({
     password: false,
     confirmPassword: false,
     newPassword: false,
-    confirmResetPassword: false
+    confirmResetPassword: false,
   });
   const [showCyberModal, setShowCyberModal] = useState(false);
   const [awsCredentials, setAwsCredentials] = useState(null);
-  
+
   const { loginWithRedirect, isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
-  const { user: authUser, login, signup, forceLogoutAndClearData, markAwsCredentialsViewed } = useAuth();
+  const {
+    user: authUser,
+    login,
+    signup,
+    forceLogoutAndClearData,
+    markAwsCredentialsViewed,
+  } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
     if ((authUser || (isAuth0Authenticated && auth0User)) && !isLoading) {
       const currentUser = auth0User || authUser;
-      
-      if (currentUser && 
-          currentUser.awsAccessKeyId && 
-          currentUser.awsSecretAccessKey &&
-          !currentUser.hasViewedAwsCredentials && 
-          !showCyberModal) {
+
+      if (
+        currentUser &&
+        currentUser.awsAccessKeyId &&
+        currentUser.awsSecretAccessKey &&
+        !currentUser.hasViewedAwsCredentials &&
+        !showCyberModal
+      ) {
         console.log('Setting AWS credentials for modal:', {
           hasAccessKey: !!currentUser.awsAccessKeyId,
           hasSecretKey: !!currentUser.awsSecretAccessKey,
-          hasViewed: currentUser.hasViewedAwsCredentials
+          hasViewed: currentUser.hasViewedAwsCredentials,
         });
-        
+
         setAwsCredentials({
           accessKeyId: currentUser.awsAccessKeyId,
-          secretAccessKey: currentUser.awsSecretAccessKey
+          secretAccessKey: currentUser.awsSecretAccessKey,
         });
         setShowCyberModal(true);
         return;
       }
-      
+
       if (currentUser && !currentUser.profileSetupCompleted) {
         navigate('/setup', { replace: true });
       } else {
@@ -161,7 +176,7 @@ function Auth({ theme }) {
       auth0User: !!auth0User,
       isLoading,
       showCyberModal,
-      awsCredentials: !!awsCredentials
+      awsCredentials: !!awsCredentials,
     });
   }, [authUser, auth0User, isLoading, showCyberModal, awsCredentials]);
 
@@ -171,7 +186,7 @@ function Auth({ theme }) {
     const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
     });
     setError('');
   };
@@ -179,15 +194,15 @@ function Auth({ theme }) {
   const handleResetInputChange = (e) => {
     setResetData({
       ...resetData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
     setError('');
   };
 
   const togglePasswordVisibility = (field) => {
-    setShowPassword(prev => ({
+    setShowPassword((prev) => ({
       ...prev,
-      [field]: !prev[field]
+      [field]: !prev[field],
     }));
   };
 
@@ -203,36 +218,38 @@ function Auth({ theme }) {
 
       const { confirmPassword: _, rememberMe, ...authData } = formData;
       authData.rememberMe = rememberMe;
-      
-      const timeoutPromise = new Promise((_, reject) => 
+
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Connection timeout - backend may be starting up')), 5000)
       );
-      
+
       if (isLogin) {
         const loginResult = await Promise.race([login(authData), timeoutPromise]);
         console.log('Login result:', loginResult);
-        
-        if (loginResult && 
-            loginResult.user && 
-            loginResult.user.awsAccessKeyId && 
-            loginResult.user.awsSecretAccessKey &&
-            !loginResult.user.hasViewedAwsCredentials) {
+
+        if (
+          loginResult &&
+          loginResult.user &&
+          loginResult.user.awsAccessKeyId &&
+          loginResult.user.awsSecretAccessKey &&
+          !loginResult.user.hasViewedAwsCredentials
+        ) {
           console.log('Login: Setting AWS credentials for modal');
           setAwsCredentials({
             accessKeyId: loginResult.user.awsAccessKeyId,
-            secretAccessKey: loginResult.user.awsSecretAccessKey
+            secretAccessKey: loginResult.user.awsSecretAccessKey,
           });
           setShowCyberModal(true);
           setIsLoading(false);
           return;
         }
-        
+
         setIsLoading(false);
         navigate('/', { replace: true });
       } else {
         const signupResult = await Promise.race([signup(authData), timeoutPromise]);
         console.log('Signup result:', signupResult);
-        
+
         if (signupResult && signupResult.awsCredentials) {
           console.log('Signup: Setting AWS credentials for modal');
           setAwsCredentials(signupResult.awsCredentials);
@@ -240,11 +257,10 @@ function Auth({ theme }) {
           setIsLoading(false);
           return;
         }
-        
+
         setIsLoading(false);
         navigate('/', { replace: true });
       }
-      
     } catch (err) {
       setError(err.message || 'Authentication failed');
       setIsLoading(false);
@@ -257,20 +273,20 @@ function Auth({ theme }) {
     setIsLoading(true);
 
     try {
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Request timeout - please check your connection')), 10000)
       );
-      
+
       const data = await Promise.race([
         authAPI.forgotPassword(resetData.identifier),
-        timeoutPromise
+        timeoutPromise,
       ]);
 
       if (data.needsEmailVerification) {
-        setResetData(prev => ({
+        setResetData((prev) => ({
           ...prev,
           censoredEmail: data.censoredEmail,
-          needsEmailVerification: true
+          needsEmailVerification: true,
         }));
         setForgotPasswordStep('verify-email');
       } else {
@@ -338,10 +354,14 @@ function Auth({ theme }) {
         newPassword: '',
         confirmPassword: '',
         censoredEmail: '',
-        needsEmailVerification: false
+        needsEmailVerification: false,
       });
       setError('');
-      showToast('Password reset successful! You can now sign in with your new password.', 'success', 5000);
+      showToast(
+        'Password reset successful! You can now sign in with your new password.',
+        'success',
+        5000
+      );
     } catch (err) {
       setError(err.message);
     } finally {
@@ -356,10 +376,10 @@ function Auth({ theme }) {
         appState: { returnTo: window.location.origin },
         authorizationParams: {
           connection: 'google-oauth2',
-          response_type: "code",
-          code_challenge_method: "S256",
-          prompt: "login"
-        }
+          response_type: 'code',
+          code_challenge_method: 'S256',
+          prompt: 'login',
+        },
       });
     } catch {
       setError('Social login failed. Please try again.');
@@ -376,7 +396,7 @@ function Auth({ theme }) {
       newPassword: '',
       confirmPassword: '',
       censoredEmail: '',
-      needsEmailVerification: false
+      needsEmailVerification: false,
     });
     setError('');
   };
@@ -394,16 +414,16 @@ function Auth({ theme }) {
 
   return (
     <div className="auth-container">
-      <motion.div 
+      <motion.div
         className="auth-card"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
         <div className="auth-header">
-          <motion.img 
-            src={theme === 'light' ? "/aws-logo-dark.svg" : "/aws-logo-light.svg"}
-            alt="AWS Logo" 
+          <motion.img
+            src={theme === 'light' ? '/aws-logo-dark.svg' : '/aws-logo-light.svg'}
+            alt="AWS Logo"
             className="auth-logo"
             initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
@@ -427,7 +447,7 @@ function Auth({ theme }) {
 
         {!forgotPasswordStep && (
           <div className="auth-toggle">
-            <button 
+            <button
               className={isLogin ? 'active' : ''}
               onClick={() => {
                 setIsLogin(true);
@@ -436,7 +456,7 @@ function Auth({ theme }) {
             >
               Sign In
             </button>
-            <button 
+            <button
               className={!isLogin ? 'active' : ''}
               onClick={() => {
                 setIsLogin(false);
@@ -490,7 +510,7 @@ function Auth({ theme }) {
               >
                 {isLoading ? <div className="loading-spinner" /> : 'Continue'}
               </motion.button>
-              <motion.button 
+              <motion.button
                 type="button"
                 className="back-home"
                 onClick={resetForgotPassword}
@@ -511,8 +531,9 @@ function Auth({ theme }) {
               exit={{ opacity: 0, x: -20 }}
             >
               <p className="verify-email-text">
-                We found an account with username <strong>{resetData.identifier}</strong>. 
-                Please enter the email address <strong>{resetData.censoredEmail}</strong> to verify your identity.
+                We found an account with username <strong>{resetData.identifier}</strong>. Please
+                enter the email address <strong>{resetData.censoredEmail}</strong> to verify your
+                identity.
               </p>
               <div className="form-group">
                 <input
@@ -533,7 +554,7 @@ function Auth({ theme }) {
               >
                 {isLoading ? <div className="loading-spinner" /> : 'Verify Email'}
               </motion.button>
-              <motion.button 
+              <motion.button
                 type="button"
                 className="back-home"
                 onClick={resetForgotPassword}
@@ -574,7 +595,7 @@ function Auth({ theme }) {
               >
                 {isLoading ? <div className="loading-spinner" /> : 'Verify Code'}
               </motion.button>
-              <motion.button 
+              <motion.button
                 type="button"
                 className="back-home"
                 onClick={resetForgotPassword}
@@ -625,7 +646,7 @@ function Auth({ theme }) {
               >
                 {isLoading ? <div className="loading-spinner" /> : 'Reset Password'}
               </motion.button>
-              <motion.button 
+              <motion.button
                 type="button"
                 className="back-home"
                 onClick={resetForgotPassword}
@@ -682,7 +703,7 @@ function Auth({ theme }) {
                 <input
                   type="text"
                   name="email"
-                  placeholder={isLogin ? "Email or Username" : "Email"}
+                  placeholder={isLogin ? 'Email or Username' : 'Email'}
                   value={formData.email}
                   onChange={handleInputChange}
                   required
@@ -742,7 +763,7 @@ function Auth({ theme }) {
                   <span className="remember-me-text">Remember me</span>
                 </label>
                 {isLogin && (
-                  <button 
+                  <button
                     type="button"
                     className="forgot-password"
                     onClick={() => setForgotPasswordStep('forgot-password')}
@@ -760,8 +781,10 @@ function Auth({ theme }) {
               >
                 {isLoading ? (
                   <div className="loading-spinner" />
+                ) : isLogin ? (
+                  'Sign In'
                 ) : (
-                  isLogin ? 'Sign In' : 'Create Account'
+                  'Create Account'
                 )}
               </motion.button>
             </motion.form>
@@ -770,9 +793,7 @@ function Auth({ theme }) {
 
         {!forgotPasswordStep && (
           <>
-            <div className="auth-divider">
-              Or continue with
-            </div>
+            <div className="auth-divider">Or continue with</div>
 
             <div className="social-auth">
               <motion.button
@@ -786,7 +807,7 @@ function Auth({ theme }) {
               </motion.button>
             </div>
 
-            <motion.button 
+            <motion.button
               className="back-home"
               onClick={() => navigate('/')}
               whileHover={{ scale: 1.02 }}
@@ -796,10 +817,10 @@ function Auth({ theme }) {
             </motion.button>
           </>
         )}
-        
+
         {/* Debug Helper for Browser Data Issues - Temporary */}
         {error && error.includes('Load failed') && (
-          <motion.div 
+          <motion.div
             className="debug-helper"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -809,7 +830,7 @@ function Auth({ theme }) {
               background: 'rgba(255, 165, 0, 0.1)',
               border: '1px solid rgba(255, 165, 0, 0.3)',
               borderRadius: '8px',
-              textAlign: 'center'
+              textAlign: 'center',
             }}
           >
             <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
@@ -826,7 +847,7 @@ function Auth({ theme }) {
                 padding: '0.5rem 1rem',
                 borderRadius: '6px',
                 fontSize: '0.9rem',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               Clear All Browser Data & Reload

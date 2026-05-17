@@ -19,9 +19,9 @@ function Resources() {
             <span></span>
           </div>
         </div>
-        
+
         <div className="resources-container">
-          <motion.div 
+          <motion.div
             className="resource-card"
             initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -33,10 +33,12 @@ function Resources() {
             </div>
             <h3>AWS Free Tier Access</h3>
             <p>Get started with AWS services at no cost through our educational partnership.</p>
-            <a href="#" className="resource-link">Access Now <i className="fas fa-arrow-right"></i></a>
+            <a href="#" className="resource-link">
+              Access Now <i className="fas fa-arrow-right"></i>
+            </a>
           </motion.div>
-          
-          <motion.div 
+
+          <motion.div
             className="resource-card"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -48,10 +50,12 @@ function Resources() {
             </div>
             <h3>Certification Vouchers</h3>
             <p>Active members may qualify for discounted AWS certification exam vouchers.</p>
-            <a href="#" className="resource-link">Learn More <i className="fas fa-arrow-right"></i></a>
+            <a href="#" className="resource-link">
+              Learn More <i className="fas fa-arrow-right"></i>
+            </a>
           </motion.div>
-          
-          <motion.div 
+
+          <motion.div
             className="resource-card"
             initial={{ opacity: 0, x: 50 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -63,11 +67,13 @@ function Resources() {
             </div>
             <h3>Learning Materials</h3>
             <p>Access our curated collection of guides, tutorials, and practice exercises.</p>
-            <a href="#" className="resource-link">Browse Library <i className="fas fa-arrow-right"></i></a>
+            <a href="#" className="resource-link">
+              Browse Library <i className="fas fa-arrow-right"></i>
+            </a>
           </motion.div>
         </div>
-        
-        <motion.div 
+
+        <motion.div
           className="testimonials-container"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -77,11 +83,14 @@ function Resources() {
           <h3>What Our Members Say</h3>
           <div className="testimonials-slider">
             <div className="testimonial">
-              <p>Being on the board for the AWS Cloud Club really pushed me out of my comfort zone.
-                 As a finance major, I wasn't fluent in technology terms at first but organizing events 
-                 helped me pick up so many concepts I wouldn't have learned in the classroom. 
-                It gave me the confidence to navigate technical conversations, which I rely on now in my role at Deloitte,
-                 where I work closely with AWS in technology risk advisory practice.</p>
+              <p>
+                Being on the board for the AWS Cloud Club really pushed me out of my comfort zone.
+                As a finance major, I wasn't fluent in technology terms at first but organizing
+                events helped me pick up so many concepts I wouldn't have learned in the classroom.
+                It gave me the confidence to navigate technical conversations, which I rely on now
+                in my role at Deloitte, where I work closely with AWS in technology risk advisory
+                practice.
+              </p>
               <div className="testimonial-author">
                 <img src="/mahdyya.jpeg" alt="Jane Doe" />
                 <div>
@@ -97,7 +106,7 @@ function Resources() {
       <SocialLinks />
 
       <section className="cta-section">
-        <motion.div 
+        <motion.div
           className="cta-card"
           initial={{ opacity: 0, scale: 0.9 }}
           whileInView={{ opacity: 1, scale: 1 }}
@@ -105,8 +114,15 @@ function Resources() {
           viewport={{ once: true, amount: 0.5 }}
         >
           <h2>{user ? 'Welcome back!' : 'Ready to start your cloud journey?'}</h2>
-          <p>{user ? 'Check out upcoming events and stay connected with the community.' : 'Join our community today and get access to workshops, networking events, and resources to accelerate your career.'}</p>
-          <button className="join-button pulse-animation" onClick={() => navigate(user ? '/events' : '/auth?mode=signup')}>
+          <p>
+            {user
+              ? 'Check out upcoming events and stay connected with the community.'
+              : 'Join our community today and get access to workshops, networking events, and resources to accelerate your career.'}
+          </p>
+          <button
+            className="join-button pulse-animation"
+            onClick={() => navigate(user ? '/events' : '/auth?mode=signup')}
+          >
             {user ? 'View Events' : 'Join the Club'}
           </button>
         </motion.div>

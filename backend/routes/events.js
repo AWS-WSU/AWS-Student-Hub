@@ -14,5 +14,3 @@ router.delete('/:eventId', requireAdmin, eventController.deleteEvent);
 router.post('/:eventId/notify', requireAdmin, eventController.sendEventNotification);
 
 module.exports = router;
-
-

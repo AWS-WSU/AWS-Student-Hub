@@ -6,49 +6,49 @@ import { useAuth } from '../context/AuthContext';
 import './styles/PublicProfile.css';
 
 const languageIcons = {
-  'JavaScript': '/js.svg',
-  'Python': '/py.svg',
-  'Java': '/java.svg',
-  'C++': '/cpp.svg',  
+  JavaScript: '/js.svg',
+  Python: '/py.svg',
+  Java: '/java.svg',
+  'C++': '/cpp.svg',
   'C#': '/csharp.svg',
-  'React': '/jsx.svg',
+  React: '/jsx.svg',
   'Node.js': '/js.svg',
-  'TypeScript': '/ts.svg',
-  'Swift': '/swift.svg',
-  'Kotlin': '/kotlin.svg',
-  'Ruby': '/ruby.svg',
-  'Go': '/go.svg',
-  'Rust': '/rs.svg',
+  TypeScript: '/ts.svg',
+  Swift: '/swift.svg',
+  Kotlin: '/kotlin.svg',
+  Ruby: '/ruby.svg',
+  Go: '/go.svg',
+  Rust: '/rs.svg',
   'HTML/CSS': '/html.svg',
-  'SQL': '/sql.svg'
+  SQL: '/sql.svg',
 };
 
 const getStatusDisplay = (role) => {
   switch (role?.toLowerCase()) {
     case 'superuser':
-      return { 
-        title: 'President', 
+      return {
+        title: 'President',
         icon: '/pres.svg',
-        isPresident: true 
+        isPresident: true,
       };
     case 'admin':
-      return { 
-        title: 'Site Admin', 
+      return {
+        title: 'Site Admin',
         icon: '/admin.svg',
-        isPresident: false 
+        isPresident: false,
       };
     case 'moderator':
-      return { 
-        title: 'Site Moderator', 
+      return {
+        title: 'Site Moderator',
         icon: '/mod.svg',
-        isPresident: false 
+        isPresident: false,
       };
     case 'member':
     default:
-      return { 
-        title: 'AWS Cloud Member', 
+      return {
+        title: 'AWS Cloud Member',
         icon: null,
-        isPresident: false 
+        isPresident: false,
       };
   }
 };
@@ -96,7 +96,7 @@ function PublicProfile({ theme }) {
       return new Date(lastLogin).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
-        day: 'numeric'
+        day: 'numeric',
       });
     }
   };
@@ -105,10 +105,10 @@ function PublicProfile({ theme }) {
     return (
       <div className="public-profile-container">
         <div className="profile-loading">
-          <motion.div 
+          <motion.div
             className="loading-spinner"
             animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
           >
             ⚙️
           </motion.div>
@@ -148,7 +148,7 @@ function PublicProfile({ theme }) {
   return (
     <div className="public-profile-container">
       <div className="profile-content">
-        <motion.button 
+        <motion.button
           className="back-button"
           onClick={() => navigate(-1)}
           initial={{ opacity: 0, x: -20 }}
@@ -160,7 +160,7 @@ function PublicProfile({ theme }) {
           ← Back
         </motion.button>
 
-        <motion.div 
+        <motion.div
           className={`profile-header ${getStatusDisplay(profile.role).isPresident ? 'president-header' : ''}`}
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -168,8 +168,8 @@ function PublicProfile({ theme }) {
         >
           <div className="profile-avatar-section">
             <div className="profile-avatar">
-              <img 
-                src={profile.profilePicture || '/avatar.jpg'} 
+              <img
+                src={profile.profilePicture || '/avatar.jpg'}
                 alt={`${profile.fullName}'s profile`}
                 onError={(e) => {
                   e.target.src = '/avatar.jpg';
@@ -178,49 +178,61 @@ function PublicProfile({ theme }) {
               <div className="avatar-border"></div>
             </div>
           </div>
-          
+
           <div className="profile-info">
             <h1 className="profile-name">{profile.fullName}</h1>
             <p className="profile-username">@{profile.username}</p>
-            <p className="profile-member-since">
-              Member since {profile.stats.memberSince}
-            </p>
+            <p className="profile-member-since">Member since {profile.stats.memberSince}</p>
           </div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="profile-stats"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           <div className="stat-card">
-            <div className="stat-icon"><img src="/calendar.svg" alt="Days as Member" style={{ width: '32px', height: '32px' }} /></div>
+            <div className="stat-icon">
+              <img
+                src="/calendar.svg"
+                alt="Days as Member"
+                style={{ width: '32px', height: '32px' }}
+              />
+            </div>
             <div className="stat-content">
               <h3>Days as Member</h3>
               <p>{profile.stats.daysSinceJoin}</p>
             </div>
           </div>
-          
+
           <div className="stat-card">
-            <div className="stat-icon"><img src="/activity.svg" alt="Last Seen" style={{ width: '32px', height: '32px' }} /></div>
+            <div className="stat-icon">
+              <img src="/activity.svg" alt="Last Seen" style={{ width: '32px', height: '32px' }} />
+            </div>
             <div className="stat-content">
               <h3>Last Seen</h3>
               <p>{formatLastSeen(profile.lastLogin, profile.stats.daysSinceLastSeen)}</p>
             </div>
           </div>
-          
-          <div className={`stat-card ${getStatusDisplay(profile.role).isPresident ? 'president-status' : ''}`}>
+
+          <div
+            className={`stat-card ${getStatusDisplay(profile.role).isPresident ? 'president-status' : ''}`}
+          >
             <div className="stat-icon">
               {getStatusDisplay(profile.role).icon ? (
-                <img 
-                  src={getStatusDisplay(profile.role).icon} 
+                <img
+                  src={getStatusDisplay(profile.role).icon}
                   alt={getStatusDisplay(profile.role).title}
                   className={`role-icon ${getStatusDisplay(profile.role).isPresident ? 'president-icon' : ''}`}
                   style={{ width: '32px', height: '32px' }}
                 />
               ) : (
-                <img src={theme === 'dark' ? '/aws-light.svg' : '/aws.svg'} alt="Status" style={{ width: '32px', height: '32px' }} />
+                <img
+                  src={theme === 'dark' ? '/aws-light.svg' : '/aws.svg'}
+                  alt="Status"
+                  style={{ width: '32px', height: '32px' }}
+                />
               )}
             </div>
             <div className="stat-content">
@@ -232,7 +244,7 @@ function PublicProfile({ theme }) {
           </div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="profile-bio"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -244,18 +256,23 @@ function PublicProfile({ theme }) {
               <p className="user-bio">{profile.bio}</p>
             ) : (
               <p className="default-bio">
-                {profile.fullName} is an active member of the Wayne State University AWS Cloud Computing Club. 
-                {profile.stats.daysSinceJoin < 30 ? ' They recently joined our community' : ' They have been part of our community'} 
-                {profile.stats.daysSinceJoin >= 365 ? ' for over a year' : 
-                 profile.stats.daysSinceJoin >= 30 ? ` for ${Math.floor(profile.stats.daysSinceJoin / 30)} month${Math.floor(profile.stats.daysSinceJoin / 30) > 1 ? 's' : ''}` : 
-                 ` ${profile.stats.daysSinceJoin} day${profile.stats.daysSinceJoin > 1 ? 's' : ''} ago `} 
+                {profile.fullName} is an active member of the Wayne State University AWS Cloud
+                Computing Club.
+                {profile.stats.daysSinceJoin < 30
+                  ? ' They recently joined our community'
+                  : ' They have been part of our community'}
+                {profile.stats.daysSinceJoin >= 365
+                  ? ' for over a year'
+                  : profile.stats.daysSinceJoin >= 30
+                    ? ` for ${Math.floor(profile.stats.daysSinceJoin / 30)} month${Math.floor(profile.stats.daysSinceJoin / 30) > 1 ? 's' : ''}`
+                    : ` ${profile.stats.daysSinceJoin} day${profile.stats.daysSinceJoin > 1 ? 's' : ''} ago `}
                 and is actively learning about cloud computing technologies with AWS.
               </p>
             )}
           </div>
 
           {(profile.major || profile.grade) && (
-            <motion.div 
+            <motion.div
               className="academic-info"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -280,7 +297,7 @@ function PublicProfile({ theme }) {
           )}
 
           {profile.programmingLanguages && profile.programmingLanguages.length > 0 && (
-            <motion.div 
+            <motion.div
               className="programming-skills"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -289,16 +306,16 @@ function PublicProfile({ theme }) {
               <h4>Programming Skills</h4>
               <div className="skills-grid">
                 {profile.programmingLanguages.map((language, index) => (
-                  <motion.span 
-                    key={language} 
+                  <motion.span
+                    key={language}
                     className="skill-chip"
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3, delay: 0.7 + (index * 0.1) }}
+                    transition={{ duration: 0.3, delay: 0.7 + index * 0.1 }}
                   >
                     {languageIcons[language] && (
-                      <img 
-                        src={languageIcons[language]} 
+                      <img
+                        src={languageIcons[language]}
                         alt={language}
                         className="skill-chip-icon"
                       />
@@ -309,7 +326,7 @@ function PublicProfile({ theme }) {
               </div>
             </motion.div>
           )}
-          
+
           {!user && (
             <div className="join-cta">
               <p>Interested in joining our AWS community?</p>
@@ -329,4 +346,4 @@ function PublicProfile({ theme }) {
   );
 }
 
-export default PublicProfile; 
+export default PublicProfile;

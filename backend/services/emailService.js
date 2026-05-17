@@ -7,8 +7,8 @@ const transporter = nodemailer.createTransport({
   secure: false,
   auth: {
     user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
+    pass: process.env.SMTP_PASS,
+  },
 });
 
 const sendResetCode = async (email, code, fullName) => {
@@ -47,7 +47,7 @@ const sendResetCode = async (email, code, fullName) => {
         </div>
       </body>
       </html>
-    `
+    `,
   };
 
   await transporter.sendMail(mailOptions);
@@ -55,22 +55,22 @@ const sendResetCode = async (email, code, fullName) => {
 
 const sendEventNotification = async (email, fullName, event, customMessage = '') => {
   const eventDate = new Date(event.startTime);
-  const formattedDate = eventDate.toLocaleDateString('en-US', { 
+  const formattedDate = eventDate.toLocaleDateString('en-US', {
     timeZone: 'America/Detroit',
     weekday: 'long',
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   });
-  const formattedTime = eventDate.toLocaleTimeString('en-US', { 
+  const formattedTime = eventDate.toLocaleTimeString('en-US', {
     timeZone: 'America/Detroit',
-    hour: 'numeric', 
+    hour: 'numeric',
     minute: '2-digit',
-    timeZoneName: 'short'
+    timeZoneName: 'short',
   });
 
   const isRemote = event.isRemote === true || event.isRemote === 'true';
-  
+
   let locationHtml = '';
   if (isRemote) {
     locationHtml = `
@@ -78,11 +78,15 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
         <span class="badge-icon">🌐</span>
         <span>Remote Event</span>
       </div>
-      ${event.zoomLink ? `
+      ${
+        event.zoomLink
+          ? `
         <a href="${event.zoomLink}" class="join-button" target="_blank" rel="noopener">
           🔗 Join Webinar
         </a>
-      ` : '<p style="color: #666; font-style: italic;">Zoom link will be shared before the event</p>'}
+      `
+          : '<p style="color: #666; font-style: italic;">Zoom link will be shared before the event</p>'
+      }
     `;
   } else {
     locationHtml = `
@@ -254,7 +258,9 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
             font-size: 16px;
             margin-top: 15px;
           }
-          ${event.thumbnailUrl ? `
+          ${
+            event.thumbnailUrl
+              ? `
           .event-image {
             width: 100%;
             height: auto;
@@ -262,7 +268,9 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
             margin-bottom: 25px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
           }
-          ` : ''}
+          `
+              : ''
+          }
           .footer {
             background: #232f3e;
             padding: 30px;
@@ -303,12 +311,16 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
           <div class="content">
             <p class="greeting">Hey ${fullName}! 👋</p>
             
-            ${customMessage ? `
+            ${
+              customMessage
+                ? `
             <div class="description-box" style="margin-bottom: 25px;">
               <h4>💬 Message from the Team</h4>
               <p>${customMessage.replace(/\n/g, '<br>')}</p>
             </div>
-            ` : ''}
+            `
+                : ''
+            }
             
             <p>Great news! We have a new event coming up that you won't want to miss:</p>
             
@@ -344,19 +356,27 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
               </div>
             </div>
             
-            ${event.description ? `
+            ${
+              event.description
+                ? `
             <div class="description-box">
               <h4>📝 About This Event</h4>
               <p>${event.description}</p>
             </div>
-            ` : ''}
+            `
+                : ''
+            }
             
             <div class="cta-section">
-              ${event.meetupUrl ? `
+              ${
+                event.meetupUrl
+                  ? `
                 <a href="${event.meetupUrl}" class="meetup-button" target="_blank" rel="noopener">
                   📋 RSVP on Meetup
                 </a>
-              ` : ''}
+              `
+                  : ''
+              }
             </div>
             
             <p style="color: #666; text-align: center; margin-top: 30px;">
@@ -379,7 +399,7 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
         </div>
       </body>
       </html>
-    `
+    `,
   };
 
   await transporter.sendMail(mailOptions);
@@ -403,7 +423,7 @@ const createEventSnapshot = (event) => ({
   locationName: event.locationName || '',
   description: event.description || '',
   thumbnailUrl: event.thumbnailUrl || '',
-  meetupUrl: event.meetupUrl || ''
+  meetupUrl: event.meetupUrl || '',
 });
 
 // Queue a failed email for retry
@@ -420,7 +440,7 @@ const queueFailedEmail = async (email, fullName, event, error) => {
         $inc: { attempts: 1 },
         lastAttempt: new Date(),
         lastError: error.message || String(error),
-        nextAttempt: getNextRetryTime(1)
+        nextAttempt: getNextRetryTime(1),
       },
       { upsert: true, new: true }
     );
@@ -435,7 +455,7 @@ const sendBulkEventNotification = async (users, event, customMessage = '') => {
     sent: 0,
     failed: 0,
     queued: 0,
-    errors: []
+    errors: [],
   };
 
   for (const user of users) {
@@ -443,7 +463,7 @@ const sendBulkEventNotification = async (users, event, customMessage = '') => {
       await sendEventNotification(user.email, user.fullName, event, customMessage);
       results.sent++;
       // Small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     } catch (error) {
       results.failed++;
       results.errors.push({ email: user.email, error: error.message });
@@ -461,28 +481,28 @@ const processEmailQueue = async (batchSize = 10) => {
     processed: 0,
     succeeded: 0,
     failed: 0,
-    permanentlyFailed: 0
+    permanentlyFailed: 0,
   };
 
   try {
     const pendingEmails = await EmailQueue.find({
       status: 'pending',
-      nextAttempt: { $lte: new Date() }
+      nextAttempt: { $lte: new Date() },
     })
       .sort({ nextAttempt: 1 })
       .limit(batchSize);
 
     for (const queuedEmail of pendingEmails) {
       results.processed++;
-      
+
       queuedEmail.status = 'processing';
       await queuedEmail.save();
 
       try {
         // Use the stored event snapshot
         await sendEventNotification(
-          queuedEmail.email, 
-          queuedEmail.fullName, 
+          queuedEmail.email,
+          queuedEmail.fullName,
           queuedEmail.eventSnapshot
         );
 
@@ -492,7 +512,7 @@ const processEmailQueue = async (batchSize = 10) => {
         results.succeeded++;
         console.log(`Successfully sent queued email to ${queuedEmail.email}`);
 
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (error) {
         queuedEmail.attempts += 1;
         queuedEmail.lastAttempt = new Date();
@@ -501,12 +521,16 @@ const processEmailQueue = async (batchSize = 10) => {
         if (queuedEmail.attempts >= queuedEmail.maxAttempts) {
           queuedEmail.status = 'failed';
           results.permanentlyFailed++;
-          console.error(`Email to ${queuedEmail.email} permanently failed after ${queuedEmail.attempts} attempts`);
+          console.error(
+            `Email to ${queuedEmail.email} permanently failed after ${queuedEmail.attempts} attempts`
+          );
         } else {
           queuedEmail.status = 'pending';
           queuedEmail.nextAttempt = getNextRetryTime(queuedEmail.attempts);
           results.failed++;
-          console.log(`Email to ${queuedEmail.email} failed, retry scheduled for ${queuedEmail.nextAttempt}`);
+          console.log(
+            `Email to ${queuedEmail.email} failed, retry scheduled for ${queuedEmail.nextAttempt}`
+          );
         }
 
         await queuedEmail.save();
@@ -525,7 +549,7 @@ const getQueueStats = async () => {
     EmailQueue.countDocuments({ status: 'pending' }),
     EmailQueue.countDocuments({ status: 'processing' }),
     EmailQueue.countDocuments({ status: 'completed' }),
-    EmailQueue.countDocuments({ status: 'failed' })
+    EmailQueue.countDocuments({ status: 'failed' }),
   ]);
 
   const oldestPending = await EmailQueue.findOne({ status: 'pending' })
@@ -538,10 +562,12 @@ const getQueueStats = async () => {
     completed,
     failed,
     total: pending + processing + completed + failed,
-    oldestPending: oldestPending ? {
-      createdAt: oldestPending.createdAt,
-      nextAttempt: oldestPending.nextAttempt
-    } : null
+    oldestPending: oldestPending
+      ? {
+          createdAt: oldestPending.createdAt,
+          nextAttempt: oldestPending.nextAttempt,
+        }
+      : null,
   };
 };
 
@@ -555,8 +581,10 @@ const getQueueEntries = async (status = null, page = 1, limit = 20) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select('email fullName eventId eventSnapshot.title status attempts lastAttempt nextAttempt lastError createdAt'),
-    EmailQueue.countDocuments(query)
+      .select(
+        'email fullName eventId eventSnapshot.title status attempts lastAttempt nextAttempt lastError createdAt'
+      ),
+    EmailQueue.countDocuments(query),
   ]);
 
   return {
@@ -565,8 +593,8 @@ const getQueueEntries = async (status = null, page = 1, limit = 20) => {
       page,
       limit,
       total,
-      totalPages: Math.ceil(total / limit)
-    }
+      totalPages: Math.ceil(total / limit),
+    },
   };
 };
 
@@ -594,5 +622,5 @@ module.exports = {
   processEmailQueue,
   getQueueStats,
   getQueueEntries,
-  retryFailedEmail
+  retryFailedEmail,
 };

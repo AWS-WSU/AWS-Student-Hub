@@ -24,4 +24,4 @@ router.get('/email-queue/entries', requireAdmin, adminController.getEmailQueueEn
 router.post('/email-queue/:queueId/retry', requireAdmin, adminController.retryQueuedEmail);
 router.post('/email-queue/process', requireAdmin, adminController.processQueue);
 
-module.exports = router; 
+module.exports = router;

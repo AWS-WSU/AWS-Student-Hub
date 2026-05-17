@@ -6,33 +6,62 @@ import { useToast } from '../context/ToastContext';
 import { adminAPI } from '../utils/api';
 import './styles/AdminDashboard.css';
 
-
 const DashBoardIcon = ({ className }) => (
-  <img src="/dashboard.svg" alt="Dashboard" className={className} style={{ width: '24px', height: '24px' }} />
+  <img
+    src="/dashboard.svg"
+    alt="Dashboard"
+    className={className}
+    style={{ width: '24px', height: '24px' }}
+  />
 );
 
 const AccountIcon = ({ className }) => (
-  <img src="/users.svg" alt="User" className={className} style={{ width: '24px', height: '24px' }} />
+  <img
+    src="/users.svg"
+    alt="User"
+    className={className}
+    style={{ width: '24px', height: '24px' }}
+  />
 );
 
 const ActivityIcon = ({ className }) => (
- <img src="/trend.svg" alt="Activity" className={className} style={{ width: '24px', height: '24px' }} />
+  <img
+    src="/trend.svg"
+    alt="Activity"
+    className={className}
+    style={{ width: '24px', height: '24px' }}
+  />
 );
 
 const CheckIcon = ({ className }) => (
-  <img src="/activity.svg" alt="Check" className={className} style={{ width: '24px', height: '24px' }} />
+  <img
+    src="/activity.svg"
+    alt="Check"
+    className={className}
+    style={{ width: '24px', height: '24px' }}
+  />
 );
 
 const EyeClosedIcon = ({ className }) => (
-<img src="/ban.svg" alt="Eye Closed" className={className} style={{ width: '24px', height: '24px' }} />
+  <img
+    src="/ban.svg"
+    alt="Eye Closed"
+    className={className}
+    style={{ width: '24px', height: '24px' }}
+  />
 );
 
 const AwsIcon = ({ className }) => (
-<img src="/aws.svg" alt="AWS" className={className} style={{ width: '24px', height: '24px' }} />
+  <img src="/aws.svg" alt="AWS" className={className} style={{ width: '24px', height: '24px' }} />
 );
 
 const GmailIcon = ({ className }) => (
- <img src="/email.svg" alt="Gmail" className={className} style={{ width: '24px', height: '24px' }} />
+  <img
+    src="/email.svg"
+    alt="Gmail"
+    className={className}
+    style={{ width: '24px', height: '24px' }}
+  />
 );
 
 function AdminDashboard({ theme }) {
@@ -42,20 +71,20 @@ function AdminDashboard({ theme }) {
   const [loading, setLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  
+
   const [selectedUser, setSelectedUser] = useState(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [showBanModal, setShowBanModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [banReason, setBanReason] = useState('');
   const [newRole, setNewRole] = useState('');
-  
+
   // Email Queue state
   const [queueStats, setQueueStats] = useState(null);
   const [queueEntries, setQueueEntries] = useState([]);
@@ -74,12 +103,12 @@ function AdminDashboard({ theme }) {
     if (authLoading) {
       return;
     }
-    
+
     if (!user) {
       navigate('/auth');
       return;
     }
-    
+
     if (!['moderator', 'admin', 'superuser'].includes(user.role)) {
       navigate('/');
       showToast('Access denied. Admin privileges required.', 'error');
@@ -91,10 +120,10 @@ function AdminDashboard({ theme }) {
     setUsersLoading(true);
     try {
       const response = await adminAPI.getAllUsers(
-        currentPage, 
-        20, 
-        searchTerm, 
-        roleFilter, 
+        currentPage,
+        20,
+        searchTerm,
+        roleFilter,
         statusFilter
       );
       setUsers(response.users);
@@ -182,7 +211,10 @@ function AdminDashboard({ theme }) {
     try {
       const response = await adminAPI.processEmailQueue(10);
       const result = response.result || {};
-      showToast(`Processed ${result.processed || 0} emails (${result.succeeded || 0} succeeded, ${result.failed || 0} failed)`, 'success');
+      showToast(
+        `Processed ${result.processed || 0} emails (${result.succeeded || 0} succeeded, ${result.failed || 0} failed)`,
+        'success'
+      );
       loadQueueEntries();
       loadQueueStats();
     } catch (err) {
@@ -249,7 +281,7 @@ function AdminDashboard({ theme }) {
   return (
     <div className="admin-dashboard-container">
       <div className="admin-content">
-        <motion.div 
+        <motion.div
           className="admin-header"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -260,7 +292,7 @@ function AdminDashboard({ theme }) {
         </motion.div>
 
         <div className="admin-tabs">
-          <button 
+          <button
             className={`tab-button ${activeTab === 'dashboard' ? 'active' : ''}`}
             data-tab="dashboard"
             onClick={() => setActiveTab('dashboard')}
@@ -268,7 +300,7 @@ function AdminDashboard({ theme }) {
             <DashBoardIcon className="tab-icon" />
             Dashboard
           </button>
-          <button 
+          <button
             className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
             data-tab="users"
             onClick={() => setActiveTab('users')}
@@ -277,7 +309,7 @@ function AdminDashboard({ theme }) {
             User Management
           </button>
           {(user?.role === 'admin' || user?.role === 'superuser') && (
-            <button 
+            <button
               className={`tab-button ${activeTab === 'queue' ? 'active' : ''}`}
               data-tab="queue"
               onClick={() => setActiveTab('queue')}
@@ -289,7 +321,7 @@ function AdminDashboard({ theme }) {
         </div>
 
         {activeTab === 'dashboard' && (
-          <motion.div 
+          <motion.div
             className="dashboard-content"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -310,7 +342,7 @@ function AdminDashboard({ theme }) {
                     <p>{stats.totalUsers}</p>
                   </div>
                 </div>
-                
+
                 <div className="stat-card" data-type="active">
                   <div className="stat-icon">
                     <CheckIcon className="stat-svg" />
@@ -320,7 +352,7 @@ function AdminDashboard({ theme }) {
                     <p>{stats.activeUsers}</p>
                   </div>
                 </div>
-                
+
                 <div className="stat-card" data-type="banned">
                   <div className="stat-icon">
                     <EyeClosedIcon className="stat-svg" />
@@ -330,13 +362,13 @@ function AdminDashboard({ theme }) {
                     <p>{stats.bannedUsers}</p>
                   </div>
                 </div>
-                
+
                 <div className="stat-card" data-type="admin">
                   <div className="stat-icon">
-                    <img 
-                      src={theme === 'dark' ? '/aws-light.svg' : '/aws.svg'} 
-                      alt="AWS" 
-                      className="stat-svg" 
+                    <img
+                      src={theme === 'dark' ? '/aws-light.svg' : '/aws.svg'}
+                      alt="AWS"
+                      className="stat-svg"
                       style={{ width: '24px', height: '24px' }}
                     />
                   </div>
@@ -345,7 +377,7 @@ function AdminDashboard({ theme }) {
                     <p>{stats.adminUsers}</p>
                   </div>
                 </div>
-                
+
                 <div className="stat-card" data-type="signups">
                   <div className="stat-icon">
                     <ActivityIcon className="stat-svg" />
@@ -355,7 +387,7 @@ function AdminDashboard({ theme }) {
                     <p>{stats.recentSignups}</p>
                   </div>
                 </div>
-                
+
                 <div className="stat-card" data-type="newsletter">
                   <div className="stat-icon">
                     <GmailIcon className="stat-svg" />
@@ -371,7 +403,7 @@ function AdminDashboard({ theme }) {
         )}
 
         {activeTab === 'users' && (
-          <motion.div 
+          <motion.div
             className="users-content"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -385,7 +417,7 @@ function AdminDashboard({ theme }) {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="search-input"
               />
-              
+
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
@@ -397,7 +429,7 @@ function AdminDashboard({ theme }) {
                 <option value="admin">Admin</option>
                 <option value="superuser">Superuser</option>
               </select>
-              
+
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -422,12 +454,12 @@ function AdminDashboard({ theme }) {
                     <div>Joined</div>
                     <div>Actions</div>
                   </div>
-                  
+
                   {users.map((userData) => (
                     <div key={userData._id} className="table-row">
                       <div className="user-info">
-                        <img 
-                          src={userData.profilePicture || '/avatar.jpg'} 
+                        <img
+                          src={userData.profilePicture || '/avatar.jpg'}
                           alt={userData.fullName}
                           className="user-avatar"
                         />
@@ -436,19 +468,19 @@ function AdminDashboard({ theme }) {
                           <div className="user-username">@{userData.username}</div>
                         </div>
                       </div>
-                      
+
                       <div className="user-role" data-role={userData.role}>
                         {userData.role}
                       </div>
-                      
+
                       <div className="user-status" data-status={userData.status}>
                         {userData.status}
                       </div>
-                      
+
                       <div className="user-joined">
                         {new Date(userData.createdAt).toLocaleDateString()}
                       </div>
-                      
+
                       <div className="user-actions">
                         {user.role === 'admin' || user.role === 'superuser' ? (
                           <button
@@ -462,7 +494,7 @@ function AdminDashboard({ theme }) {
                             Role
                           </button>
                         ) : null}
-                        
+
                         {userData.status === 'active' ? (
                           <button
                             onClick={() => {
@@ -481,8 +513,9 @@ function AdminDashboard({ theme }) {
                             Unban
                           </button>
                         )}
-                        
-                        {(user.role === 'admin' || user.role === 'superuser') && userData._id !== user.id ? (
+
+                        {(user.role === 'admin' || user.role === 'superuser') &&
+                        userData._id !== user.id ? (
                           <button
                             onClick={() => {
                               setSelectedUser(userData);
@@ -501,19 +534,19 @@ function AdminDashboard({ theme }) {
                 {totalPages > 1 && (
                   <div className="pagination">
                     <button
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
                       className="pagination-btn"
                     >
                       Previous
                     </button>
-                    
+
                     <span className="page-info">
                       Page {currentPage} of {totalPages}
                     </span>
-                    
+
                     <button
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages}
                       className="pagination-btn"
                     >
@@ -527,7 +560,7 @@ function AdminDashboard({ theme }) {
         )}
 
         {activeTab === 'queue' && (
-          <motion.div 
+          <motion.div
             className="queue-content"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -557,14 +590,16 @@ function AdminDashboard({ theme }) {
 
             {/* Queue Actions */}
             <div className="queue-actions">
-              <button 
+              <button
                 className="process-queue-btn"
                 onClick={handleProcessQueue}
                 disabled={processingQueue}
               >
-                {processingQueue ? 'Processing...' : `Process Queue (${queueStats?.pending || 0} emails)`}
+                {processingQueue
+                  ? 'Processing...'
+                  : `Process Queue (${queueStats?.pending || 0} emails)`}
               </button>
-              
+
               <select
                 value={queueStatusFilter}
                 onChange={(e) => {
@@ -600,30 +635,24 @@ function AdminDashboard({ theme }) {
                     <div>Created</div>
                     <div>Actions</div>
                   </div>
-                  
+
                   {queueEntries.map((entry) => (
                     <div key={entry._id} className="table-row">
                       <div className="queue-recipient">
                         <div className="recipient-name">{entry.fullName}</div>
                         <div className="recipient-email">{entry.email}</div>
                       </div>
-                      
-                      <div className="queue-event">
-                        {entry.eventSnapshot?.title || 'N/A'}
-                      </div>
-                      
+
+                      <div className="queue-event">{entry.eventSnapshot?.title || 'N/A'}</div>
+
                       <div className="queue-status" data-status={entry.status}>
                         {entry.status}
                       </div>
-                      
-                      <div className="queue-attempts">
-                        {entry.attempts || 0}
-                      </div>
-                      
-                      <div className="queue-date">
-                        {new Date(entry.createdAt).toLocaleString()}
-                      </div>
-                      
+
+                      <div className="queue-attempts">{entry.attempts || 0}</div>
+
+                      <div className="queue-date">{new Date(entry.createdAt).toLocaleString()}</div>
+
                       <div className="queue-entry-actions">
                         {(entry.status === 'failed' || entry.status === 'pending') && (
                           <button
@@ -642,19 +671,19 @@ function AdminDashboard({ theme }) {
                 {queueTotalPages > 1 && (
                   <div className="pagination">
                     <button
-                      onClick={() => setQueuePage(prev => Math.max(prev - 1, 1))}
+                      onClick={() => setQueuePage((prev) => Math.max(prev - 1, 1))}
                       disabled={queuePage === 1}
                       className="pagination-btn"
                     >
                       Previous
                     </button>
-                    
+
                     <span className="page-info">
                       Page {queuePage} of {queueTotalPages}
                     </span>
-                    
+
                     <button
-                      onClick={() => setQueuePage(prev => Math.min(prev + 1, queueTotalPages))}
+                      onClick={() => setQueuePage((prev) => Math.min(prev + 1, queueTotalPages))}
                       disabled={queuePage === queueTotalPages}
                       className="pagination-btn"
                     >
@@ -673,7 +702,7 @@ function AdminDashboard({ theme }) {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h3>Update User Role</h3>
             <p>Change role for {selectedUser?.fullName}:</p>
-            
+
             <select
               value={newRole}
               onChange={(e) => setNewRole(e.target.value)}
@@ -684,7 +713,7 @@ function AdminDashboard({ theme }) {
               {user.role === 'superuser' && <option value="admin">Admin</option>}
               {user.role === 'superuser' && <option value="superuser">Superuser</option>}
             </select>
-            
+
             <div className="modal-actions">
               <button onClick={() => setShowRoleModal(false)} className="cancel-btn">
                 Cancel
@@ -702,14 +731,14 @@ function AdminDashboard({ theme }) {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h3>Ban User</h3>
             <p>Ban {selectedUser?.fullName}?</p>
-            
+
             <textarea
               placeholder="Reason for ban (optional)"
               value={banReason}
               onChange={(e) => setBanReason(e.target.value)}
               className="ban-reason"
             />
-            
+
             <div className="modal-actions">
               <button onClick={() => setShowBanModal(false)} className="cancel-btn">
                 Cancel
@@ -728,7 +757,7 @@ function AdminDashboard({ theme }) {
             <h3>Delete User</h3>
             <p>Are you sure you want to permanently delete {selectedUser?.fullName}?</p>
             <p className="warning-text">This action cannot be undone!</p>
-            
+
             <div className="modal-actions">
               <button onClick={() => setShowDeleteModal(false)} className="cancel-btn">
                 Cancel
@@ -740,9 +769,8 @@ function AdminDashboard({ theme }) {
           </div>
         </div>
       )}
-      
     </div>
   );
 }
 
-export default AdminDashboard; 
+export default AdminDashboard;

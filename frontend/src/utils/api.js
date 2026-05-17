@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://bx7226tmz2.execute-api.us-east-1.amazonaws.com/prod';
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'https://bx7226tmz2.execute-api.us-east-1.amazonaws.com/prod';
 
 // Get item from either storage (check both for backwards compatibility)
 const getStoredItem = (key) => {
@@ -15,19 +16,19 @@ const getAuthHeaders = () => {
   const token = getStoredItem('accessToken');
   return {
     'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
+    ...(token && { Authorization: `Bearer ${token}` }),
   };
 };
 
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
-  
+
   const token = getStoredItem('accessToken');
-  
+
   const defaultOptions = {
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   };
 
@@ -42,7 +43,7 @@ const apiRequest = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(url, finalOptions);
-    
+
     // If unauthorized and we have a refresh token, try to refresh
     if (response.status === 401) {
       const refreshToken = getStoredItem('refreshToken');
@@ -52,10 +53,10 @@ const apiRequest = async (endpoint, options = {}) => {
           // Retry the original request with the new token
           finalOptions.headers.Authorization = `Bearer ${getStoredItem('accessToken')}`;
           const retryResponse = await fetch(url, finalOptions);
-          
+
           const contentType = retryResponse.headers.get('content-type');
           let data;
-          
+
           if (contentType && contentType.includes('application/json')) {
             data = await retryResponse.json();
           } else {
@@ -63,7 +64,9 @@ const apiRequest = async (endpoint, options = {}) => {
           }
 
           if (!retryResponse.ok) {
-            throw new Error(data.error || data.message || `HTTP error! status: ${retryResponse.status}`);
+            throw new Error(
+              data.error || data.message || `HTTP error! status: ${retryResponse.status}`
+            );
           }
 
           return data;
@@ -76,10 +79,10 @@ const apiRequest = async (endpoint, options = {}) => {
         }
       }
     }
-    
+
     const contentType = response.headers.get('content-type');
     let data;
-    
+
     if (contentType && contentType.includes('application/json')) {
       data = await response.json();
     } else {
@@ -104,21 +107,21 @@ const apiRequest = async (endpoint, options = {}) => {
 const setStoredItem = (key, value) => {
   const shouldRemember = localStorage.getItem('rememberMe') === 'true';
   const storage = shouldRemember ? localStorage : sessionStorage;
-  
+
   // Clear from the other storage
   if (shouldRemember) {
     sessionStorage.removeItem(key);
   } else {
     localStorage.removeItem(key);
   }
-  
+
   storage.setItem(key, value);
 };
 
 const refreshTokens = async () => {
   const refreshToken = getStoredItem('refreshToken');
   const deviceId = getStoredItem('deviceId') || localStorage.getItem('deviceId');
-  
+
   if (!refreshToken || !deviceId) {
     throw new Error('No refresh token available');
   }
@@ -130,7 +133,7 @@ const refreshTokens = async () => {
     },
     body: JSON.stringify({
       refreshToken,
-      deviceId
+      deviceId,
     }),
   });
 
@@ -142,7 +145,7 @@ const refreshTokens = async () => {
   setStoredItem('accessToken', data.accessToken);
   setStoredItem('refreshToken', data.refreshToken);
   setStoredItem('cachedUser', JSON.stringify(data.user));
-  
+
   return data;
 };
 
@@ -152,7 +155,7 @@ export const newsletterAPI = {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
-  }
+  },
 };
 
 export const authAPI = {
@@ -160,14 +163,14 @@ export const authAPI = {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials)
+      body: JSON.stringify(credentials),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Login failed');
     }
-    
+
     return response.json();
   },
 
@@ -175,27 +178,27 @@ export const authAPI = {
     const response = await fetch(`${API_BASE_URL}/auth/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData)
+      body: JSON.stringify(userData),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Signup failed');
     }
-    
+
     return response.json();
   },
 
   getCurrentUser: async () => {
     const response = await fetch(`${API_BASE_URL}/auth/me`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to get user');
     }
-    
+
     return response.json();
   },
 
@@ -203,14 +206,14 @@ export const authAPI = {
     const response = await fetch(`${API_BASE_URL}/auth/profile`, {
       method: 'PUT',
       headers: getAuthHeaders(),
-      body: JSON.stringify(updates)
+      body: JSON.stringify(updates),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to update profile');
     }
-    
+
     return response.json();
   },
 
@@ -218,40 +221,40 @@ export const authAPI = {
     const response = await fetch(`${API_BASE_URL}/auth/check-username`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ username })
+      body: JSON.stringify({ username }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to check username');
     }
-    
+
     return response.json();
   },
 
   getRecentUsers: async (limit = 6) => {
     const response = await fetch(`${API_BASE_URL}/auth/recent-users?limit=${limit}`, {
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch recent users');
     }
-    
+
     return response.json();
   },
 
   getPublicProfile: async (username) => {
     const response = await fetch(`${API_BASE_URL}/auth/public-profile/${username}`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to get public profile');
     }
-    
+
     return response.json();
   },
 
@@ -263,9 +266,9 @@ export const authAPI = {
     const response = await fetch(`${API_BASE_URL}/upload/profile-picture`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
-      body: formData
+      body: formData,
     });
 
     if (!response.ok) {
@@ -279,18 +282,18 @@ export const authAPI = {
   searchUsers: async (query, limit = 10) => {
     const params = new URLSearchParams({
       q: query,
-      limit: limit.toString()
+      limit: limit.toString(),
     });
-    
+
     const response = await fetch(`${API_BASE_URL}/auth/search?${params}`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to search users');
     }
-    
+
     return response.json();
   },
 
@@ -298,14 +301,14 @@ export const authAPI = {
     const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier })
+      body: JSON.stringify({ identifier }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Network error' }));
       throw new Error(error.error || 'Request failed');
     }
-    
+
     return response.json();
   },
 
@@ -313,14 +316,14 @@ export const authAPI = {
     const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, email })
+      body: JSON.stringify({ username, email }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to verify email');
     }
-    
+
     return response.json();
   },
 
@@ -328,14 +331,14 @@ export const authAPI = {
     const response = await fetch(`${API_BASE_URL}/auth/verify-reset-code`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier, code })
+      body: JSON.stringify({ identifier, code }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to verify reset code');
     }
-    
+
     return response.json();
   },
 
@@ -343,35 +346,35 @@ export const authAPI = {
     const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier, code, newPassword })
+      body: JSON.stringify({ identifier, code, newPassword }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to reset password');
     }
-    
+
     return response.json();
-  }
+  },
 };
 
 export const discordAPI = {
   getInvite: async () => {
     return apiRequest('/discord-invite');
-  }
+  },
 };
-  
+
 export const adminAPI = {
   getDashboardStats: async () => {
     const response = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch dashboard stats');
     }
-    
+
     return response.json();
   },
 
@@ -381,31 +384,31 @@ export const adminAPI = {
       limit: limit.toString(),
       ...(search && { search }),
       ...(role && { role }),
-      ...(status && { status })
+      ...(status && { status }),
     });
-    
+
     const response = await fetch(`${API_BASE_URL}/admin/users?${params}`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch users');
     }
-    
+
     return response.json();
   },
 
   getUserDetails: async (userId) => {
     const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch user details');
     }
-    
+
     return response.json();
   },
 
@@ -413,14 +416,14 @@ export const adminAPI = {
     const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/role`, {
       method: 'PUT',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ role })
+      body: JSON.stringify({ role }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to update user role');
     }
-    
+
     return response.json();
   },
 
@@ -428,56 +431,56 @@ export const adminAPI = {
     const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/ban`, {
       method: 'PUT',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ reason })
+      body: JSON.stringify({ reason }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to ban user');
     }
-    
+
     return response.json();
   },
 
   unbanUser: async (userId) => {
     const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/unban`, {
       method: 'PUT',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to unban user');
     }
-    
+
     return response.json();
   },
 
   deleteUser: async (userId) => {
     const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
       method: 'DELETE',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to delete user');
     }
-    
+
     return response.json();
   },
 
   // Email Queue Management
   getEmailQueueStats: async () => {
     const response = await fetch(`${API_BASE_URL}/admin/email-queue/stats`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch email queue stats');
     }
-    
+
     return response.json();
   },
 
@@ -485,48 +488,51 @@ export const adminAPI = {
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
-      ...(status && { status })
+      ...(status && { status }),
     });
-    
+
     const response = await fetch(`${API_BASE_URL}/admin/email-queue/entries?${params}`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch email queue entries');
     }
-    
+
     return response.json();
   },
 
   retryQueuedEmail: async (queueId) => {
     const response = await fetch(`${API_BASE_URL}/admin/email-queue/${queueId}/retry`, {
       method: 'POST',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to retry email');
     }
-    
+
     return response.json();
   },
 
   processEmailQueue: async (batchSize = 10) => {
-    const response = await fetch(`${API_BASE_URL}/admin/email-queue/process?batchSize=${batchSize}`, {
-      method: 'POST',
-      headers: getAuthHeaders()
-    });
-    
+    const response = await fetch(
+      `${API_BASE_URL}/admin/email-queue/process?batchSize=${batchSize}`,
+      {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      }
+    );
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to process email queue');
     }
-    
+
     return response.json();
-  }
+  },
 };
 
 export const eventsAPI = {
@@ -547,8 +553,8 @@ export const eventsAPI = {
     });
     const res = await fetch(`${API_BASE_URL}/events`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: form
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to create event');
@@ -562,8 +568,8 @@ export const eventsAPI = {
     });
     const res = await fetch(`${API_BASE_URL}/events/${eventId}`, {
       method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: form
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to update event');
@@ -573,11 +579,11 @@ export const eventsAPI = {
     return apiRequest(`/events/${eventId}`, { method: 'DELETE' });
   },
   sendNotification: async (eventId, customMessage = '') => {
-    return apiRequest(`/events/${eventId}/notify`, { 
+    return apiRequest(`/events/${eventId}/notify`, {
       method: 'POST',
-      body: JSON.stringify({ customMessage })
+      body: JSON.stringify({ customMessage }),
     });
-  }
+  },
 };
 
 export { apiRequest };

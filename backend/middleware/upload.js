@@ -23,8 +23,8 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024
-  }
+    fileSize: 5 * 1024 * 1024,
+  },
 });
 
 const processImage = async (buffer) => {
@@ -32,12 +32,12 @@ const processImage = async (buffer) => {
     console.warn('⚠️ Sharp not available - returning original image buffer');
     return buffer; // Return original buffer if sharp is not available
   }
-  
+
   try {
     return await sharp(buffer)
       .resize(400, 400, {
         fit: 'cover',
-        position: 'center'
+        position: 'center',
       })
       .jpeg({ quality: 90 })
       .toBuffer();
@@ -49,5 +49,5 @@ const processImage = async (buffer) => {
 
 module.exports = {
   upload,
-  processImage
+  processImage,
 };

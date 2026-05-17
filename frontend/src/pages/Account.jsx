@@ -10,27 +10,41 @@ import CyberChallengeModal from '../components/CyberChallengeModal';
 const getStoredItem = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
 const programmingLanguages = [
-  'JavaScript', 'Python', 'Java', 'C++', 'C#', 'React', 'Node.js', 'PHP', 
-  'Ruby', 'Go', 'Rust', 'TypeScript', 'Swift', 'Kotlin', 'HTML/CSS', 'SQL'
+  'JavaScript',
+  'Python',
+  'Java',
+  'C++',
+  'C#',
+  'React',
+  'Node.js',
+  'PHP',
+  'Ruby',
+  'Go',
+  'Rust',
+  'TypeScript',
+  'Swift',
+  'Kotlin',
+  'HTML/CSS',
+  'SQL',
 ];
 
 const languageIcons = {
-  'JavaScript': '/js.svg',
-  'Python': '/py.svg',
-  'Java': '/java.svg',
-  'C++': '/cpp.svg',  
+  JavaScript: '/js.svg',
+  Python: '/py.svg',
+  Java: '/java.svg',
+  'C++': '/cpp.svg',
   'C#': '/csharp.svg',
-  'React': '/jsx.svg',
+  React: '/jsx.svg',
   'Node.js': '/js.svg',
-  'PHP': '/php.svg',
-  'TypeScript': '/ts.svg',
-  'Swift': '/swift.svg',
-  'Kotlin': '/kotlin.svg',
-  'Ruby': '/ruby.svg',
-  'Go': '/go.svg',
-  'Rust': '/rs.svg',
+  PHP: '/php.svg',
+  TypeScript: '/ts.svg',
+  Swift: '/swift.svg',
+  Kotlin: '/kotlin.svg',
+  Ruby: '/ruby.svg',
+  Go: '/go.svg',
+  Rust: '/rs.svg',
   'HTML/CSS': '/html.svg',
-  'SQL': '/sql.svg'
+  SQL: '/sql.svg',
 };
 
 const grades = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Other'];
@@ -43,7 +57,7 @@ function Account({ theme }) {
     bio: false,
     major: false,
     grade: false,
-    programmingLanguages: false
+    programmingLanguages: false,
   });
   const [formData, setFormData] = useState({
     name: '',
@@ -53,7 +67,7 @@ function Account({ theme }) {
     bio: '',
     major: '',
     grade: '',
-    programmingLanguages: []
+    programmingLanguages: [],
   });
   const [originalData, setOriginalData] = useState({});
   const [loading, setLoading] = useState(false);
@@ -69,7 +83,7 @@ function Account({ theme }) {
   const [showCyberModal, setShowCyberModal] = useState(false);
   const fileInputRef = useRef(null);
   const inputRefs = useRef({});
-  
+
   const navigate = useNavigate();
   const { isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
   const { user: authUser, updateUser, uploadProfilePicture, getAwsCredentials } = useAuth();
@@ -93,7 +107,7 @@ function Account({ theme }) {
         bio: currentUser.bio || '',
         major: currentUser.major || '',
         grade: currentUser.grade || '',
-        programmingLanguages: currentUser.programmingLanguages || []
+        programmingLanguages: currentUser.programmingLanguages || [],
       };
       setFormData(userData);
       setOriginalData(userData);
@@ -108,31 +122,31 @@ function Account({ theme }) {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
     }));
     setError('');
   };
 
   const handleLanguageToggle = (language) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       programmingLanguages: prev.programmingLanguages.includes(language)
-        ? prev.programmingLanguages.filter(lang => lang !== language)
-        : [...prev.programmingLanguages, language]
+        ? prev.programmingLanguages.filter((lang) => lang !== language)
+        : [...prev.programmingLanguages, language],
     }));
     setError('');
   };
 
   const handleCancel = (field) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: originalData[field]
+      [field]: originalData[field],
     }));
-    setIsEditing(prev => ({
+    setIsEditing((prev) => ({
       ...prev,
-      [field]: false
+      [field]: false,
     }));
     setError('');
   };
@@ -163,7 +177,7 @@ function Account({ theme }) {
       const compressedFile = await compressImage(file, 400, 0.9);
       const finalFile = new File([compressedFile], file.name, {
         type: 'image/jpeg',
-        lastModified: Date.now()
+        lastModified: Date.now(),
       });
 
       const response = await uploadProfilePicture(finalFile);
@@ -182,14 +196,14 @@ function Account({ theme }) {
 
   const handleFieldClick = (field) => {
     if (isSocialLogin && (field === 'name' || field === 'username')) return;
-    
-    setIsEditing(prev => ({
+
+    setIsEditing((prev) => ({
       ...prev,
-      [field]: true
+      [field]: true,
     }));
-    
+
     // Not sure why but sometimes the input doesn't focus immediately
-    // So we use a timeout to ensure it does. This also 
+    // So we use a timeout to ensure it does. This also
     // Stops the text from being selected when clicking the field.
     setTimeout(() => {
       if (inputRefs.current[field]) {
@@ -202,9 +216,9 @@ function Account({ theme }) {
     if (formData[field] !== originalData[field]) {
       await handleSave(field);
     } else {
-      setIsEditing(prev => ({
+      setIsEditing((prev) => ({
         ...prev,
-        [field]: false
+        [field]: false,
       }));
     }
   };
@@ -215,50 +229,53 @@ function Account({ theme }) {
       if (formData[field] !== originalData[field]) {
         await handleSave(field);
       } else {
-        setIsEditing(prev => ({
+        setIsEditing((prev) => ({
           ...prev,
-          [field]: false
+          [field]: false,
         }));
       }
     } else if (e.key === 'Escape') {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [field]: originalData[field]
+        [field]: originalData[field],
       }));
-      setIsEditing(prev => ({
+      setIsEditing((prev) => ({
         ...prev,
-        [field]: false
+        [field]: false,
       }));
       setError('');
     }
   };
 
   const handleSave = async (field) => {
-    setFieldLoading(prev => ({ ...prev, [field]: true }));
+    setFieldLoading((prev) => ({ ...prev, [field]: true }));
     setError('');
     setSuccess('');
 
     try {
       if (field === 'username') {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://bx7226tmz2.execute-api.us-east-1.amazonaws.com/prod'}/auth/check-username`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getStoredItem('accessToken')}`
-          },
-          body: JSON.stringify({ username: formData.username })
-        });
-        
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL || 'https://bx7226tmz2.execute-api.us-east-1.amazonaws.com/prod'}/auth/check-username`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${getStoredItem('accessToken')}`,
+            },
+            body: JSON.stringify({ username: formData.username }),
+          }
+        );
+
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.message || 'Username validation failed');
         }
-        
+
         if (!data.available) {
           throw new Error('Username is already taken');
         }
       }
-      
+
       const updateData = {};
       if (field === 'name') {
         updateData.fullName = formData.name;
@@ -273,34 +290,33 @@ function Account({ theme }) {
       } else if (field === 'programmingLanguages') {
         updateData.programmingLanguages = formData.programmingLanguages;
       }
-      
+
       await updateUser(updateData);
-      
-      setOriginalData(prev => ({
+
+      setOriginalData((prev) => ({
         ...prev,
-        [field]: formData[field]
+        [field]: formData[field],
       }));
-      
-      setIsEditing(prev => ({
+
+      setIsEditing((prev) => ({
         ...prev,
-        [field]: false
+        [field]: false,
       }));
-      
+
       setSuccessField(field);
       setTimeout(() => setSuccessField(''), 600);
-      
     } catch (err) {
       setError(err.message || `Failed to update ${field}`);
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [field]: originalData[field]
+        [field]: originalData[field],
       }));
-      setIsEditing(prev => ({
+      setIsEditing((prev) => ({
         ...prev,
-        [field]: false
+        [field]: false,
       }));
     } finally {
-      setFieldLoading(prev => ({ ...prev, [field]: false }));
+      setFieldLoading((prev) => ({ ...prev, [field]: false }));
     }
   };
 
@@ -311,15 +327,15 @@ function Account({ theme }) {
 
     try {
       const newValue = !formData.wantsEmails;
-      setFormData(prev => ({ ...prev, wantsEmails: newValue }));
-      
+      setFormData((prev) => ({ ...prev, wantsEmails: newValue }));
+
       await updateUser({ wantsEmails: newValue });
-      
-      setOriginalData(prev => ({ ...prev, wantsEmails: newValue }));
+
+      setOriginalData((prev) => ({ ...prev, wantsEmails: newValue }));
       setSuccess(`Email notifications ${newValue ? 'enabled' : 'disabled'}!`);
       setTimeout(() => setSuccess(''), 3000);
     } catch {
-      setFormData(prev => ({ ...prev, wantsEmails: !prev.wantsEmails }));
+      setFormData((prev) => ({ ...prev, wantsEmails: !prev.wantsEmails }));
       setError('Failed to update email preferences');
     } finally {
       setLoading(false);
@@ -341,7 +357,7 @@ function Account({ theme }) {
       setAwsCredentials(credentials);
       setCredentialsPassword('');
       setShowCredentialsModal(false);
-      
+
       setSuccess('AWS credentials revealed successfully!');
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
@@ -363,18 +379,18 @@ function Account({ theme }) {
     const isCurrentlyEditing = isEditing[field];
     const isFieldLoading = fieldLoading[field];
     const showSuccessFlash = successField === field;
-    
+
     return (
       <div className="form-field">
         <label>{label}</label>
-        <div 
+        <div
           className={`field-container ${isCurrentlyEditing ? 'editing' : ''} ${readonly ? 'readonly' : ''}`}
           onClick={() => !readonly && handleFieldClick(field)}
         >
           {showSuccessFlash && <div className="success-flash" />}
-          
+
           <div className="display-container">
-            <span 
+            <span
               className={`field-value ${!readonly ? 'editable' : ''} ${isCurrentlyEditing ? 'editing' : ''} ${field === 'email' ? 'email-readonly' : ''}`}
             >
               {field === 'username' && value ? `@${value}` : value || 'Not set'}
@@ -384,7 +400,7 @@ function Account({ theme }) {
 
           <div className={`edit-overlay ${isCurrentlyEditing ? 'active' : ''}`}>
             <input
-              ref={el => inputRefs.current[field] = el}
+              ref={(el) => (inputRefs.current[field] = el)}
               type="text"
               name={field}
               value={formData[field]}
@@ -396,7 +412,9 @@ function Account({ theme }) {
             />
           </div>
 
-          <div className={`edit-hint ${readonly || isCurrentlyEditing || isFieldLoading ? 'hidden' : ''}`}>
+          <div
+            className={`edit-hint ${readonly || isCurrentlyEditing || isFieldLoading ? 'hidden' : ''}`}
+          >
             {isFieldLoading ? (
               <div className="loading-indicator">
                 <div className="loading-dots">
@@ -422,7 +440,7 @@ function Account({ theme }) {
     <div className="account-container">
       <div className="account-content">
         <div className="account-header">
-          <motion.div 
+          <motion.div
             className="account-title"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -456,17 +474,17 @@ function Account({ theme }) {
         )}
 
         <div className="account-sections">
-          <motion.section 
+          <motion.section
             className="profile-section"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
           >
             <h2>Profile Information</h2>
-            
+
             <div className="profile-picture-section">
               <div className="profile-picture-container">
-                <img 
+                <img
                   src={profileImage}
                   alt="Profile"
                   className="profile-picture"
@@ -487,12 +505,16 @@ function Account({ theme }) {
                       onChange={handleFileSelect}
                       style={{ display: 'none' }}
                     />
-                    <button 
+                    <button
                       className="upload-button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isUploading}
                     >
-                      {isUploading ? '...' : <img src='/upload-icon.svg' alt='Upload' height="24px" width="24px"/>}
+                      {isUploading ? (
+                        '...'
+                      ) : (
+                        <img src="/upload-icon.svg" alt="Upload" height="24px" width="24px" />
+                      )}
                     </button>
                   </>
                 )}
@@ -506,47 +528,41 @@ function Account({ theme }) {
 
             <div className="form-fields">
               {renderEditableField(
-                'name', 
-                'Full Name', 
-                formData.name, 
+                'name',
+                'Full Name',
+                formData.name,
                 'Enter your full name',
                 isSocialLogin
               )}
 
               {renderEditableField(
-                'username', 
-                'Username', 
-                formData.username, 
+                'username',
+                'Username',
+                formData.username,
                 'Enter your username'
               )}
 
-              {renderEditableField(
-                'email', 
-                'Email Address', 
-                formData.email, 
-                '',
-                true
-              )}
+              {renderEditableField('email', 'Email Address', formData.email, '', true)}
             </div>
           </motion.section>
 
-          <motion.section 
+          <motion.section
             className="profile-details-section"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
             <h2>Profile Details</h2>
-            
+
             <div className="form-fields">
               <div className="form-field">
                 <label>Bio</label>
-                <div 
+                <div
                   className={`field-container textarea-container ${isEditing.bio ? 'editing' : ''}`}
                   onClick={() => handleFieldClick('bio')}
                 >
                   {successField === 'bio' && <div className="success-flash" />}
-                  
+
                   <div className="display-container">
                     <span className={`field-value editable ${isEditing.bio ? 'editing' : ''}`}>
                       {formData.bio || 'Tell us about yourself...'}
@@ -555,7 +571,7 @@ function Account({ theme }) {
 
                   <div className={`edit-overlay ${isEditing.bio ? 'active' : ''}`}>
                     <textarea
-                      ref={el => inputRefs.current.bio = el}
+                      ref={(el) => (inputRefs.current.bio = el)}
                       name="bio"
                       value={formData.bio}
                       onChange={handleInputChange}
@@ -570,9 +586,7 @@ function Account({ theme }) {
                       maxLength={500}
                       rows={4}
                     />
-                    <div className="character-count">
-                      {formData.bio.length}/500
-                    </div>
+                    <div className="character-count">{formData.bio.length}/500</div>
                   </div>
 
                   <div className={`edit-hint ${isEditing.bio || fieldLoading.bio ? 'hidden' : ''}`}>
@@ -592,20 +606,20 @@ function Account({ theme }) {
               </div>
 
               {renderEditableField(
-                'major', 
-                'Major/Field of Study', 
-                formData.major, 
+                'major',
+                'Major/Field of Study',
+                formData.major,
                 'e.g. Computer Science, Engineering, Business'
               )}
 
               <div className="form-field">
                 <label>Academic Level</label>
-                <div 
+                <div
                   className={`field-container ${isEditing.grade ? 'editing' : ''}`}
                   onClick={() => handleFieldClick('grade')}
                 >
                   {successField === 'grade' && <div className="success-flash" />}
-                  
+
                   <div className="display-container">
                     <span className={`field-value editable ${isEditing.grade ? 'editing' : ''}`}>
                       {formData.grade || 'Select your academic level'}
@@ -614,7 +628,7 @@ function Account({ theme }) {
 
                   <div className={`edit-overlay ${isEditing.grade ? 'active' : ''}`}>
                     <select
-                      ref={el => inputRefs.current.grade = el}
+                      ref={(el) => (inputRefs.current.grade = el)}
                       name="grade"
                       value={formData.grade}
                       onChange={handleInputChange}
@@ -623,13 +637,17 @@ function Account({ theme }) {
                       className="edit-input edit-select"
                     >
                       <option value="">Select your academic level</option>
-                      {grades.map(grade => (
-                        <option key={grade} value={grade}>{grade}</option>
+                      {grades.map((grade) => (
+                        <option key={grade} value={grade}>
+                          {grade}
+                        </option>
                       ))}
                     </select>
                   </div>
 
-                  <div className={`edit-hint ${isEditing.grade || fieldLoading.grade ? 'hidden' : ''}`}>
+                  <div
+                    className={`edit-hint ${isEditing.grade || fieldLoading.grade ? 'hidden' : ''}`}
+                  >
                     {fieldLoading.grade ? (
                       <div className="loading-indicator">
                         <div className="loading-dots">
@@ -647,31 +665,33 @@ function Account({ theme }) {
 
               <div className="form-field">
                 <label>Programming Languages & Technologies</label>
-                <div 
+                <div
                   className={`field-container languages-container ${isEditing.programmingLanguages ? 'editing' : ''}`}
                   onClick={() => handleFieldClick('programmingLanguages')}
                 >
                   {successField === 'programmingLanguages' && <div className="success-flash" />}
-                  
+
                   <div className="display-container">
-                                         <div className="languages-display">
-                       {formData.programmingLanguages.length > 0 ? (
-                         formData.programmingLanguages.map(lang => (
-                           <span key={lang} className="language-tag">
-                             {languageIcons[lang] && (
-                               <img 
-                                 src={languageIcons[lang]} 
-                                 alt={lang}
-                                 className="language-tag-icon"
-                               />
-                             )}
-                             {lang}
-                           </span>
-                         ))
-                       ) : (
-                         <span className="field-value editable">Select your programming languages...</span>
-                       )}
-                     </div>
+                    <div className="languages-display">
+                      {formData.programmingLanguages.length > 0 ? (
+                        formData.programmingLanguages.map((lang) => (
+                          <span key={lang} className="language-tag">
+                            {languageIcons[lang] && (
+                              <img
+                                src={languageIcons[lang]}
+                                alt={lang}
+                                className="language-tag-icon"
+                              />
+                            )}
+                            {lang}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="field-value editable">
+                          Select your programming languages...
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className={`edit-overlay ${isEditing.programmingLanguages ? 'active' : ''}`}>
@@ -688,7 +708,7 @@ function Account({ theme }) {
                       </button>
                       <h3>Select Programming Languages & Technologies</h3>
                       <div className="languages-grid">
-                        {programmingLanguages.map(language => (
+                        {programmingLanguages.map((language) => (
                           <button
                             key={language}
                             type="button"
@@ -699,8 +719,8 @@ function Account({ theme }) {
                             }}
                           >
                             {languageIcons[language] && (
-                              <img 
-                                src={languageIcons[language]} 
+                              <img
+                                src={languageIcons[language]}
                                 alt={language}
                                 className="language-icon"
                               />
@@ -734,7 +754,9 @@ function Account({ theme }) {
                     </div>
                   </div>
 
-                  <div className={`edit-hint ${isEditing.programmingLanguages || fieldLoading.programmingLanguages ? 'hidden' : ''}`}>
+                  <div
+                    className={`edit-hint ${isEditing.programmingLanguages || fieldLoading.programmingLanguages ? 'hidden' : ''}`}
+                  >
                     {fieldLoading.programmingLanguages ? (
                       <div className="loading-indicator">
                         <div className="loading-dots">
@@ -752,14 +774,14 @@ function Account({ theme }) {
             </div>
           </motion.section>
 
-          <motion.section 
+          <motion.section
             className="cyber-challenge-section"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
             <h2>🔐 Cyber Challenge #5 Info</h2>
-            
+
             <div className="challenge-card">
               <div className="challenge-header">
                 <div className="challenge-icon">🛡️</div>
@@ -802,7 +824,7 @@ function Account({ theme }) {
                       >
                         🔐 Reveal AWS Credentials
                       </motion.button>
-                      
+
                       <motion.button
                         className="show-modal-btn"
                         onClick={handleShowCyberModal}
@@ -821,7 +843,9 @@ function Account({ theme }) {
                         <div className="credential-value">
                           <code>{awsCredentials.accessKeyId}</code>
                           <button
-                            onClick={() => navigator.clipboard.writeText(awsCredentials.accessKeyId)}
+                            onClick={() =>
+                              navigator.clipboard.writeText(awsCredentials.accessKeyId)
+                            }
                             className="copy-btn"
                           >
                             📋
@@ -833,7 +857,9 @@ function Account({ theme }) {
                         <div className="credential-value">
                           <code>{awsCredentials.secretAccessKey}</code>
                           <button
-                            onClick={() => navigator.clipboard.writeText(awsCredentials.secretAccessKey)}
+                            onClick={() =>
+                              navigator.clipboard.writeText(awsCredentials.secretAccessKey)
+                            }
                             className="copy-btn"
                           >
                             📋
@@ -867,14 +893,14 @@ function Account({ theme }) {
             </div>
           </motion.section>
 
-          <motion.section 
+          <motion.section
             className="preferences-section"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
             <h2>Preferences</h2>
-            
+
             <div className="preference-item">
               <div className="preference-info">
                 <h3>Email Communications</h3>
@@ -887,7 +913,7 @@ function Account({ theme }) {
                   disabled={loading}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <motion.div 
+                  <motion.div
                     className="toggle-slider"
                     animate={{ x: formData.wantsEmails ? 24 : 0 }}
                     transition={{ duration: 0.2 }}
@@ -901,7 +927,7 @@ function Account({ theme }) {
 
       {showCredentialsModal && (
         <div className="modal-overlay" onClick={() => setShowCredentialsModal(false)}>
-          <div className="credentials-modal" onClick={e => e.stopPropagation()}>
+          <div className="credentials-modal" onClick={(e) => e.stopPropagation()}>
             <h3>Enter Your Password</h3>
             <p>Please enter your account password to reveal your AWS credentials.</p>
             <form onSubmit={handleRevealCredentials}>
@@ -917,8 +943,8 @@ function Account({ theme }) {
                 <button type="submit" disabled={isLoadingCredentials}>
                   {isLoadingCredentials ? 'Verifying...' : 'Reveal Credentials'}
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => {
                     setShowCredentialsModal(false);
                     setCredentialsPassword('');
@@ -936,10 +962,14 @@ function Account({ theme }) {
       <CyberChallengeModal
         isOpen={showCyberModal}
         onClose={() => setShowCyberModal(false)}
-        awsCredentials={currentUser?.awsAccessKeyId && currentUser?.awsSecretAccessKey ? {
-          accessKeyId: currentUser.awsAccessKeyId,
-          secretAccessKey: currentUser.awsSecretAccessKey
-        } : null}
+        awsCredentials={
+          currentUser?.awsAccessKeyId && currentUser?.awsSecretAccessKey
+            ? {
+                accessKeyId: currentUser.awsAccessKeyId,
+                secretAccessKey: currentUser.awsSecretAccessKey,
+              }
+            : null
+        }
       />
     </div>
   );

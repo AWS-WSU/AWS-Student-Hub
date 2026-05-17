@@ -5,12 +5,12 @@
   box-sizing: border-box;
 }
 
-  @font-face {
-    font-family: 'RJ1';
-    src: url('./assets/fonts/RJ1.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-  }
+@font-face {
+  font-family: 'RJ1';
+  src: url('./assets/fonts/RJ1.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
 
 :root {
   /* Global variables */
@@ -36,7 +36,7 @@
   --light-accent-secondary-rgb: 35, 47, 62;
   --light-card-bg: #ffffff;
   --light-card-shadow: rgba(0, 0, 0, 0.1);
-  
+
   /* Dark Theme Colors */
   --dark-bg-primary: #121212;
   --dark-bg-primary-rgb: 18, 18, 18;
@@ -46,13 +46,13 @@
   --dark-text-primary-rgb: 248, 249, 250;
   --dark-text-secondary: #adb5bd;
   --dark-text-secondary-rgb: 173, 181, 189;
-  --dark-accent: #ff9900; 
+  --dark-accent: #ff9900;
   --dark-accent-rgb: 255, 153, 0;
-  --dark-accent-secondary: #00a1c9; 
+  --dark-accent-secondary: #00a1c9;
   --dark-accent-secondary-rgb: 0, 161, 201;
   --dark-card-bg: #2d2d2d;
   --dark-card-shadow: rgba(0, 0, 0, 0.5);
-  
+
   /* Default to Dark Theme */
   --bg-primary: var(--dark-bg-primary);
   --bg-primary-rgb: var(--dark-bg-primary-rgb);
@@ -85,7 +85,7 @@
 }
 
 /* Light Theme Overrides */
-[data-theme="light"] {
+[data-theme='light'] {
   --bg-primary: var(--light-bg-primary);
   --bg-primary-rgb: var(--light-bg-primary-rgb);
   --bg-secondary: var(--light-bg-secondary);
@@ -124,7 +124,9 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.6;
-  transition: background-color 0.5s ease, color 0.5s ease;
+  transition:
+    background-color 0.5s ease,
+    color 0.5s ease;
 }
 
 /* Theme transition effect */
