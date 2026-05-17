@@ -34,6 +34,7 @@ function Navbar({ theme, toggleTheme }) {
   useEffect(() => {
     const rememberMe = localStorage.getItem('rememberMe');
     if (!rememberMe && isAuth0Authenticated) {
+      // TODO: handle session expiry for non-remembered Auth0 users
     }
   }, [isAuth0Authenticated]);
 

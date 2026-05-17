@@ -49,7 +49,7 @@ const languageIcons = {
 
 const grades = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Other'];
 
-function Account({ theme }) {
+function Account({ theme: _theme }) {
   const [profileImage, setProfileImage] = useState('/avatar.jpg');
   const [isEditing, setIsEditing] = useState({
     name: false,
