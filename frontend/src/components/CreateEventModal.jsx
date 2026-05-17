@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import { eventsAPI } from '../utils/api';
+import { Mail } from 'lucide-react';
 
 const easternToISO = (dateStr, timeStr) => {
   const testDate = new Date(`${dateStr}T12:00:00`);
@@ -329,9 +330,15 @@ function CreateEventModal({ onClose, onEventCreated }) {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-                  {sendEmailNotification
-                    ? '📧 Email notifications enabled'
-                    : '📧 Send email to all members'}
+                  {sendEmailNotification ? (
+                    <>
+                      <Mail size={16} /> Email notifications enabled
+                    </>
+                  ) : (
+                    <>
+                      <Mail size={16} /> Send email to all members
+                    </>
+                  )}
                 </div>
                 <div
                   style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}

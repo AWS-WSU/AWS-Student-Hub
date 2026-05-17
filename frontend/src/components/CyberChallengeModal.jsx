@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Check, Copy } from 'lucide-react';
 import './styles/CyberChallengeModal.css';
 
 function CyberChallengeModal({ isOpen, onClose, awsCredentials }) {
@@ -65,7 +66,7 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }) {
                     className={`copy-button ${copiedField === 'accessKey' ? 'copied' : ''}`}
                     onClick={() => copyToClipboard(awsCredentials.accessKeyId, 'accessKey')}
                   >
-                    {copiedField === 'accessKey' ? '✓' : '📋'}
+                    {copiedField === 'accessKey' ? <Check size={16} /> : <Copy size={16} />}
                   </button>
                 </div>
               </div>
@@ -83,7 +84,7 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }) {
                     className={`copy-button ${copiedField === 'secretKey' ? 'copied' : ''}`}
                     onClick={() => copyToClipboard(awsCredentials.secretAccessKey, 'secretKey')}
                   >
-                    {copiedField === 'secretKey' ? '✓' : '📋'}
+                    {copiedField === 'secretKey' ? <Check size={16} /> : <Copy size={16} />}
                   </button>
                 </div>
               </div>
@@ -96,7 +97,7 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }) {
                     className={`copy-button ${copiedField === 'region' ? 'copied' : ''}`}
                     onClick={() => copyToClipboard('us-east-1', 'region')}
                   >
-                    {copiedField === 'region' ? '✓' : '📋'}
+                    {copiedField === 'region' ? <Check size={16} /> : <Copy size={16} />}
                   </button>
                 </div>
               </div>

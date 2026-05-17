@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Link2 } from 'lucide-react';
 import SocialLinks from '../components/SocialLinks';
 import '../pages/styles/Landing.css';
 
@@ -15,7 +16,9 @@ function Resources() {
           <h2>Club Resources</h2>
           <div className="section-divider">
             <span></span>
-            <div className="divider-icon">🔗</div>
+            <div className="divider-icon">
+              <Link2 size={20} />
+            </div>
             <span></span>
           </div>
         </div>

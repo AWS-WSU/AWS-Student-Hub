@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { validateImageFile, compressImage } from '../utils/imageUtils';
+import { BookOpen, Code } from 'lucide-react';
 import './styles/QuickSetup.css';
 
 const programmingLanguages = [
@@ -250,7 +251,9 @@ function QuickSetup({ theme }) {
       className="setup-step"
     >
       <div className="step-header">
-        <h2>Tell us about yourself 📚</h2>
+        <h2>
+          Tell us about yourself <BookOpen size={24} />
+        </h2>
         <p>This information will be shown on your public profile</p>
       </div>
 
@@ -307,7 +310,9 @@ function QuickSetup({ theme }) {
       className="setup-step"
     >
       <div className="step-header">
-        <h2>Your Programming Skills 💻</h2>
+        <h2>
+          Your Programming Skills <Code size={24} />
+        </h2>
         <p>Select the programming languages and technologies you're comfortable with</p>
       </div>
 
