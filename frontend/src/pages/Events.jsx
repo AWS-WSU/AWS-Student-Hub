@@ -1,10 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 import { eventsAPI } from '../utils/api';
 import Cropper from 'react-easy-crop';
 
-function Events({ theme, toggleTheme }) {
+function Events({ theme }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
@@ -240,13 +238,6 @@ function Events({ theme, toggleTheme }) {
 
   return (
     <div className="landing-container">
-      <Navbar 
-        theme={theme} 
-        toggleTheme={toggleTheme} 
-        activeSection={''}
-        scrollToSection={() => {}}
-        themeIcon={theme === 'light' ? "/dark.svg" : "/light.svg"}
-      />
       <section className="events-section">
         <div className="section-header">
           <h2>All Events</h2>
@@ -280,7 +271,6 @@ function Events({ theme, toggleTheme }) {
           </div>
         )}
       </section>
-      <Footer theme={theme} />
       {selected && <EventModal event={selected} />}
     </div>
   );

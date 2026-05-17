@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 import { authAPI } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 import './styles/PublicProfile.css';
 
 const languageIcons = {
@@ -54,9 +53,10 @@ const getStatusDisplay = (role) => {
   }
 };
 
-function PublicProfile({ theme, toggleTheme }) {
+function PublicProfile({ theme }) {
   const { username } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -82,10 +82,6 @@ function PublicProfile({ theme, toggleTheme }) {
     fetchProfile();
   }, [username]);
 
-  const scrollToSection = (sectionId) => {
-    navigate(`/#${sectionId}`);
-  };
-
   const formatLastSeen = (lastLogin, daysSinceLastSeen) => {
     if (daysSinceLastSeen === 0) {
       return 'Active today';
@@ -108,12 +104,6 @@ function PublicProfile({ theme, toggleTheme }) {
   if (loading) {
     return (
       <div className="public-profile-container">
-        <Navbar 
-          theme={theme} 
-          toggleTheme={toggleTheme} 
-          activeSection="" 
-          scrollToSection={scrollToSection}
-        />
         <div className="profile-loading">
           <motion.div 
             className="loading-spinner"
@@ -124,7 +114,6 @@ function PublicProfile({ theme, toggleTheme }) {
           </motion.div>
           <p>Loading profile...</p>
         </div>
-        <Footer theme={theme} />
       </div>
     );
   }
@@ -132,12 +121,6 @@ function PublicProfile({ theme, toggleTheme }) {
   if (error) {
     return (
       <div className="public-profile-container">
-        <Navbar 
-          theme={theme} 
-          toggleTheme={toggleTheme} 
-          activeSection="" 
-          scrollToSection={scrollToSection}
-        />
         <div className="profile-error">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -158,20 +141,12 @@ function PublicProfile({ theme, toggleTheme }) {
             </motion.button>
           </motion.div>
         </div>
-        <Footer theme={theme} />
       </div>
     );
   }
 
   return (
     <div className="public-profile-container">
-      <Navbar 
-        theme={theme} 
-        toggleTheme={toggleTheme} 
-        activeSection="" 
-        scrollToSection={scrollToSection}
-      />
-      
       <div className="profile-content">
         <motion.button 
           className="back-button"
@@ -335,21 +310,21 @@ function PublicProfile({ theme, toggleTheme }) {
             </motion.div>
           )}
           
-          <div className="join-cta">
-            <p>Interested in joining our AWS community?</p>
-            <motion.button
-              className="join-community-btn"
-              onClick={() => navigate('/auth?mode=signup')}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Join the Club
-            </motion.button>
-          </div>
+          {!user && (
+            <div className="join-cta">
+              <p>Interested in joining our AWS community?</p>
+              <motion.button
+                className="join-community-btn"
+                onClick={() => navigate('/auth?mode=signup')}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Join the Club
+              </motion.button>
+            </div>
+          )}
         </motion.div>
       </div>
-      
-      <Footer theme={theme} />
     </div>
   );
 }

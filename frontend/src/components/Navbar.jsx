@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import './styles/Navbar.css';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAuth } from '../context/AuthContext';
 
-function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
+function Navbar({ theme, toggleTheme }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [profileImage, setProfileImage] = useState('/avatar.jpg');
   const navigate = useNavigate();
+  const location = useLocation();
   
   const { logout: auth0Logout, isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
   const { user: authUser, logout: authLogout } = useAuth();
@@ -29,8 +30,6 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
   useEffect(() => {
     const rememberMe = localStorage.getItem('rememberMe');
     if (!rememberMe && isAuth0Authenticated) {
-      // If user didn't choose remember me, we could implement auto-logout after session
-      // For now, we'll keep them logged in until they manually log out
     }
   }, [isAuth0Authenticated]);
 
@@ -87,6 +86,8 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
   const isAuthenticated = isAuth0Authenticated || !!authUser;
   const currentUser = auth0User || authUser;
 
+  const isActive = (path) => location.pathname === path;
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -123,50 +124,52 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
       >
-        <img 
-          src={theme === 'light' ? "/aws-logo-dark.svg" : "/aws-logo-light.svg"} 
-          alt="AWS Logo" 
-          className="aws-logo" 
-        />
-        <div className="logo-text">
-          <h1>Wayne State University</h1>
-          <span className="accent-text">AWS Cloud Computing Club</span>
-        </div>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
+          <img 
+            src={theme === 'light' ? "/aws-logo-dark.svg" : "/aws-logo-light.svg"} 
+            alt="AWS Logo" 
+            className="aws-logo" 
+          />
+          <div className="logo-text">
+            <h1>Wayne State University</h1>
+            <span className="accent-text">AWS Cloud Computing Club</span>
+          </div>
+        </Link>
       </motion.div>
       
       <nav className="desktop-nav">
         <ul>
           <motion.li 
-            className={activeSection === 'home' ? 'active' : ''}
+            className={isActive('/') ? 'active' : ''}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1 }}
           >
-            <a onClick={() => scrollToSection('home')}>Home</a>
+            <Link to="/">Home</Link>
           </motion.li>
           <motion.li 
-            className={activeSection === 'about' ? 'active' : ''}
+            className={isActive('/about') ? 'active' : ''}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.2 }}
           >
-            <a onClick={() => scrollToSection('about')}>About</a>
+            <Link to="/about">About</Link>
           </motion.li>
           <motion.li 
-            className={activeSection === 'events' ? 'active' : ''}
+            className={isActive('/events') ? 'active' : ''}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.3 }}
           >
-            <a onClick={() => scrollToSection('events')}>Events</a>
+            <Link to="/events">Events</Link>
           </motion.li>
           <motion.li 
-            className={activeSection === 'resources' ? 'active' : ''}
+            className={isActive('/resources') ? 'active' : ''}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.4 }}
           >
-            <a onClick={() => scrollToSection('resources')}>Resources</a>
+            <Link to="/resources">Resources</Link>
           </motion.li>
         </ul>
       </nav>
@@ -377,28 +380,28 @@ function Navbar({ theme, toggleTheme, activeSection, scrollToSection }) {
                 animate={{ opacity: 1, x: 0 }} 
                 transition={{ delay: 0.1 }}
               >
-                <a onClick={() => { scrollToSection('home'); toggleMenu(); }}>Home</a>
+                <Link to="/" onClick={toggleMenu}>Home</Link>
               </motion.li>
               <motion.li 
                 initial={{ opacity: 0, x: 20 }} 
                 animate={{ opacity: 1, x: 0 }} 
                 transition={{ delay: 0.2 }}
               >
-                <a onClick={() => { scrollToSection('about'); toggleMenu(); }}>About</a>
+                <Link to="/about" onClick={toggleMenu}>About</Link>
               </motion.li>
               <motion.li 
                 initial={{ opacity: 0, x: 20 }} 
                 animate={{ opacity: 1, x: 0 }} 
                 transition={{ delay: 0.3 }}
               >
-                <a onClick={() => { scrollToSection('events'); toggleMenu(); }}>Events</a>
+                <Link to="/events" onClick={toggleMenu}>Events</Link>
               </motion.li>
               <motion.li 
                 initial={{ opacity: 0, x: 20 }} 
                 animate={{ opacity: 1, x: 0 }} 
                 transition={{ delay: 0.4 }}
               >
-                <a onClick={() => { scrollToSection('resources'); toggleMenu(); }}>Resources</a>
+                <Link to="/resources" onClick={toggleMenu}>Resources</Link>
               </motion.li>
             </ul>
           </motion.div>

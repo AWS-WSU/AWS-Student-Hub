@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
+import { Link } from 'react-router-dom';
 import { newsletterAPI } from '../utils/api';
 import './styles/Footer.css';
 
@@ -69,10 +70,10 @@ function Footer({ theme }) {
         >
           <h3>Quick Links</h3>
           <ul>
-            <li><a href="#home">Home</a></li>
-            <li><a href="#about">About Us</a></li>
-            <li><a href="#events">Events</a></li>
-            <li><a href="#resources">Resources</a></li>
+            <li><Link to="/">Home</Link></li>
+            <li><Link to="/about">About Us</Link></li>
+            <li><Link to="/events">Events</Link></li>
+            <li><Link to="/resources">Resources</Link></li>
           </ul>
         </motion.div>
         
