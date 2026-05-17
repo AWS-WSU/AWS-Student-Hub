@@ -19,6 +19,8 @@ const generateRandomPassword = (length = 12) => {
   return password;
 };
 
+const CHALLENGE_BUCKET = process.env.AWS_CHALLENGE_BUCKET || 'wayne-aws-club-secrets-prod';
+
 const createIAMPolicy = (username) => {
   return {
     Version: '2012-10-17',
@@ -26,7 +28,7 @@ const createIAMPolicy = (username) => {
       {
         Effect: 'Allow',
         Action: 's3:GetObject',
-        Resource: `arn:aws:s3:::wayne-aws-club-secrets/secrets/${username}.txt`
+        Resource: `arn:aws:s3:::${CHALLENGE_BUCKET}/secrets/${username}.txt`
       }
     ]
   };
@@ -97,7 +99,7 @@ const createChallengeUser = async (username) => {
     const s3Content = `next_password=${challengePassword}`;
     
     const s3Params = {
-      Bucket: 'wayne-aws-club-secrets',
+      Bucket: CHALLENGE_BUCKET,
       Key: s3Key,
       Body: s3Content,
       ContentType: 'text/plain'
