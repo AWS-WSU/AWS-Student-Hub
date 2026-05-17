@@ -26,7 +26,7 @@ const validateSignup = [
   body('password')
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters long')
-    .matches(/^(?=.*\d)(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).*$/)
+    .matches(/^(?=.*\d)(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=[{};':"\\|,.<>/?]).*$/)
     .withMessage(
       'Password must contain at least one number, one uppercase letter, and one special character'
     ),
@@ -47,7 +47,7 @@ const validateResetPassword = [
   body('newPassword')
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters long')
-    .matches(/^(?=.*\d)(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).*$/)
+    .matches(/^(?=.*\d)(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=[{};':"\\|,.<>/?]).*$/)
     .withMessage(
       'Password must contain at least one number, one uppercase letter, and one special character'
     ),

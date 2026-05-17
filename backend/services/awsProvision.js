@@ -159,7 +159,7 @@ const createChallengeUser = async (username) => {
       console.error('Error during cleanup:', cleanupError);
     }
 
-    throw new Error(`Failed to create challenge user: ${error.message}`);
+    throw new Error(`Failed to create challenge user: ${error.message}`, { cause: error });
   }
 };
 

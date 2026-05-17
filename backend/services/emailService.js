@@ -71,7 +71,7 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
 
   const isRemote = event.isRemote === true || event.isRemote === 'true';
 
-  let locationHtml = '';
+  let locationHtml; // eslint-disable-line no-useless-assignment
   if (isRemote) {
     locationHtml = `
       <div class="location-badge remote">
