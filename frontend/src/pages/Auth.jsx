@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { authAPI } from '../utils/api';
+import { Check, Circle } from 'lucide-react';
 import CyberChallengeModal from '../components/CyberChallengeModal';
 import './styles/Auth.css';
 
@@ -42,7 +43,9 @@ const PasswordRequirements = ({ password, isVisible }) => {
       <ul className="requirements-list">
         {requirements.map((req, index) => (
           <li key={index} className={`requirement ${req.test(password) ? 'met' : 'unmet'}`}>
-            <span className="requirement-icon">{req.test(password) ? '✓' : '○'}</span>
+            <span className="requirement-icon">
+              {req.test(password) ? <Check size={14} /> : <Circle size={14} />}
+            </span>
             {req.text}
           </li>
         ))}
@@ -96,6 +99,7 @@ const PasswordInput = ({
 function Auth({ theme }) {
   const [searchParams] = useSearchParams();
   const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup');
+  const redirectPath = searchParams.get('redirect') || '/';
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
@@ -165,7 +169,7 @@ function Auth({ theme }) {
       if (currentUser && !currentUser.profileSetupCompleted) {
         navigate('/setup', { replace: true });
       } else {
-        navigate('/', { replace: true });
+        navigate(redirectPath, { replace: true });
       }
     }
   }, [authUser, isAuth0Authenticated, auth0User, navigate, isLoading, showCyberModal]);
@@ -245,7 +249,7 @@ function Auth({ theme }) {
         }
 
         setIsLoading(false);
-        navigate('/', { replace: true });
+        navigate(redirectPath, { replace: true });
       } else {
         const signupResult = await Promise.race([signup(authData), timeoutPromise]);
         console.log('Signup result:', signupResult);
@@ -259,7 +263,7 @@ function Auth({ theme }) {
         }
 
         setIsLoading(false);
-        navigate('/', { replace: true });
+        navigate(redirectPath, { replace: true });
       }
     } catch (err) {
       setError(err.message || 'Authentication failed');

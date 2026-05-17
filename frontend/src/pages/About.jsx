@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Cloud } from 'lucide-react';
 import '../pages/styles/Landing.css';
 
 function About() {
@@ -14,7 +15,9 @@ function About() {
           <h2>About Our Club</h2>
           <div className="section-divider">
             <span></span>
-            <div className="divider-icon">☁️</div>
+            <div className="divider-icon">
+              <Cloud size={20} />
+            </div>
             <span></span>
           </div>
         </div>

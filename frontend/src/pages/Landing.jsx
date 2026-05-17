@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import './styles/Landing.css';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { Calendar, Sparkles } from 'lucide-react';
 import SocialLinks from '../components/SocialLinks';
 import CreateEventModal from '../components/CreateEventModal';
 import EventModal from '../components/EventModal';
@@ -319,7 +320,7 @@ function Landing({ theme }) {
               transition={{ duration: 0.6, delay: 0.3 }}
               viewport={{ once: true, amount: 0.3 }}
             >
-              Let's give a warm welcome to our newest club members! 🎉 Ready to join this amazing
+              Let's give a warm welcome to our newest club members! Ready to join this amazing
               community?
             </motion.p>
           </motion.div>
@@ -331,7 +332,9 @@ function Landing({ theme }) {
             transition={{ duration: 0.6 }}
             viewport={{ once: true, amount: 0.3 }}
           >
-            <div className="no-users-icon">🌟</div>
+            <div className="no-users-icon">
+              <Sparkles size={32} />
+            </div>
             <h3>Be Our First Member!</h3>
             <p>Join our community and be part of something amazing from the beginning.</p>
           </motion.div>
@@ -449,7 +452,9 @@ function Landing({ theme }) {
           <h2>Upcoming Events</h2>
           <div className="section-divider">
             <span></span>
-            <div className="divider-icon">📅</div>
+            <div className="divider-icon">
+              <Calendar size={20} />
+            </div>
             <span></span>
           </div>
         </div>

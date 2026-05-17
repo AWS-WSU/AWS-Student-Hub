@@ -7,6 +7,7 @@ import Landing from './pages/Landing';
 import About from './pages/About';
 import Resources from './pages/Resources';
 import Events from './pages/Events';
+import Challenges from './pages/Challenges';
 import Auth from './pages/Auth';
 import Account from './pages/Account';
 import PublicProfile from './pages/PublicProfile';
@@ -36,6 +37,7 @@ function AppContent() {
           <Route path="/about" element={<About />} />
           <Route path="/resources" element={<Resources />} />
           <Route path="/events" element={<Events theme={theme} />} />
+          <Route path="/challenges" element={<Challenges theme={theme} />} />
           <Route path="/auth" element={<Auth theme={theme} />} />
           <Route path="/setup" element={<QuickSetup theme={theme} />} />
           <Route path="/account" element={<Account theme={theme} />} />

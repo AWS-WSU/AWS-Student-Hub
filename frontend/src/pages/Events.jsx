@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { eventsAPI } from '../utils/api';
+import { Calendar, MapPin, Link2 } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 
 function Events({ theme: _theme }) {
@@ -198,12 +199,16 @@ function Events({ theme: _theme }) {
             <div className="hub-event-details">
               <div className="hub-detail-section">
                 <div className="hub-detail-item">
-                  <span className="hub-detail-label">📅 Date & Time</span>
+                  <span className="hub-detail-label">
+                    <Calendar size={14} /> Date & Time
+                  </span>
                   <strong className="hub-detail-value">{formatted}</strong>
                 </div>
 
                 <div className="hub-detail-item">
-                  <span className="hub-detail-label">📍 Location</span>
+                  <span className="hub-detail-label">
+                    <MapPin size={14} /> Location
+                  </span>
                   {isRemote ? (
                     <div className="hub-detail-value">
                       <strong>Remote Event</strong>
@@ -215,7 +220,7 @@ function Events({ theme: _theme }) {
                             rel="noreferrer"
                             className="hub-btn link"
                           >
-                            🔗 Join Webinar
+                            <Link2 size={14} /> Join Webinar
                           </a>
                         </div>
                       ) : (
@@ -303,7 +308,9 @@ function Events({ theme: _theme }) {
           <h2>All Events</h2>
           <div className="section-divider">
             <span></span>
-            <div className="divider-icon">📅</div>
+            <div className="divider-icon">
+              <Calendar size={20} />
+            </div>
             <span></span>
           </div>
         </div>

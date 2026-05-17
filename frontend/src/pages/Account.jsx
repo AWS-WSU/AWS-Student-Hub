@@ -5,6 +5,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useAuth } from '../context/AuthContext';
 import './styles/Account.css';
 import { validateImageFile, compressImage } from '../utils/imageUtils';
+import { Target, Copy } from 'lucide-react';
 import CyberChallengeModal from '../components/CyberChallengeModal';
 
 const getStoredItem = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -832,7 +833,7 @@ function Account({ theme: _theme }) {
                         whileTap={{ scale: 0.98 }}
                         style={{ marginLeft: '1rem' }}
                       >
-                        🎯 Show Challenge Modal
+                        <Target size={16} /> Show Challenge Modal
                       </motion.button>
                     </>
                   ) : (
@@ -848,7 +849,7 @@ function Account({ theme: _theme }) {
                             }
                             className="copy-btn"
                           >
-                            📋
+                            <Copy size={14} />
                           </button>
                         </div>
                       </div>
@@ -862,7 +863,7 @@ function Account({ theme: _theme }) {
                             }
                             className="copy-btn"
                           >
-                            📋
+                            <Copy size={14} />
                           </button>
                         </div>
                       </div>
@@ -879,7 +880,7 @@ function Account({ theme: _theme }) {
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
-                          🎯 Show Challenge Modal
+                          <Target size={16} /> Show Challenge Modal
                         </motion.button>
                       </div>
                     </div>

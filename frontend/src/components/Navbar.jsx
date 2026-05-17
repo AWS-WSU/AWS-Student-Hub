@@ -184,6 +184,14 @@ function Navbar({ theme, toggleTheme }) {
           >
             <Link to="/resources">Resources</Link>
           </motion.li>
+          <motion.li
+            className={isActive('/challenges') ? 'active' : ''}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.5 }}
+          >
+            <Link to="/challenges">Challenges</Link>
+          </motion.li>
         </ul>
       </nav>
 
