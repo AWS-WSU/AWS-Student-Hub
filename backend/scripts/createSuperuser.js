@@ -15,7 +15,7 @@ async function createSuperuser(email) {
     console.log('📦 Connected to MongoDB');
 
     const user = await User.findOne({ email: email.toLowerCase() });
-    
+
     if (!user) {
       console.log('❌ User with email', email, 'not found');
       console.log('👉 User must register first before being promoted to superuser');
@@ -27,9 +27,9 @@ async function createSuperuser(email) {
       process.exit(0);
     }
 
-    await User.findByIdAndUpdate(user._id, { 
+    await User.findByIdAndUpdate(user._id, {
       role: 'superuser',
-      status: 'active'
+      status: 'active',
     });
 
     console.log('🎉 Successfully promoted', email, 'to superuser!');
@@ -46,7 +46,6 @@ async function createSuperuser(email) {
     console.log('   - Create other admins and moderators');
     console.log('   - Ban/unban users');
     console.log('   - View system analytics');
-
   } catch (error) {
     console.error('❌ Error creating superuser:', error.message);
     process.exit(1);
@@ -81,4 +80,4 @@ if (!emailRegex.test(email)) {
 console.log('🚀 Creating superuser for:', email);
 console.log('');
 
-createSuperuser(email); 
+createSuperuser(email);

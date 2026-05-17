@@ -20,7 +20,7 @@
   width: 100%;
   max-height: 95vh;
   overflow-y: auto;
-  box-shadow: 
+  box-shadow:
     0 25px 50px rgba(0, 0, 0, 0.6),
     0 0 0 1px rgba(255, 255, 255, 0.05);
   position: relative;
@@ -28,7 +28,11 @@
 }
 
 .cyber-modal-header {
-  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.1), rgba(var(--accent-secondary-rgb), 0.05));
+  background: linear-gradient(
+    135deg,
+    rgba(var(--accent-rgb), 0.1),
+    rgba(var(--accent-secondary-rgb), 0.05)
+  );
   padding: 2.5rem 2rem 2rem;
   text-align: center;
   border-radius: 20px 20px 0 0;
@@ -188,7 +192,7 @@
 .credential-input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 
+  box-shadow:
     0 0 0 3px rgba(var(--accent-rgb), 0.1),
     0 4px 12px rgba(var(--accent-rgb), 0.15);
   background: rgba(var(--accent-rgb), 0.02);
@@ -227,9 +231,15 @@
 }
 
 @keyframes copySuccess {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .challenge-details {
@@ -379,7 +389,7 @@
   font-size: 1.1rem;
   cursor: pointer;
   transition: all 0.4s ease;
-  box-shadow: 
+  box-shadow:
     0 8px 25px rgba(var(--accent-rgb), 0.3),
     0 3px 10px rgba(0, 0, 0, 0.2);
   text-transform: uppercase;
@@ -405,7 +415,7 @@
 
 .primary-button:hover {
   transform: translateY(-3px);
-  box-shadow: 
+  box-shadow:
     0 12px 35px rgba(var(--accent-rgb), 0.4),
     0 6px 15px rgba(0, 0, 0, 0.3);
 }
@@ -415,34 +425,34 @@
 }
 
 /* Light theme overrides */
-[data-theme="light"] .cyber-modal-content {
+[data-theme='light'] .cyber-modal-content {
   background: #ffffff;
-  box-shadow: 
+  box-shadow:
     0 25px 50px rgba(0, 0, 0, 0.15),
     0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
-[data-theme="light"] .close-button {
+[data-theme='light'] .close-button {
   background: rgba(0, 0, 0, 0.05);
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-[data-theme="light"] .credential-input {
+[data-theme='light'] .credential-input {
   background: rgba(0, 0, 0, 0.02);
   border: 2px solid rgba(0, 0, 0, 0.08);
 }
 
-[data-theme="light"] .credentials-section {
+[data-theme='light'] .credentials-section {
   background: rgba(0, 0, 0, 0.01);
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-[data-theme="light"] .step {
+[data-theme='light'] .step {
   background: rgba(0, 0, 0, 0.01);
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-[data-theme="light"] .aws-cli-example {
+[data-theme='light'] .aws-cli-example {
   background: linear-gradient(135deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.02));
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
@@ -471,59 +481,59 @@
   .cyber-modal-overlay {
     padding: 0.5rem;
   }
-  
+
   .cyber-modal-content {
     border-radius: 16px;
     max-height: 98vh;
   }
-  
+
   .cyber-modal-header {
     padding: 2rem 1.5rem 1.5rem;
     border-radius: 16px 16px 0 0;
   }
-  
+
   .cyber-modal-header h2 {
     font-size: 1.6rem;
   }
-  
+
   .challenge-icon {
     font-size: 3rem;
   }
-  
+
   .cyber-modal-body,
   .cyber-modal-footer {
     padding: 1.5rem;
   }
-  
+
   .credential-input-group {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .copy-button {
     width: 100%;
     justify-content: center;
   }
-  
+
   .step {
     padding: 1.25rem;
     gap: 1rem;
   }
-  
+
   .primary-button {
     width: 100%;
     padding: 1.25rem 2rem;
     font-size: 1rem;
   }
-  
+
   .aws-cli-example {
     padding: 1.5rem;
   }
-  
+
   .code-block {
     padding: 1.25rem;
   }
-  
+
   .code-block code {
     font-size: 0.8rem;
   }
@@ -533,17 +543,17 @@
   .cyber-modal-header h2 {
     font-size: 1.4rem;
   }
-  
+
   .challenge-icon {
     font-size: 2.5rem;
   }
-  
+
   .step {
     flex-direction: column;
     gap: 0.75rem;
     text-align: center;
   }
-  
+
   .step-number {
     align-self: center;
   }

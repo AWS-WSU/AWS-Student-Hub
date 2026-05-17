@@ -7,12 +7,12 @@ export const getImageUrl = (url, fallback = '/avatar.jpg') => {
   if (!url || url === '/avatar.jpg') {
     return fallback;
   }
-  
+
   // If it's already a full URL, return as is
   if (url.startsWith('http')) {
     return url;
   }
-  
+
   // If it's a relative path, return as is
   return url;
 };
@@ -26,7 +26,7 @@ export const preloadImage = (src) => {
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = src;
-    
+
     // Set referrer policy for CORS
     img.referrerPolicy = 'no-referrer';
     img.crossOrigin = 'anonymous';
@@ -58,11 +58,11 @@ export const compressImage = (file, maxWidth = 400, quality = 0.9) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
-    
+
     img.onload = () => {
       // Calculate dimensions maintaining aspect ratio
       let { width, height } = img;
-      
+
       if (width > height) {
         if (width > maxWidth) {
           height = (height * maxWidth) / width;
@@ -74,18 +74,18 @@ export const compressImage = (file, maxWidth = 400, quality = 0.9) => {
           height = maxWidth;
         }
       }
-      
+
       canvas.width = width;
       canvas.height = height;
-      
+
       // Draw image with high quality
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
-      
+
       canvas.toBlob(resolve, 'image/jpeg', quality);
     };
-    
+
     img.src = createPreviewUrl(file);
   });
 };
@@ -95,19 +95,19 @@ export const compressImage = (file, maxWidth = 400, quality = 0.9) => {
  */
 export const validateImageFile = (file, maxSizeMB = 5) => {
   const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-  
+
   if (!file) {
     return { valid: false, error: 'No file selected' };
   }
-  
+
   if (!validTypes.includes(file.type)) {
     return { valid: false, error: 'Please select a valid image file (JPG, PNG, or WebP)' };
   }
-  
+
   if (file.size > maxSizeMB * 1024 * 1024) {
     return { valid: false, error: `File size must be less than ${maxSizeMB}MB` };
   }
-  
+
   return { valid: true };
 };
 
@@ -124,4 +124,4 @@ export const getImageDimensions = (file) => {
     img.onerror = reject;
     img.src = createPreviewUrl(file);
   });
-}; 
+};

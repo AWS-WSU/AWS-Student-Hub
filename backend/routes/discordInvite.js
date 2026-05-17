@@ -18,10 +18,10 @@ router.get('/discord-invite', async (req, res) => {
     const response = await axios.post(
       `https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/invites`,
       {
-        max_age: 0, 
-        max_uses: 0, 
+        max_age: 0,
+        max_uses: 0,
         temporary: false,
-        unique: true
+        unique: true,
       },
       {
         headers: {
@@ -33,23 +33,23 @@ router.get('/discord-invite', async (req, res) => {
 
     const invite = response.data;
     console.log('Discord invite generated successfully:', invite.code);
-    return res.json({ 
+    return res.json({
       inviteUrl: `https://discord.gg/${invite.code}`,
-      success: true 
+      success: true,
     });
   } catch (error) {
     console.error('Error generating Discord invite:', error.response?.data || error.message);
-    
+
     if (error.response?.status === 403) {
       console.error('Bot lacks permissions to create invites in the channel');
     } else if (error.response?.status === 404) {
       console.error('Channel not found or bot not in server');
     }
-    
-    return res.status(500).json({ 
+
+    return res.status(500).json({
       error: 'Failed to generate invite',
       message: error.response?.data?.message || 'Discord API error',
-      success: false
+      success: false,
     });
   }
 });

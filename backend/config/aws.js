@@ -7,12 +7,12 @@ const s3Client = new S3Client({
     accessKeyId: process.env.S3_ACCESS_KEY_ID,
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
   },
-  region: process.env.S3_REGION
+  region: process.env.S3_REGION,
 });
 
 const uploadToS3 = async (file, key) => {
   const versionedKey = `${key}`;
-  
+
   const upload = new Upload({
     client: s3Client,
     params: {
@@ -23,9 +23,9 @@ const uploadToS3 = async (file, key) => {
       CacheControl: 'public, max-age=31536000, immutable',
       Metadata: {
         'uploaded-at': new Date().toISOString(),
-        'version': Date.now().toString()
-      }
-    }
+        version: Date.now().toString(),
+      },
+    },
   });
 
   return upload.done();
@@ -34,7 +34,7 @@ const uploadToS3 = async (file, key) => {
 const deleteFromS3 = async (key) => {
   const command = new DeleteObjectCommand({
     Bucket: process.env.S3_BUCKET_NAME,
-    Key: key
+    Key: key,
   });
 
   return s3Client.send(command);
@@ -43,5 +43,5 @@ const deleteFromS3 = async (key) => {
 module.exports = {
   s3Client,
   uploadToS3,
-  deleteFromS3
+  deleteFromS3,
 };

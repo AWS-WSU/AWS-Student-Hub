@@ -9,7 +9,7 @@ const newsletterLimiter = rateLimit({
   max: 5,
   message: {
     success: false,
-    message: 'Too many requests, please try again later.'
+    message: 'Too many requests, please try again later.',
   },
   standardHeaders: true,
   legacyHeaders: false,

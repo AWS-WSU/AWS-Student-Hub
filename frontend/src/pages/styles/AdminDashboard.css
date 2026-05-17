@@ -4,7 +4,9 @@
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-family);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .admin-content {
@@ -92,7 +94,9 @@
   color: var(--accent);
 }
 
-.dashboard-content, .users-content, .queue-content {
+.dashboard-content,
+.users-content,
+.queue-content {
   animation: fadeInUp 0.5s ease forwards;
 }
 
@@ -187,7 +191,8 @@
   flex-wrap: wrap;
 }
 
-.search-input, .filter-select {
+.search-input,
+.filter-select {
   padding: 12px 16px;
   border: 2px solid rgba(var(--text-secondary-rgb), 0.2);
   border-radius: 12px;
@@ -200,7 +205,8 @@
   font-family: var(--font-family);
 }
 
-.search-input:focus, .filter-select:focus {
+.search-input:focus,
+.filter-select:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
@@ -307,7 +313,8 @@
   opacity: 0.8;
 }
 
-.user-role, .user-status {
+.user-role,
+.user-status {
   font-weight: 600;
   text-transform: capitalize;
   padding: 6px 14px;
@@ -320,39 +327,39 @@
   line-height: 1.2;
 }
 
-.user-role[data-role="member"] {
+.user-role[data-role='member'] {
   background-color: rgba(var(--text-secondary-rgb), 0.1);
   color: var(--text-secondary);
 }
 
-.user-role[data-role="moderator"] {
+.user-role[data-role='moderator'] {
   background-color: rgba(76, 175, 80, 0.1);
-  color: #4CAF50;
+  color: #4caf50;
 }
 
-.user-role[data-role="admin"] {
+.user-role[data-role='admin'] {
   background-color: rgba(255, 152, 0, 0.1);
-  color: #FF9800;
+  color: #ff9800;
 }
 
-.user-role[data-role="superuser"] {
+.user-role[data-role='superuser'] {
   background-color: rgba(244, 67, 54, 0.1);
-  color: #F44336;
+  color: #f44336;
 }
 
-.user-status[data-status="active"] {
+.user-status[data-status='active'] {
   background-color: rgba(76, 175, 80, 0.1);
-  color: #4CAF50;
+  color: #4caf50;
 }
 
-.user-status[data-status="banned"] {
+.user-status[data-status='banned'] {
   background-color: rgba(244, 67, 54, 0.1);
-  color: #F44336;
+  color: #f44336;
 }
 
-.user-status[data-status="suspended"] {
+.user-status[data-status='suspended'] {
   background-color: rgba(255, 152, 0, 0.1);
-  color: #FF9800;
+  color: #ff9800;
 }
 
 .user-joined {
@@ -403,7 +410,7 @@
 }
 
 .ban-btn {
-  background-color: #F44336;
+  background-color: #f44336;
   color: white;
 }
 
@@ -413,7 +420,7 @@
 }
 
 .unban-btn {
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: white;
 }
 
@@ -468,7 +475,7 @@
   color: var(--text-secondary);
   font-family: var(--font-family);
 }
-  
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -522,11 +529,12 @@
 }
 
 .warning-text {
-  color: #F44336 !important;
+  color: #f44336 !important;
   font-weight: 600;
 }
 
-.role-select, .ban-reason {
+.role-select,
+.ban-reason {
   width: 100%;
   padding: 12px 16px;
   border: 2px solid rgba(var(--text-secondary-rgb), 0.2);
@@ -544,7 +552,8 @@
   min-height: 100px;
 }
 
-.role-select:focus, .ban-reason:focus {
+.role-select:focus,
+.ban-reason:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
@@ -557,7 +566,8 @@
   margin-top: 30px;
 }
 
-.cancel-btn, .confirm-btn {
+.cancel-btn,
+.confirm-btn {
   padding: 12px 30px;
   border: none;
   border-radius: 12px;
@@ -590,7 +600,8 @@
 }
 
 /* Loading and Error States */
-.loading-stats, .loading-users {
+.loading-stats,
+.loading-users {
   text-align: center;
   padding: 60px 20px;
   font-size: 1.1rem;
@@ -600,7 +611,7 @@
 
 .error-message {
   background-color: rgba(244, 67, 54, 0.1);
-  color: #F44336;
+  color: #f44336;
   padding: 16px 20px;
   border-radius: 12px;
   text-align: center;
@@ -628,11 +639,13 @@
     flex-direction: column;
   }
 
-  .search-input, .filter-select {
+  .search-input,
+  .filter-select {
     min-width: 100%;
   }
 
-  .table-header, .table-row {
+  .table-header,
+  .table-row {
     grid-template-columns: 1fr;
     gap: 10px;
     text-align: left;
@@ -722,7 +735,8 @@
     flex-direction: column;
   }
 
-  .cancel-btn, .confirm-btn {
+  .cancel-btn,
+  .confirm-btn {
     padding: 14px 20px;
   }
 }
@@ -766,36 +780,36 @@
   font-family: var(--font-family);
 }
 
-.queue-stat-card[data-type="pending"] {
-  border-top: 3px solid #FF9800;
+.queue-stat-card[data-type='pending'] {
+  border-top: 3px solid #ff9800;
 }
 
-.queue-stat-card[data-type="pending"] .queue-stat-value {
-  color: #FF9800;
+.queue-stat-card[data-type='pending'] .queue-stat-value {
+  color: #ff9800;
 }
 
-.queue-stat-card[data-type="processing"] {
-  border-top: 3px solid #2196F3;
+.queue-stat-card[data-type='processing'] {
+  border-top: 3px solid #2196f3;
 }
 
-.queue-stat-card[data-type="processing"] .queue-stat-value {
-  color: #2196F3;
+.queue-stat-card[data-type='processing'] .queue-stat-value {
+  color: #2196f3;
 }
 
-.queue-stat-card[data-type="completed"] {
-  border-top: 3px solid #4CAF50;
+.queue-stat-card[data-type='completed'] {
+  border-top: 3px solid #4caf50;
 }
 
-.queue-stat-card[data-type="completed"] .queue-stat-value {
-  color: #4CAF50;
+.queue-stat-card[data-type='completed'] .queue-stat-value {
+  color: #4caf50;
 }
 
-.queue-stat-card[data-type="failed"] {
-  border-top: 3px solid #F44336;
+.queue-stat-card[data-type='failed'] {
+  border-top: 3px solid #f44336;
 }
 
-.queue-stat-card[data-type="failed"] .queue-stat-value {
-  color: #F44336;
+.queue-stat-card[data-type='failed'] .queue-stat-value {
+  color: #f44336;
 }
 
 .queue-actions {
@@ -884,24 +898,24 @@
   text-align: center;
 }
 
-.queue-status[data-status="pending"] {
+.queue-status[data-status='pending'] {
   background-color: rgba(255, 152, 0, 0.1);
-  color: #FF9800;
+  color: #ff9800;
 }
 
-.queue-status[data-status="processing"] {
+.queue-status[data-status='processing'] {
   background-color: rgba(33, 150, 243, 0.1);
-  color: #2196F3;
+  color: #2196f3;
 }
 
-.queue-status[data-status="completed"] {
+.queue-status[data-status='completed'] {
   background-color: rgba(76, 175, 80, 0.1);
-  color: #4CAF50;
+  color: #4caf50;
 }
 
-.queue-status[data-status="failed"] {
+.queue-status[data-status='failed'] {
   background-color: rgba(244, 67, 54, 0.1);
-  color: #F44336;
+  color: #f44336;
 }
 
 .queue-attempts {
@@ -923,12 +937,12 @@
 }
 
 .retry-btn {
-  background-color: #2196F3;
+  background-color: #2196f3;
   color: white;
 }
 
 .retry-btn:hover:not(:disabled) {
-  background-color: #1976D2;
+  background-color: #1976d2;
   transform: translateY(-2px);
 }
 
@@ -1011,4 +1025,4 @@
   .process-queue-btn {
     width: 100%;
   }
-} 
+}

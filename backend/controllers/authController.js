@@ -16,19 +16,19 @@ const generateTokens = (user, deviceId, rememberMe = false) => {
     console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
     console.log('JWT_SECRET length:', process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0);
   }
-  
+
   const accessToken = jwt.sign(
-    { 
-      id: user._id, 
+    {
+      id: user._id,
       email: user.email,
-      tokenVersion: user.tokenVersion
+      tokenVersion: user.tokenVersion,
     },
     process.env.JWT_SECRET,
     { expiresIn: '15m' }
   );
-  
+
   const refreshToken = user.generateRefreshToken(deviceId, rememberMe);
-  
+
   return { accessToken, refreshToken };
 };
 
@@ -36,7 +36,7 @@ const generateUsername = async (email) => {
   let baseUsername = email.split('@')[0];
   let username = baseUsername;
   let counter = 1;
-  
+
   while (true) {
     const existingUser = await User.findOne({ username });
     if (!existingUser) {
@@ -72,66 +72,77 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { fullName, email, password, username: providedUsername, deviceId, rememberMe } = req.body;
+    const {
+      fullName,
+      email,
+      password,
+      username: providedUsername,
+      deviceId,
+      rememberMe,
+    } = req.body;
 
     let existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ error: 'Account creation failed. Please check your information.' });
+      return res
+        .status(400)
+        .json({ error: 'Account creation failed. Please check your information.' });
     }
 
     if (providedUsername) {
       const existingUsername = await User.findOne({ username: providedUsername });
       if (existingUsername) {
-        return res.status(400).json({ error: 'Account creation failed. Please check your information.' });
+        return res
+          .status(400)
+          .json({ error: 'Account creation failed. Please check your information.' });
       }
     }
 
     const fieldsToCheck = [
       { name: 'username', value: providedUsername },
       { name: 'full name', value: fullName },
-      { name: 'email', value: email }
+      { name: 'email', value: email },
     ];
 
     for (const field of fieldsToCheck) {
       if (field.value && containsProfanity(field.value)) {
         return res.status(400).json({
-          error: `Hey, that's not nice. Try again.`
+          error: `Hey, that's not nice. Try again.`,
         });
       }
     }
 
-    const username = providedUsername || await generateUsername(email);
+    const username = providedUsername || (await generateUsername(email));
 
     const user = new User({
       username,
       fullName,
       email,
-      password
+      password,
     });
 
     const currentDeviceId = deviceId || generateDeviceId();
     const { accessToken, refreshToken } = generateTokens(user, currentDeviceId, !!rememberMe);
 
     user.lastLogin = Date.now();
-    
+
     let awsCredentials = null;
     try {
       console.log(`Creating AWS challenge user for: ${username}`);
       console.log('AWS_ADMIN_ACCESS_KEY_ID exists:', !!process.env.AWS_ADMIN_ACCESS_KEY_ID);
       console.log('AWS_ADMIN_SECRET_ACCESS_KEY exists:', !!process.env.AWS_ADMIN_SECRET_ACCESS_KEY);
       console.log('AWS_S3_BUCKET:', process.env.AWS_S3_BUCKET);
-      
+
       const challengeUserResult = await createChallengeUser(username);
-      
+
       user.nextChallengePassword = challengeUserResult.password;
       user.awsAccessKeyId = challengeUserResult.access_key;
       user.awsSecretAccessKey = challengeUserResult.secret_key;
-      
+
       awsCredentials = {
         accessKeyId: challengeUserResult.access_key,
-        secretAccessKey: challengeUserResult.secret_key
+        secretAccessKey: challengeUserResult.secret_key,
       };
-      
+
       console.log(`Successfully created AWS challenge user for: ${username}`);
       console.log(`AWS Access Key ID: ${challengeUserResult.access_key.substring(0, 8)}...`);
     } catch (awsError) {
@@ -139,10 +150,10 @@ exports.signup = async (req, res) => {
       console.error('AWS Error details:', {
         message: awsError.message,
         code: awsError.code,
-        stack: awsError.stack
+        stack: awsError.stack,
       });
     }
-    
+
     await user.save();
 
     const response = {
@@ -150,28 +161,26 @@ exports.signup = async (req, res) => {
       refreshToken,
       deviceId: currentDeviceId,
       rememberMe: !!rememberMe,
-      user: user.toSafeObject()
+      user: user.toSafeObject(),
     };
-    
+
     if (awsCredentials) {
       response.awsCredentials = awsCredentials;
     }
 
     res.status(201).json(response);
-
   } catch (error) {
     console.error('Signup error:', error);
 
     if (error.code === 11000) {
       return res.status(400).json({
-        error: 'Account creation failed. Please check your information.'
+        error: 'Account creation failed. Please check your information.',
       });
     }
 
     res.status(500).json({ error: 'Server error during signup' });
   }
 };
-
 
 exports.login = async (req, res) => {
   try {
@@ -184,37 +193,39 @@ exports.login = async (req, res) => {
 
     let user;
     const isEmail = email.includes('@');
-    
+
     // Remove timeout race condition - let MongoDB handle its own timeouts
     // The database middleware ensures connection is ready before this runs
     if (isEmail) {
       user = await User.findOne({ email }).select('+password +awsAccessKeyId +awsSecretAccessKey');
     } else {
-      user = await User.findOne({ username: email }).select('+password +awsAccessKeyId +awsSecretAccessKey');
+      user = await User.findOne({ username: email }).select(
+        '+password +awsAccessKeyId +awsSecretAccessKey'
+      );
     }
 
     if (!user) {
       return res.status(401).json({
-        error: 'Invalid credentials'
+        error: 'Invalid credentials',
       });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({
-        error: 'Invalid credentials'
+        error: 'Invalid credentials',
       });
     }
 
     const currentDeviceId = deviceId || generateDeviceId();
-    
+
     user.cleanExpiredRefreshTokens();
-    
+
     const { accessToken, refreshToken } = generateTokens(user, currentDeviceId, !!rememberMe);
 
     setImmediate(() => {
       user.lastLogin = Date.now();
-      user.save().catch(err => console.error('Failed to update user data:', err));
+      user.save().catch((err) => console.error('Failed to update user data:', err));
     });
 
     const userObj = user.toSafeObject();
@@ -228,20 +239,24 @@ exports.login = async (req, res) => {
       refreshToken,
       deviceId: currentDeviceId,
       rememberMe: !!rememberMe,
-      user: userObj
+      user: userObj,
     });
   } catch (error) {
     console.error('Login error:', error);
-    
+
     // Check if it's a MongoDB connection error
-    if (error.name === 'MongoServerSelectionError' || error.name === 'MongoNetworkError' || error.message?.includes('connection')) {
+    if (
+      error.name === 'MongoServerSelectionError' ||
+      error.name === 'MongoNetworkError' ||
+      error.message?.includes('connection')
+    ) {
       return res.status(503).json({
-        error: 'Service temporarily unavailable. Please try again.'
+        error: 'Service temporarily unavailable. Please try again.',
       });
     }
-    
+
     res.status(500).json({
-      error: 'Server error during login'
+      error: 'Server error during login',
     });
   }
 };
@@ -251,7 +266,7 @@ exports.getCurrentUser = async (req, res) => {
     const user = await User.findById(req.user.id).select('+awsAccessKeyId +awsSecretAccessKey');
     if (!user) {
       return res.status(404).json({
-        error: 'User not found'
+        error: 'User not found',
       });
     }
 
@@ -260,12 +275,12 @@ exports.getCurrentUser = async (req, res) => {
       userObj.awsAccessKeyId = user.awsAccessKeyId;
       userObj.awsSecretAccessKey = user.awsSecretAccessKey;
     }
-    
+
     res.json(userObj);
   } catch (error) {
     console.error('Get current user error:', error);
     res.status(500).json({
-      error: 'Server error while fetching user'
+      error: 'Server error while fetching user',
     });
   }
 };
@@ -278,25 +293,25 @@ exports.checkUsername = async (req, res) => {
     if (!username) {
       return res.status(400).json({
         success: false,
-        message: 'Username is required'
+        message: 'Username is required',
       });
     }
 
-    const existingUser = await User.findOne({ 
+    const existingUser = await User.findOne({
       username,
-      _id: { $ne: currentUserId }
+      _id: { $ne: currentUserId },
     });
 
     res.json({
       success: true,
       available: !existingUser,
-      message: existingUser ? 'Username is already taken' : 'Username is available'
+      message: existingUser ? 'Username is already taken' : 'Username is available',
     });
   } catch (error) {
     console.error('Check username error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error while checking username'
+      message: 'Server error while checking username',
     });
   }
 };
@@ -304,12 +319,21 @@ exports.checkUsername = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { bio, major, grade, programmingLanguages, profileSetupCompleted, wantsEmails, fullName, username } = req.body;
+    const {
+      bio,
+      major,
+      grade,
+      programmingLanguages,
+      profileSetupCompleted,
+      wantsEmails,
+      fullName,
+      username,
+    } = req.body;
 
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
-        error: 'User not found'
+        error: 'User not found',
       });
     }
 
@@ -327,12 +351,12 @@ exports.updateProfile = async (req, res) => {
     res.json({
       success: true,
       message: 'Profile updated successfully',
-      user: user.toSafeObject()
+      user: user.toSafeObject(),
     });
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({
-      error: 'Server error while updating profile'
+      error: 'Server error while updating profile',
     });
   }
 };
@@ -343,13 +367,13 @@ exports.forgotPassword = async (req, res) => {
 
     if (!identifier) {
       return res.status(400).json({
-        error: 'Email or username is required'
+        error: 'Email or username is required',
       });
     }
 
     let user;
     const isEmail = identifier.includes('@');
-    
+
     if (isEmail) {
       user = await User.findOne({ email: identifier.toLowerCase() });
     } else {
@@ -359,16 +383,16 @@ exports.forgotPassword = async (req, res) => {
     if (!user) {
       return res.json({
         success: true,
-        message: isEmail ? 
-          'If an account exists with this email, a reset code has been sent.' :
-          'If an account exists with this username, you will need to verify your email address.'
+        message: isEmail
+          ? 'If an account exists with this email, a reset code has been sent.'
+          : 'If an account exists with this username, you will need to verify your email address.',
       });
     }
 
     if (user.auth0Id) {
       return res.json({
         success: true,
-        message: 'If an account exists with this information, a reset code has been sent.'
+        message: 'If an account exists with this information, a reset code has been sent.',
       });
     }
 
@@ -378,7 +402,8 @@ exports.forgotPassword = async (req, res) => {
         success: true,
         needsEmailVerification: true,
         censoredEmail,
-        message: 'Please enter the email address associated with this username to verify your identity.'
+        message:
+          'Please enter the email address associated with this username to verify your identity.',
       });
     }
 
@@ -389,12 +414,12 @@ exports.forgotPassword = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'If an account exists with this email, a reset code has been sent.'
+      message: 'If an account exists with this email, a reset code has been sent.',
     });
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({
-      error: 'Server error while processing password reset request'
+      error: 'Server error while processing password reset request',
     });
   }
 };
@@ -405,26 +430,26 @@ exports.verifyEmail = async (req, res) => {
 
     if (!username || !email) {
       return res.status(400).json({
-        error: 'Username and email are required'
+        error: 'Username and email are required',
       });
     }
 
-    const user = await User.findOne({ 
+    const user = await User.findOne({
       username,
-      email: email.toLowerCase()
+      email: email.toLowerCase(),
     });
 
     if (!user) {
       return res.json({
         success: true,
-        message: 'If the email matches the username, a reset code has been sent.'
+        message: 'If the email matches the username, a reset code has been sent.',
       });
     }
 
     if (user.auth0Id) {
       return res.json({
         success: true,
-        message: 'If the email matches the username, a reset code has been sent.'
+        message: 'If the email matches the username, a reset code has been sent.',
       });
     }
 
@@ -435,12 +460,12 @@ exports.verifyEmail = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'If the email matches the username, a reset code has been sent.'
+      message: 'If the email matches the username, a reset code has been sent.',
     });
   } catch (error) {
     console.error('Email verification error:', error);
     res.status(500).json({
-      error: 'Server error while verifying email'
+      error: 'Server error while verifying email',
     });
   }
 };
@@ -451,42 +476,42 @@ exports.verifyResetCode = async (req, res) => {
 
     if (!identifier || !code) {
       return res.status(400).json({
-        error: 'Email/username and reset code are required'
+        error: 'Email/username and reset code are required',
       });
     }
 
     let user;
     const isEmail = identifier.includes('@');
-    
+
     if (isEmail) {
-      user = await User.findOne({ 
+      user = await User.findOne({
         email: identifier.toLowerCase(),
         resetPasswordToken: code,
-        resetPasswordExpires: { $gt: Date.now() }
+        resetPasswordExpires: { $gt: Date.now() },
       }).select('+resetPasswordToken +resetPasswordExpires');
     } else {
-      user = await User.findOne({ 
+      user = await User.findOne({
         username: identifier,
         resetPasswordToken: code,
-        resetPasswordExpires: { $gt: Date.now() }
+        resetPasswordExpires: { $gt: Date.now() },
       }).select('+resetPasswordToken +resetPasswordExpires');
     }
 
     if (!user) {
       return res.status(400).json({
-        error: 'Invalid or expired reset code'
+        error: 'Invalid or expired reset code',
       });
     }
 
     res.json({
       success: true,
       message: 'Reset code verified successfully. You can now set a new password.',
-      resetToken: code
+      resetToken: code,
     });
   } catch (error) {
     console.error('Verify reset code error:', error);
     res.status(500).json({
-      error: 'Server error while verifying reset code'
+      error: 'Server error while verifying reset code',
     });
   }
 };
@@ -497,36 +522,36 @@ exports.resetPassword = async (req, res) => {
 
     if (!identifier || !code || !newPassword) {
       return res.status(400).json({
-        error: 'All fields are required'
+        error: 'All fields are required',
       });
     }
 
     if (newPassword.length < 6) {
       return res.status(400).json({
-        error: 'Password must be at least 6 characters long'
+        error: 'Password must be at least 6 characters long',
       });
     }
 
     let user;
     const isEmail = identifier.includes('@');
-    
+
     if (isEmail) {
-      user = await User.findOne({ 
+      user = await User.findOne({
         email: identifier.toLowerCase(),
         resetPasswordToken: code,
-        resetPasswordExpires: { $gt: Date.now() }
+        resetPasswordExpires: { $gt: Date.now() },
       }).select('+resetPasswordToken +resetPasswordExpires +password');
     } else {
-      user = await User.findOne({ 
+      user = await User.findOne({
         username: identifier,
         resetPasswordToken: code,
-        resetPasswordExpires: { $gt: Date.now() }
+        resetPasswordExpires: { $gt: Date.now() },
       }).select('+resetPasswordToken +resetPasswordExpires +password');
     }
 
     if (!user) {
       return res.status(400).json({
-        error: 'Invalid or expired reset code'
+        error: 'Invalid or expired reset code',
       });
     }
 
@@ -536,12 +561,12 @@ exports.resetPassword = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Password has been reset successfully. You can now sign in with your new password.'
+      message: 'Password has been reset successfully. You can now sign in with your new password.',
     });
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({
-      error: 'Server error while resetting password'
+      error: 'Server error while resetting password',
     });
   }
 };
@@ -549,7 +574,7 @@ exports.resetPassword = async (req, res) => {
 exports.getRecentUsers = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 6;
-    
+
     const recentUsers = await User.find({})
       .select('username fullName profilePicture createdAt')
       .sort({ createdAt: -1 })
@@ -557,20 +582,24 @@ exports.getRecentUsers = async (req, res) => {
 
     res.json({
       success: true,
-      users: recentUsers
+      users: recentUsers,
     });
   } catch (error) {
     console.error('Get recent users error:', error);
     // Check if it's a MongoDB connection error
-    if (error.name === 'MongoServerSelectionError' || error.name === 'MongoNetworkError' || error.message?.includes('connection')) {
+    if (
+      error.name === 'MongoServerSelectionError' ||
+      error.name === 'MongoNetworkError' ||
+      error.message?.includes('connection')
+    ) {
       return res.status(503).json({
         success: false,
-        error: 'Service temporarily unavailable. Please try again.'
+        error: 'Service temporarily unavailable. Please try again.',
       });
     }
     res.status(500).json({
       success: false,
-      error: 'Server error while fetching recent users'
+      error: 'Server error while fetching recent users',
     });
   }
 };
@@ -579,26 +608,27 @@ exports.getPublicProfile = async (req, res) => {
   try {
     const { username } = req.params;
 
-    const user = await User.findOne({ username })
-      .select('username fullName profilePicture bio major grade programmingLanguages role createdAt lastLogin');
+    const user = await User.findOne({ username }).select(
+      'username fullName profilePicture bio major grade programmingLanguages role createdAt lastLogin'
+    );
 
     if (!user) {
       return res.status(404).json({
-        error: 'User not found'
+        error: 'User not found',
       });
     }
 
     const now = new Date();
     const createdAt = new Date(user.createdAt);
     const lastLogin = new Date(user.lastLogin);
-    
+
     const daysSinceJoin = Math.floor((now - createdAt) / (1000 * 60 * 60 * 24));
     const daysSinceLastSeen = Math.floor((now - lastLogin) / (1000 * 60 * 60 * 24));
-    
+
     const memberSince = createdAt.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
     });
 
     const profileData = {
@@ -614,18 +644,18 @@ exports.getPublicProfile = async (req, res) => {
       stats: {
         memberSince,
         daysSinceJoin,
-        daysSinceLastSeen
-      }
+        daysSinceLastSeen,
+      },
     };
 
     res.json({
       success: true,
-      profile: profileData
+      profile: profileData,
     });
   } catch (error) {
     console.error('Get public profile error:', error);
     res.status(500).json({
-      error: 'Server error while fetching profile'
+      error: 'Server error while fetching profile',
     });
   }
 };
@@ -633,11 +663,11 @@ exports.getPublicProfile = async (req, res) => {
 exports.searchUsers = async (req, res) => {
   try {
     const { q, limit = 10 } = req.query;
-    
+
     if (!q || q.length < 2) {
       return res.status(400).json({
         success: false,
-        error: 'Search query must be at least 2 characters long'
+        error: 'Search query must be at least 2 characters long',
       });
     }
 
@@ -645,24 +675,21 @@ exports.searchUsers = async (req, res) => {
     const searchLimit = Math.min(parseInt(limit), 20);
 
     const users = await User.find({
-      $or: [
-        { username: searchRegex },
-        { fullName: searchRegex }
-      ]
+      $or: [{ username: searchRegex }, { fullName: searchRegex }],
     })
-    .select('username fullName profilePicture createdAt')
-    .limit(searchLimit)
-    .sort({ createdAt: -1 });
+      .select('username fullName profilePicture createdAt')
+      .limit(searchLimit)
+      .sort({ createdAt: -1 });
 
     res.json({
       success: true,
-      users
+      users,
     });
   } catch (error) {
     console.error('Search users error:', error);
     res.status(500).json({
       success: false,
-      error: 'Server error while searching users'
+      error: 'Server error while searching users',
     });
   }
 };
@@ -673,24 +700,24 @@ exports.refreshToken = async (req, res) => {
 
     if (!refreshToken || !deviceId) {
       return res.status(400).json({
-        error: 'Refresh token and device ID are required'
+        error: 'Refresh token and device ID are required',
       });
     }
 
     const user = await User.findOne({
       'refreshTokens.token': refreshToken,
-      'refreshTokens.deviceId': deviceId
+      'refreshTokens.deviceId': deviceId,
     });
 
     if (!user) {
       return res.status(401).json({
-        error: 'Invalid refresh token'
+        error: 'Invalid refresh token',
       });
     }
 
     if (!user.validateRefreshToken(refreshToken, deviceId)) {
       return res.status(401).json({
-        error: 'Refresh token expired or invalid'
+        error: 'Refresh token expired or invalid',
       });
     }
 
@@ -705,12 +732,12 @@ exports.refreshToken = async (req, res) => {
     res.json({
       accessToken,
       refreshToken: newRefreshToken,
-      user: user.toSafeObject()
+      user: user.toSafeObject(),
     });
   } catch (error) {
     console.error('Refresh token error:', error);
     res.status(500).json({
-      error: 'Server error during token refresh'
+      error: 'Server error during token refresh',
     });
   }
 };
@@ -723,7 +750,7 @@ exports.logout = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
-        error: 'User not found'
+        error: 'User not found',
       });
     }
 
@@ -732,19 +759,19 @@ exports.logout = async (req, res) => {
     } else if (refreshToken) {
       user.revokeRefreshToken(refreshToken);
     } else if (deviceId) {
-      user.refreshTokens = user.refreshTokens.filter(token => token.deviceId !== deviceId);
+      user.refreshTokens = user.refreshTokens.filter((token) => token.deviceId !== deviceId);
     }
 
     await user.save();
 
     res.json({
       success: true,
-      message: allDevices ? 'Logged out from all devices' : 'Logged out successfully'
+      message: allDevices ? 'Logged out from all devices' : 'Logged out successfully',
     });
   } catch (error) {
     console.error('Logout error:', error);
     res.status(500).json({
-      error: 'Server error during logout'
+      error: 'Server error during logout',
     });
   }
 };
@@ -756,27 +783,29 @@ exports.getAwsCredentials = async (req, res) => {
 
     if (!password) {
       return res.status(400).json({
-        error: 'Password is required to access AWS credentials'
+        error: 'Password is required to access AWS credentials',
       });
     }
 
-    const user = await User.findById(userId).select('+password +awsAccessKeyId +awsSecretAccessKey');
+    const user = await User.findById(userId).select(
+      '+password +awsAccessKeyId +awsSecretAccessKey'
+    );
     if (!user) {
       return res.status(404).json({
-        error: 'User not found'
+        error: 'User not found',
       });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({
-        error: 'Invalid password'
+        error: 'Invalid password',
       });
     }
 
     if (!user.awsAccessKeyId || !user.awsSecretAccessKey) {
       return res.status(404).json({
-        error: 'AWS credentials not found for this account'
+        error: 'AWS credentials not found for this account',
       });
     }
 
@@ -787,13 +816,13 @@ exports.getAwsCredentials = async (req, res) => {
       success: true,
       awsCredentials: {
         accessKeyId: user.awsAccessKeyId,
-        secretAccessKey: user.awsSecretAccessKey
-      }
+        secretAccessKey: user.awsSecretAccessKey,
+      },
     });
   } catch (error) {
     console.error('Get AWS credentials error:', error);
     res.status(500).json({
-      error: 'Server error while retrieving AWS credentials'
+      error: 'Server error while retrieving AWS credentials',
     });
   }
 };
@@ -801,11 +830,11 @@ exports.getAwsCredentials = async (req, res) => {
 exports.markAwsCredentialsViewed = async (req, res) => {
   try {
     const userId = req.user.id;
-    
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
-        error: 'User not found'
+        error: 'User not found',
       });
     }
 
@@ -814,12 +843,12 @@ exports.markAwsCredentialsViewed = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'AWS credentials marked as viewed'
+      message: 'AWS credentials marked as viewed',
     });
   } catch (error) {
     console.error('Mark AWS credentials viewed error:', error);
     res.status(500).json({
-      error: 'Server error while updating credentials status'
+      error: 'Server error while updating credentials status',
     });
   }
 };

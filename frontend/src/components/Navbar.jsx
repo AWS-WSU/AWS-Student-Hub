@@ -12,8 +12,12 @@ function Navbar({ theme, toggleTheme }) {
   const [profileImage, setProfileImage] = useState('/avatar.jpg');
   const navigate = useNavigate();
   const location = useLocation();
-  
-  const { logout: auth0Logout, isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
+
+  const {
+    logout: auth0Logout,
+    isAuthenticated: isAuth0Authenticated,
+    user: auth0User,
+  } = useAuth0();
   const { user: authUser, logout: authLogout } = useAuth();
 
   useEffect(() => {
@@ -41,18 +45,18 @@ function Navbar({ theme, toggleTheme }) {
         setScrolled(false);
       }
     };
-    
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 992 && isMenuOpen) {
         setIsMenuOpen(false);
       }
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [isMenuOpen]);
@@ -72,10 +76,10 @@ function Navbar({ theme, toggleTheme }) {
 
   const handleLogout = () => {
     if (isAuth0Authenticated) {
-      auth0Logout({ 
-        logoutParams: { 
-          returnTo: window.location.origin 
-        } 
+      auth0Logout({
+        logoutParams: {
+          returnTo: window.location.origin,
+        },
       });
     } else {
       authLogout();
@@ -98,17 +102,17 @@ function Navbar({ theme, toggleTheme }) {
 
   const getDisplayName = (user) => {
     if (!user) return 'User';
-    
+
     if (user.sub) {
       if (user.sub.startsWith('google-oauth2|') || user.sub.startsWith('windowslive|')) {
         return user.name?.split(' ')[0] || user.name || 'User';
       }
     }
-    
+
     if (user.username) {
       return user.username;
     }
-    
+
     if (user.fullName) {
       return user.fullName.split(' ')[0] || user.fullName;
     }
@@ -118,17 +122,25 @@ function Navbar({ theme, toggleTheme }) {
 
   return (
     <header className={`landing-header ${scrolled ? 'scrolled' : ''}`}>
-      <motion.div 
+      <motion.div
         className="logo-container"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
       >
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
-          <img 
-            src={theme === 'light' ? "/aws-logo-dark.svg" : "/aws-logo-light.svg"} 
-            alt="AWS Logo" 
-            className="aws-logo" 
+        <Link
+          to="/"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            textDecoration: 'none',
+            color: 'inherit',
+          }}
+        >
+          <img
+            src={theme === 'light' ? '/aws-logo-dark.svg' : '/aws-logo-light.svg'}
+            alt="AWS Logo"
+            className="aws-logo"
           />
           <div className="logo-text">
             <h1>Wayne State University</h1>
@@ -136,10 +148,10 @@ function Navbar({ theme, toggleTheme }) {
           </div>
         </Link>
       </motion.div>
-      
+
       <nav className="desktop-nav">
         <ul>
-          <motion.li 
+          <motion.li
             className={isActive('/') ? 'active' : ''}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -147,7 +159,7 @@ function Navbar({ theme, toggleTheme }) {
           >
             <Link to="/">Home</Link>
           </motion.li>
-          <motion.li 
+          <motion.li
             className={isActive('/about') ? 'active' : ''}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -155,7 +167,7 @@ function Navbar({ theme, toggleTheme }) {
           >
             <Link to="/about">About</Link>
           </motion.li>
-          <motion.li 
+          <motion.li
             className={isActive('/events') ? 'active' : ''}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -163,7 +175,7 @@ function Navbar({ theme, toggleTheme }) {
           >
             <Link to="/events">Events</Link>
           </motion.li>
-          <motion.li 
+          <motion.li
             className={isActive('/resources') ? 'active' : ''}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -173,11 +185,11 @@ function Navbar({ theme, toggleTheme }) {
           </motion.li>
         </ul>
       </nav>
-      
+
       <div className="header-controls">
         {!isAuth0Authenticated && !authUser && (
           <div className="auth-buttons">
-            <motion.button 
+            <motion.button
               className="auth-option secondary"
               onClick={() => navigate('/auth')}
               whileHover={{ scale: 1.02 }}
@@ -185,7 +197,7 @@ function Navbar({ theme, toggleTheme }) {
             >
               Sign In
             </motion.button>
-            <motion.button 
+            <motion.button
               className="auth-option primary"
               onClick={() => navigate('/auth')}
               whileHover={{ scale: 1.02 }}
@@ -198,7 +210,7 @@ function Navbar({ theme, toggleTheme }) {
 
         {isAuthenticated && (
           <div className="account-dropdown-container">
-            <motion.button 
+            <motion.button
               className="account-toggle"
               onClick={toggleAccountDropdown}
               whileHover={{ scale: 1.05 }}
@@ -216,7 +228,7 @@ function Navbar({ theme, toggleTheme }) {
                 referrerPolicy="no-referrer"
                 initial={false}
                 animate={{
-                  scale: isAccountDropdownOpen ? 0.95 : 1
+                  scale: isAccountDropdownOpen ? 0.95 : 1,
                 }}
               />
             </motion.button>
@@ -237,7 +249,7 @@ function Navbar({ theme, toggleTheme }) {
                     </div>
                   </div>
 
-                  <motion.button 
+                  <motion.button
                     className="auth-option secondary"
                     onClick={() => {
                       navigate('/account');
@@ -246,17 +258,17 @@ function Navbar({ theme, toggleTheme }) {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <img 
-                      src="/avatar.jpg" 
-                      alt="Profile" 
-                      className="login-icon" 
+                    <img
+                      src="/avatar.jpg"
+                      alt="Profile"
+                      className="login-icon"
                       style={{ filter: theme === 'dark' ? 'invert(100%)' : 'invert(0%)' }}
                     />
                     Profile
                   </motion.button>
 
                   {authUser && ['moderator', 'admin', 'superuser'].includes(authUser.role) && (
-                    <motion.button 
+                    <motion.button
                       className="auth-option secondary admin-link"
                       onClick={() => {
                         navigate('/admin');
@@ -265,26 +277,26 @@ function Navbar({ theme, toggleTheme }) {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <img 
-                        src={theme === 'dark' ? '/aws-light.svg' : '/aws.svg'} 
-                        alt="Admin Dashboard" 
-                        className="login-icon"  
+                      <img
+                        src={theme === 'dark' ? '/aws-light.svg' : '/aws.svg'}
+                        alt="Admin Dashboard"
+                        className="login-icon"
                         style={{ filter: theme === 'dark' ? 'invert(100%)' : 'invert(0%)' }}
                       />
                       Admin Dashboard
                     </motion.button>
                   )}
 
-                  <motion.button 
+                  <motion.button
                     className="auth-option secondary"
                     onClick={handleLogout}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <img 
-                      src="/login.svg" 
-                      alt="Logout" 
-                      className="login-icon" 
+                    <img
+                      src="/login.svg"
+                      alt="Logout"
+                      className="login-icon"
                       style={{ filter: theme === 'dark' ? 'invert(100%)' : 'invert(0%)' }}
                     />
                     Sign Out
@@ -295,7 +307,7 @@ function Navbar({ theme, toggleTheme }) {
           </div>
         )}
 
-        <motion.button 
+        <motion.button
           className="theme-toggle"
           onClick={toggleTheme}
           whileHover={{ scale: 1.1 }}
@@ -306,68 +318,69 @@ function Navbar({ theme, toggleTheme }) {
             className="theme-icon-container"
             initial={false}
             animate={{ rotate: theme === 'light' ? 0 : 180 }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 200, 
+            transition={{
+              type: 'spring',
+              stiffness: 200,
               damping: 10,
-              duration: 0.6 
+              duration: 0.6,
             }}
           >
-            {theme === 'light' ? 
-              <img 
-                src="/dark.svg" 
-                alt="Switch to dark mode" 
-                className="theme-icon" 
+            {theme === 'light' ? (
+              <img
+                src="/dark.svg"
+                alt="Switch to dark mode"
+                className="theme-icon"
                 style={{ filter: 'invert(0%)' }}
-              /> : 
-              <motion.img 
-                src="/light.svg" 
-                alt="Switch to light mode" 
-                className="theme-icon" 
+              />
+            ) : (
+              <motion.img
+                src="/light.svg"
+                alt="Switch to light mode"
+                className="theme-icon"
                 style={{ filter: 'invert(100%)' }}
                 animate={{ rotate: 180 }}
                 transition={{ duration: 0 }}
               />
-            }
+            )}
           </motion.div>
         </motion.button>
-        
-        <motion.button 
+
+        <motion.button
           className={`mobile-menu-toggle ${isMenuOpen ? 'active' : ''}`}
-          onClick={toggleMenu} 
-          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+          onClick={toggleMenu}
+          aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
           <motion.span
-            animate={{ 
+            animate={{
               rotate: isMenuOpen ? 45 : 0,
               y: isMenuOpen ? 10 : 0,
-              x: isMenuOpen ? 2 : 0
+              x: isMenuOpen ? 2 : 0,
             }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
           />
           <motion.span
-            animate={{ 
+            animate={{
               opacity: isMenuOpen ? 0 : 1,
-              scale: isMenuOpen ? 0 : 1
+              scale: isMenuOpen ? 0 : 1,
             }}
             transition={{ duration: 0.2 }}
           />
           <motion.span
-            animate={{ 
+            animate={{
               rotate: isMenuOpen ? -45 : 0,
               y: isMenuOpen ? -10 : 0,
-              x: isMenuOpen ? 2 : 0
+              x: isMenuOpen ? 2 : 0,
             }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
           />
         </motion.button>
       </div>
-      
+
       <AnimatePresence>
         {isMenuOpen && (
-          <motion.div 
+          <motion.div
             className="mobile-menu"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
@@ -375,33 +388,41 @@ function Navbar({ theme, toggleTheme }) {
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           >
             <ul>
-              <motion.li 
-                initial={{ opacity: 0, x: 20 }} 
-                animate={{ opacity: 1, x: 0 }} 
+              <motion.li
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                <Link to="/" onClick={toggleMenu}>Home</Link>
+                <Link to="/" onClick={toggleMenu}>
+                  Home
+                </Link>
               </motion.li>
-              <motion.li 
-                initial={{ opacity: 0, x: 20 }} 
-                animate={{ opacity: 1, x: 0 }} 
+              <motion.li
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                <Link to="/about" onClick={toggleMenu}>About</Link>
+                <Link to="/about" onClick={toggleMenu}>
+                  About
+                </Link>
               </motion.li>
-              <motion.li 
-                initial={{ opacity: 0, x: 20 }} 
-                animate={{ opacity: 1, x: 0 }} 
+              <motion.li
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <Link to="/events" onClick={toggleMenu}>Events</Link>
+                <Link to="/events" onClick={toggleMenu}>
+                  Events
+                </Link>
               </motion.li>
-              <motion.li 
-                initial={{ opacity: 0, x: 20 }} 
-                animate={{ opacity: 1, x: 0 }} 
+              <motion.li
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                <Link to="/resources" onClick={toggleMenu}>Resources</Link>
+                <Link to="/resources" onClick={toggleMenu}>
+                  Resources
+                </Link>
               </motion.li>
             </ul>
           </motion.div>

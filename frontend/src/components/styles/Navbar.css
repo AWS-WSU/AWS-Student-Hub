@@ -68,7 +68,7 @@
   .desktop-nav {
     display: block;
   }
-  
+
   .mobile-menu-toggle {
     display: none;
   }
@@ -132,7 +132,9 @@
   color: var(--text-primary);
   padding: 0.4rem;
   border-radius: 50%;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -160,7 +162,10 @@
   border-radius: 50%;
   opacity: 0;
   transform: translate(-50%, -50%);
-  transition: width 0.5s ease, height 0.5s ease, opacity 0.5s ease;
+  transition:
+    width 0.5s ease,
+    height 0.5s ease,
+    opacity 0.5s ease;
   z-index: -1;
 }
 
@@ -168,14 +173,19 @@
   width: 150%;
   height: 150%;
   opacity: 0.2;
-  transition: width 0.3s ease, height 0.3s ease, opacity 0.2s ease;
+  transition:
+    width 0.3s ease,
+    height 0.3s ease,
+    opacity 0.2s ease;
 }
 
 .theme-toggle img {
   width: 20px;
   height: 20px;
   filter: var(--icon-filter);
-  transition: filter 0.2s ease, transform 0.2s ease;
+  transition:
+    filter 0.2s ease,
+    transform 0.2s ease;
 }
 
 .theme-toggle:hover {
@@ -210,7 +220,9 @@
   height: 3px;
   background-color: var(--text-primary);
   border-radius: 3px;
-  transition: transform 0.3s ease, opacity 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
   transform-origin: center;
 }
 
@@ -402,8 +414,9 @@
 }
 
 .account-dropdown .auth-option.secondary {
-  background: linear-gradient(135deg, 
-    rgba(var(--text-primary-rgb), 0.05) 0%, 
+  background: linear-gradient(
+    135deg,
+    rgba(var(--text-primary-rgb), 0.05) 0%,
     rgba(var(--text-primary-rgb), 0.1) 100%
   );
   border: none;
@@ -411,8 +424,9 @@
 }
 
 .account-dropdown .auth-option.secondary:hover {
-  background: linear-gradient(135deg, 
-    rgba(var(--text-primary-rgb), 0.08) 0%, 
+  background: linear-gradient(
+    135deg,
+    rgba(var(--text-primary-rgb), 0.08) 0%,
     rgba(var(--text-primary-rgb), 0.15) 100%
   );
   opacity: 1;
@@ -443,7 +457,7 @@
   .desktop-nav {
     display: none;
   }
-  
+
   .mobile-menu-toggle {
     display: flex;
   }

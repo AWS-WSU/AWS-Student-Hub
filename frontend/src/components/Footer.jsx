@@ -8,10 +8,10 @@ function Footer({ theme }) {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!email.trim()) {
       setMessage({ text: 'Please enter your email address', type: 'error' });
       return;
@@ -22,7 +22,7 @@ function Footer({ theme }) {
 
     try {
       const response = await newsletterAPI.subscribe(email);
-      
+
       if (response.success) {
         setMessage({ text: response.message, type: 'success' });
         setEmail('');
@@ -31,13 +31,13 @@ function Footer({ theme }) {
       }
     } catch (error) {
       console.error('Newsletter subscription error:', error);
-      setMessage({ 
+      setMessage({
         text: error.message || 'Unable to subscribe. Please try again later.',
-        type: 'error' 
+        type: 'error',
       });
     } finally {
       setIsLoading(false);
-      
+
       setTimeout(() => {
         setMessage({ text: '', type: '' });
       }, 5000);
@@ -47,7 +47,7 @@ function Footer({ theme }) {
   return (
     <footer className="landing-footer">
       <div className="footer-content">
-        <motion.div 
+        <motion.div
           className="footer-section"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -55,13 +55,20 @@ function Footer({ theme }) {
           viewport={{ once: true }}
         >
           <div className="footer-logo">
-            <img src={theme === 'light' ? "/aws-logo-dark.svg" : "/aws-logo-light.svg"} alt="AWS Logo" className="footer-aws-logo" />
+            <img
+              src={theme === 'light' ? '/aws-logo-dark.svg' : '/aws-logo-light.svg'}
+              alt="AWS Logo"
+              className="footer-aws-logo"
+            />
             <h3>WSU AWS Cloud Computing Club</h3>
           </div>
-          <p>Empowering students with cloud computing skills and connecting them to industry opportunities.</p>
+          <p>
+            Empowering students with cloud computing skills and connecting them to industry
+            opportunities.
+          </p>
         </motion.div>
-        
-        <motion.div 
+
+        <motion.div
           className="footer-section"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -70,14 +77,22 @@ function Footer({ theme }) {
         >
           <h3>Quick Links</h3>
           <ul>
-            <li><Link to="/">Home</Link></li>
-            <li><Link to="/about">About Us</Link></li>
-            <li><Link to="/events">Events</Link></li>
-            <li><Link to="/resources">Resources</Link></li>
+            <li>
+              <Link to="/">Home</Link>
+            </li>
+            <li>
+              <Link to="/about">About Us</Link>
+            </li>
+            <li>
+              <Link to="/events">Events</Link>
+            </li>
+            <li>
+              <Link to="/resources">Resources</Link>
+            </li>
           </ul>
         </motion.div>
-        
-        <motion.div 
+
+        <motion.div
           className="footer-section"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -90,8 +105,8 @@ function Footer({ theme }) {
             <span>awscloudclubs@wayne.edu</span>
           </div>
         </motion.div>
-        
-        <motion.div 
+
+        <motion.div
           className="footer-section"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -102,29 +117,29 @@ function Footer({ theme }) {
           <p>Stay updated with our latest events and opportunities</p>
           <div className="newsletter">
             <form className="newsletter-form" onSubmit={handleSubmit}>
-              <input 
-                type="email" 
-                placeholder="Your email" 
+              <input
+                type="email"
+                placeholder="Your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
                 required
               />
-              <motion.button 
+              <motion.button
                 type="submit"
                 disabled={isLoading}
                 whileHover={!isLoading ? { backgroundColor: 'var(--accent-secondary)' } : {}}
                 whileTap={!isLoading ? { scale: 0.95 } : {}}
-                style={{ 
+                style={{
                   opacity: isLoading ? 0.7 : 1,
-                  cursor: isLoading ? 'not-allowed' : 'pointer'
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
                 }}
               >
                 {isLoading ? 'Joining...' : 'Join'}
               </motion.button>
             </form>
             {message.text && (
-              <motion.div 
+              <motion.div
                 className={`newsletter-message ${message.type}`}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -137,7 +152,7 @@ function Footer({ theme }) {
           </div>
         </motion.div>
       </div>
-      
+
       <div className="footer-bottom">
         <p>&copy; {new Date().getFullYear()} Wayne State University AWS Cloud Computing Club</p>
       </div>

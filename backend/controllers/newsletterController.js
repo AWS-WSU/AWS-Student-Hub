@@ -9,40 +9,39 @@ const subscribe = async (req, res) => {
     if (!email || !validator.isEmail(email)) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide a valid email address'
+        message: 'Please provide a valid email address',
       });
     }
 
     if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({
         success: false,
-        message: 'Service temporarily unavailable. Please try again later.'
+        message: 'Service temporarily unavailable. Please try again later.',
       });
     }
 
     const normalizedEmail = email.toLowerCase();
-    
+
     const newSubscription = new Newsletter({ email: normalizedEmail });
     await newSubscription.save();
 
     res.status(201).json({
       success: true,
-      message: 'Successfully subscribed to newsletter! Thank you for joining us.'
+      message: 'Successfully subscribed to newsletter! Thank you for joining us.',
     });
-
   } catch (error) {
     console.error('Newsletter subscription error:', error);
-    
+
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
-        message: 'This email is already subscribed to our newsletter'
+        message: 'This email is already subscribed to our newsletter',
       });
     }
 
     res.status(500).json({
       success: false,
-      message: 'Something went wrong. Please try again later.'
+      message: 'Something went wrong. Please try again later.',
     });
   }
 };
@@ -52,7 +51,7 @@ const getSubscriptions = async (req, res) => {
     if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({
         success: false,
-        message: 'Service temporarily unavailable. Please try again later.'
+        message: 'Service temporarily unavailable. Please try again later.',
       });
     }
 
@@ -63,18 +62,18 @@ const getSubscriptions = async (req, res) => {
     res.status(200).json({
       success: true,
       data: subscriptions,
-      count: subscriptions.length
+      count: subscriptions.length,
     });
   } catch (error) {
     console.error('Get subscriptions error:', error);
     res.status(500).json({
       success: false,
-      message: 'Error retrieving subscriptions'
+      message: 'Error retrieving subscriptions',
     });
   }
 };
 
 module.exports = {
   subscribe,
-  getSubscriptions
+  getSubscriptions,
 };

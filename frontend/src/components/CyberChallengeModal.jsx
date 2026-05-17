@@ -36,27 +36,32 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }) {
           <div className="cyber-modal-header">
             <div className="challenge-icon">🔐</div>
             <h2>Cyber Challenge #5 - AWS Access</h2>
-            <button className="close-button" onClick={onClose}>×</button>
+            <button className="close-button" onClick={onClose}>
+              ×
+            </button>
           </div>
-          
+
           <div className="cyber-modal-body">
             <div className="challenge-intro">
-              <p>Welcome to the AWS Cloud Security Challenge! You've been granted unique AWS credentials to access your challenge resources.</p>
+              <p>
+                Welcome to the AWS Cloud Security Challenge! You've been granted unique AWS
+                credentials to access your challenge resources.
+              </p>
             </div>
 
             <div className="credentials-section">
               <h3>Your AWS Credentials</h3>
-              
+
               <div className="credential-field">
                 <label>Access Key ID</label>
                 <div className="credential-input-group">
-                  <input 
-                    type="text" 
-                    value={awsCredentials.accessKeyId} 
-                    readOnly 
+                  <input
+                    type="text"
+                    value={awsCredentials.accessKeyId}
+                    readOnly
                     className="credential-input"
                   />
-                  <button 
+                  <button
                     className={`copy-button ${copiedField === 'accessKey' ? 'copied' : ''}`}
                     onClick={() => copyToClipboard(awsCredentials.accessKeyId, 'accessKey')}
                   >
@@ -68,13 +73,13 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }) {
               <div className="credential-field">
                 <label>Secret Access Key</label>
                 <div className="credential-input-group">
-                  <input 
-                    type="password" 
-                    value={awsCredentials.secretAccessKey} 
-                    readOnly 
+                  <input
+                    type="password"
+                    value={awsCredentials.secretAccessKey}
+                    readOnly
                     className="credential-input"
                   />
-                  <button 
+                  <button
                     className={`copy-button ${copiedField === 'secretKey' ? 'copied' : ''}`}
                     onClick={() => copyToClipboard(awsCredentials.secretAccessKey, 'secretKey')}
                   >
@@ -86,13 +91,8 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }) {
               <div className="credential-field">
                 <label>AWS Region</label>
                 <div className="credential-input-group">
-                  <input 
-                    type="text" 
-                    value="us-east-1" 
-                    readOnly 
-                    className="credential-input"
-                  />
-                  <button 
+                  <input type="text" value="us-east-1" readOnly className="credential-input" />
+                  <button
                     className={`copy-button ${copiedField === 'region' ? 'copied' : ''}`}
                     onClick={() => copyToClipboard('us-east-1', 'region')}
                   >
@@ -111,7 +111,9 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }) {
                 </div>
                 <div className="step">
                   <span className="step-number">2</span>
-                  <p>Find your secret file in the S3 bucket: <code>wayne-aws-club-secrets</code></p>
+                  <p>
+                    Find your secret file in the S3 bucket: <code>wayne-aws-club-secrets</code>
+                  </p>
                 </div>
                 <div className="step">
                   <span className="step-number">3</span>
@@ -128,8 +130,10 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }) {
               <h4>AWS CLI Setup Example:</h4>
               <div className="code-block">
                 <code>
-                  aws configure set aws_access_key_id {awsCredentials.accessKeyId}<br/>
-                  aws configure set aws_secret_access_key [YOUR_SECRET_KEY]<br/>
+                  aws configure set aws_access_key_id {awsCredentials.accessKeyId}
+                  <br />
+                  aws configure set aws_secret_access_key [YOUR_SECRET_KEY]
+                  <br />
                   aws configure set default.region us-east-1
                 </code>
               </div>

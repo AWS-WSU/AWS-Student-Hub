@@ -78,11 +78,11 @@ function Landing({ theme }) {
     setIsSearching(true);
     setSearchPerformed(true);
     setShowReferralLink(false);
-    
+
     try {
       const response = await authAPI.searchUsers(searchQuery.trim(), 5);
       setSearchResults(response.users || []);
-      
+
       if (!response.users || response.users.length === 0) {
         setTimeout(() => setShowReferralLink(true), 500);
       }
@@ -98,7 +98,7 @@ function Landing({ theme }) {
   const handleSearchInputChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
-    
+
     if (!value.trim()) {
       setSearchResults([]);
       setSearchPerformed(false);
@@ -147,25 +147,25 @@ function Landing({ theme }) {
     <div className="landing-container">
       <section id="home" className="hero-section">
         <div className="hero-backdrop"></div>
-        <motion.div 
+        <motion.div
           className="hero-content"
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <motion.div 
+          <motion.div
             className="hero-logo-container"
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.8 }}
           >
-            <img 
-              src={theme === 'light' ? "/aws-logo-dark.svg" : "/aws-logo-light.svg"} 
-              alt="AWS Logo" 
-              className="hero-logo" 
+            <img
+              src={theme === 'light' ? '/aws-logo-dark.svg' : '/aws-logo-light.svg'}
+              alt="AWS Logo"
+              className="hero-logo"
             />
           </motion.div>
-          
+
           <motion.h2
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -173,16 +173,11 @@ function Landing({ theme }) {
             className="hero-title"
           >
             <span className="hero-main-text">
-              <span className="gradient-text animated-text">
-                Building The Future
-              </span>
+              <span className="gradient-text animated-text">Building The Future</span>
             </span>
-            <span className="hero-subtitle">
-              with Cloud Computing
-            </span>
+            <span className="hero-subtitle">with Cloud Computing</span>
           </motion.h2>
-          
-          
+
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -190,8 +185,8 @@ function Landing({ theme }) {
           >
             Join a community of cloud enthusiasts learning, building, and innovating together
           </motion.p>
-          
-          <motion.div 
+
+          <motion.div
             className="cta-buttons"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -204,8 +199,8 @@ function Landing({ theme }) {
               Learn More
             </button>
           </motion.div>
-          
-          <motion.div 
+
+          <motion.div
             className="scroll-indicator"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -216,7 +211,7 @@ function Landing({ theme }) {
             <div className="scroll-arrow"></div>
           </motion.div>
         </motion.div>
-        
+
         <div className="floating-shapes">
           <div className="shape shape-1"></div>
           <div className="shape shape-2"></div>
@@ -234,9 +229,9 @@ function Landing({ theme }) {
             <span></span>
           </div>
         </div>
-        
+
         {loadingUsers ? (
-          <motion.div 
+          <motion.div
             className="loading-users"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -252,7 +247,7 @@ function Landing({ theme }) {
             </div>
           </motion.div>
         ) : recentUsers.length > 0 ? (
-          <motion.div 
+          <motion.div
             className="welcome-users-container"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -263,7 +258,7 @@ function Landing({ theme }) {
               {Array.from({ length: 3 }).map((_, index) => {
                 const user = recentUsers[index];
                 const isPlaceholder = !user;
-                
+
                 return (
                   <motion.div
                     key={user?._id || `placeholder-${index}`}
@@ -278,29 +273,28 @@ function Landing({ theme }) {
                   >
                     {!isPlaceholder ? (
                       <>
-                                                 <div className="user-avatar">
-                           <img 
-                             src={user.profilePicture || '/avatar.jpg'} 
-                             alt={`${user.fullName}'s profile`}
-                             onError={(e) => {
-                               e.target.src = '/avatar.jpg';
-                             }}
-                           />
-                         </div>
+                        <div className="user-avatar">
+                          <img
+                            src={user.profilePicture || '/avatar.jpg'}
+                            alt={`${user.fullName}'s profile`}
+                            onError={(e) => {
+                              e.target.src = '/avatar.jpg';
+                            }}
+                          />
+                        </div>
                         <div className="user-info">
                           <h4 className="user-name">{user.fullName}</h4>
                           <p className="user-username">@{user.username}</p>
                           <span className="join-date">
-                            Joined {new Date(user.createdAt).toLocaleDateString('en-US', { 
-                              month: 'short', 
+                            Joined{' '}
+                            {new Date(user.createdAt).toLocaleDateString('en-US', {
+                              month: 'short',
                               day: 'numeric',
-                              year: 'numeric'
+                              year: 'numeric',
                             })}
                           </span>
                         </div>
-                                                 <div className="welcome-badge">
-                           New
-                         </div>
+                        <div className="welcome-badge">New</div>
                       </>
                     ) : (
                       <>
@@ -318,19 +312,19 @@ function Landing({ theme }) {
                 );
               })}
             </div>
-            <motion.p 
+            <motion.p
               className="welcome-message"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.3 }}
               viewport={{ once: true, amount: 0.3 }}
             >
-              Let's give a warm welcome to our newest club members! 🎉 
-              Ready to join this amazing community?
+              Let's give a warm welcome to our newest club members! 🎉 Ready to join this amazing
+              community?
             </motion.p>
           </motion.div>
         ) : (
-          <motion.div 
+          <motion.div
             className="no-users-message"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -355,28 +349,28 @@ function Landing({ theme }) {
             </div>
           </div>
           <div className="friend-search-content">
-            <motion.div 
+            <motion.div
               className="search-input-container"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
               viewport={{ once: true, amount: 0.3 }}
             >
-                             <input
-                 type="text"
-                 placeholder="Search by name, username, or email..."
-                 value={searchQuery}
-                 onChange={handleSearchInputChange}
-                 onKeyPress={handleSearchKeyPress}
-                 className="search-input"
-               />
+              <input
+                type="text"
+                placeholder="Search by name, username, or email..."
+                value={searchQuery}
+                onChange={handleSearchInputChange}
+                onKeyPress={handleSearchKeyPress}
+                className="search-input"
+              />
               <button className="search-button" onClick={handleSearch} disabled={isSearching}>
                 {isSearching ? 'Searching...' : 'Search'}
               </button>
             </motion.div>
 
             {searchPerformed && searchResults.length === 0 && (
-              <motion.div 
+              <motion.div
                 className="no-results-message"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -387,24 +381,27 @@ function Landing({ theme }) {
                 <h3>No results found for "{searchQuery}"</h3>
                 <p>Try a different search term or invite a friend directly.</p>
                 {showReferralLink && (
-                  <motion.div 
+                  <motion.div
                     className="referral-link-container"
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
                     viewport={{ once: true, amount: 0.3 }}
                   >
-                                         <p>Don't see your friend? <span className="referral-link" onClick={copyReferralLink}>Copy invite link</span></p>
-                    {referralCopied && (
-                      <span className="copied-message">Copied!</span>
-                    )}
+                    <p>
+                      Don't see your friend?{' '}
+                      <span className="referral-link" onClick={copyReferralLink}>
+                        Copy invite link
+                      </span>
+                    </p>
+                    {referralCopied && <span className="copied-message">Copied!</span>}
                   </motion.div>
                 )}
               </motion.div>
             )}
 
             {searchPerformed && searchResults.length > 0 && (
-              <motion.div 
+              <motion.div
                 className="search-results-container"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -413,7 +410,7 @@ function Landing({ theme }) {
               >
                 <h3>Search Results</h3>
                 <div className="search-results-grid">
-                  {searchResults.map(result => (
+                  {searchResults.map((result) => (
                     <motion.div
                       key={result._id}
                       className="search-result-card"
@@ -426,8 +423,8 @@ function Landing({ theme }) {
                       whileTap={{ scale: 0.95 }}
                     >
                       <div className="user-avatar">
-                        <img 
-                          src={result.profilePicture || '/avatar.jpg'} 
+                        <img
+                          src={result.profilePicture || '/avatar.jpg'}
                           alt={`${result.fullName}'s profile`}
                           onError={(e) => {
                             e.target.src = '/avatar.jpg';
@@ -458,12 +455,14 @@ function Landing({ theme }) {
         </div>
         {isAdmin && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-            <button className="cta-secondary" onClick={() => setShowCreateModal(true)}>+ Create Event</button>
+            <button className="cta-secondary" onClick={() => setShowCreateModal(true)}>
+              + Create Event
+            </button>
           </div>
         )}
 
         {eventsLoading ? (
-          <motion.div 
+          <motion.div
             className="no-events-message"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -474,7 +473,7 @@ function Landing({ theme }) {
             Loading events...
           </motion.div>
         ) : events.length === 0 ? (
-          <motion.div 
+          <motion.div
             className="no-events-message"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -485,7 +484,7 @@ function Landing({ theme }) {
               padding: '50px 20px',
               fontSize: '1.2rem',
               color: 'var(--text-secondary)',
-              fontStyle: 'italic'
+              fontStyle: 'italic',
             }}
           >
             <div className="no-events-icon" style={{ fontSize: '3rem', marginBottom: '20px' }}>
@@ -496,20 +495,50 @@ function Landing({ theme }) {
           </motion.div>
         ) : (
           <div className="events-grid" data-count={events.length}>
-            {events.map(ev => {
+            {events.map((ev) => {
               const dt = new Date(ev.startTime);
-              const formatted = dt.toLocaleString('en-US', { timeZone: 'America/Detroit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+              const formatted = dt.toLocaleString('en-US', {
+                timeZone: 'America/Detroit',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+              });
               return (
-                <motion.div key={ev._id} className="event-card" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true, amount: 0.2 }} onClick={() => setSelectedEvent(ev)}>
+                <motion.div
+                  key={ev._id}
+                  className="event-card"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  onClick={() => setSelectedEvent(ev)}
+                >
                   {ev.thumbnailUrl && (
-                    <img src={ev.thumbnailUrl} alt={ev.title} style={{ width: '100%', height: 'auto', objectFit: 'contain', display: 'block' }} />
+                    <img
+                      src={ev.thumbnailUrl}
+                      alt={ev.title}
+                      style={{
+                        width: '100%',
+                        height: 'auto',
+                        objectFit: 'contain',
+                        display: 'block',
+                      }}
+                    />
                   )}
                   <div style={{ padding: 14 }}>
                     <div style={{ fontWeight: 700 }}>{ev.title}</div>
                     <div style={{ marginTop: 6, color: 'var(--text-secondary)' }}>{formatted}</div>
                     {ev.meetupUrl && (
                       <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
-                        <a href={ev.meetupUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="event-meetup-btn" title="Reserve your spot on Meetup">
+                        <a
+                          href={ev.meetupUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="event-meetup-btn"
+                          title="Reserve your spot on Meetup"
+                        >
                           <img src="/meetup.svg" alt="Meetup" />
                         </a>
                       </div>
@@ -520,15 +549,17 @@ function Landing({ theme }) {
             })}
           </div>
         )}
-        
-        <motion.div 
+
+        <motion.div
           className="view-all-container"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           viewport={{ once: true, amount: 0.1 }}
         >
-          <button className="view-all-button" onClick={() => navigate('/events')}>View All Events</button>
+          <button className="view-all-button" onClick={() => navigate('/events')}>
+            View All Events
+          </button>
         </motion.div>
       </section>
 
@@ -536,7 +567,7 @@ function Landing({ theme }) {
         <CreateEventModal
           onClose={() => setShowCreateModal(false)}
           onEventCreated={(event) => {
-            setEvents(prev => [event, ...prev].slice(0, 6));
+            setEvents((prev) => [event, ...prev].slice(0, 6));
           }}
         />
       )}
@@ -546,18 +577,18 @@ function Landing({ theme }) {
           isAdmin={isAdmin}
           onClose={() => setSelectedEvent(null)}
           onEventUpdated={(updated) => {
-            setEvents(prev => prev.map(ev => ev._id === updated._id ? updated : ev));
+            setEvents((prev) => prev.map((ev) => (ev._id === updated._id ? updated : ev)));
             setSelectedEvent(updated);
           }}
           onEventDeleted={(id) => {
-            setEvents(prev => prev.filter(ev => ev._id !== id));
+            setEvents((prev) => prev.filter((ev) => ev._id !== id));
             setSelectedEvent(null);
           }}
         />
       )}
 
       <section className="cta-section">
-        <motion.div 
+        <motion.div
           className="cta-card"
           initial={{ opacity: 0, scale: 0.9 }}
           whileInView={{ opacity: 1, scale: 1 }}
@@ -565,7 +596,11 @@ function Landing({ theme }) {
           viewport={{ once: true, amount: 0.5 }}
         >
           <h2>{user ? 'Welcome back!' : 'Ready to start your cloud journey?'}</h2>
-          <p>{user ? 'Check out upcoming events and stay connected with the community.' : 'Join our community today and get access to workshops, networking events, and resources to accelerate your career.'}</p>
+          <p>
+            {user
+              ? 'Check out upcoming events and stay connected with the community.'
+              : 'Join our community today and get access to workshops, networking events, and resources to accelerate your career.'}
+          </p>
           <button className="join-button pulse-animation" onClick={handleJoinClick}>
             {user ? 'View Events' : 'Join the Club'}
           </button>

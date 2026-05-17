@@ -18,9 +18,9 @@ function About() {
             <span></span>
           </div>
         </div>
-        
+
         <div className="about-content">
-          <motion.div 
+          <motion.div
             className="about-card"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -31,10 +31,13 @@ function About() {
               <i className="fas fa-bullseye"></i>
             </div>
             <h3>Our Mission</h3>
-            <p>To empower Wayne State students with AWS cloud skills, foster innovation, and connect members with industry opportunities.</p>
+            <p>
+              To empower Wayne State students with AWS cloud skills, foster innovation, and connect
+              members with industry opportunities.
+            </p>
           </motion.div>
-          
-          <motion.div 
+
+          <motion.div
             className="about-card"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -45,10 +48,13 @@ function About() {
               <i className="fas fa-laptop-code"></i>
             </div>
             <h3>What We Do</h3>
-            <p>We organize workshops, real world open-source project contributions, certification study groups, hackathons, and networking events with industry professionals.</p>
+            <p>
+              We organize workshops, real world open-source project contributions, certification
+              study groups, hackathons, and networking events with industry professionals.
+            </p>
           </motion.div>
-          
-          <motion.div 
+
+          <motion.div
             className="about-card"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -59,11 +65,15 @@ function About() {
               <i className="fas fa-cloud"></i>
             </div>
             <h3>Why AWS?</h3>
-            <p>AWS leads cloud computing worldwide. Skills in AWS are highly sought after, offering students a competitive advantage in the job market. Open source projects are available for all students looking for a boost in their resume.</p>
+            <p>
+              AWS leads cloud computing worldwide. Skills in AWS are highly sought after, offering
+              students a competitive advantage in the job market. Open source projects are available
+              for all students looking for a boost in their resume.
+            </p>
           </motion.div>
         </div>
-        
-        <motion.div 
+
+        <motion.div
           className="stats-container"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
@@ -86,7 +96,7 @@ function About() {
       </section>
 
       <section className="cta-section">
-        <motion.div 
+        <motion.div
           className="cta-card"
           initial={{ opacity: 0, scale: 0.9 }}
           whileInView={{ opacity: 1, scale: 1 }}
@@ -94,8 +104,15 @@ function About() {
           viewport={{ once: true, amount: 0.5 }}
         >
           <h2>{user ? 'Welcome back!' : 'Ready to start your cloud journey?'}</h2>
-          <p>{user ? 'Check out upcoming events and stay connected with the community.' : 'Join our community today and get access to workshops, networking events, and resources to accelerate your career.'}</p>
-          <button className="join-button pulse-animation" onClick={() => navigate(user ? '/events' : '/auth?mode=signup')}>
+          <p>
+            {user
+              ? 'Check out upcoming events and stay connected with the community.'
+              : 'Join our community today and get access to workshops, networking events, and resources to accelerate your career.'}
+          </p>
+          <button
+            className="join-button pulse-animation"
+            onClick={() => navigate(user ? '/events' : '/auth?mode=signup')}
+          >
             {user ? 'View Events' : 'Join the Club'}
           </button>
         </motion.div>

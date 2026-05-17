@@ -36,13 +36,14 @@ const connectDB = async () => {
     };
 
     console.log('Creating new MongoDB connection...');
-    
-    cached.promise = mongoose.connect(process.env.MONGODB_URI, options)
-      .then(conn => {
+
+    cached.promise = mongoose
+      .connect(process.env.MONGODB_URI, options)
+      .then((conn) => {
         console.log(`MongoDB Connected: ${conn.connection.host}`);
         return conn;
       })
-      .catch(error => {
+      .catch((error) => {
         console.error('Database connection error:', error.message);
         cached.promise = null;
         cached.conn = null;
@@ -56,7 +57,7 @@ const connectDB = async () => {
 
   try {
     cached.conn = await cached.promise;
-    
+
     if (cached.conn && (!mongoose.connection._events || !mongoose.connection._events.error)) {
       mongoose.connection.on('error', (err) => {
         console.error('MongoDB connection error:', err);
@@ -76,14 +77,14 @@ const connectDB = async () => {
     console.error('Database connection error:', error.message);
     cached.promise = null;
     cached.conn = null;
-    
+
     if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
       console.log('MongoDB connection failed in development');
       console.log('Contact Akrm Al-Hakimi for MongoDB configuration');
       console.log('Server will continue running but database operations will fail');
-      return null; 
+      return null;
     }
-    
+
     throw error;
   }
 };

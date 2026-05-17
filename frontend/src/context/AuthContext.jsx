@@ -12,23 +12,24 @@ export const useAuth = () => {
   return context;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://bx7226tmz2.execute-api.us-east-1.amazonaws.com/prod';
-
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'https://bx7226tmz2.execute-api.us-east-1.amazonaws.com/prod';
 
 const getStoredItem = (key) => {
   return localStorage.getItem(key) || sessionStorage.getItem(key);
 };
 
 const setStoredItem = (key, value, rememberMe = null) => {
-  const shouldRemember = rememberMe !== null ? rememberMe : localStorage.getItem('rememberMe') === 'true';
+  const shouldRemember =
+    rememberMe !== null ? rememberMe : localStorage.getItem('rememberMe') === 'true';
   const storage = shouldRemember ? localStorage : sessionStorage;
-  
+
   if (shouldRemember) {
     sessionStorage.removeItem(key);
   } else {
     localStorage.removeItem(key);
   }
-  
+
   storage.setItem(key, value);
 };
 
@@ -54,7 +55,7 @@ const getInitialUserState = () => {
     const accessToken = getStoredItem('accessToken');
     const refreshToken = getStoredItem('refreshToken');
     const cachedUser = getStoredItem('cachedUser');
-    
+
     if (accessToken && refreshToken && cachedUser) {
       return JSON.parse(cachedUser);
     }
@@ -69,7 +70,7 @@ const getInitialLoadingState = () => {
   const accessToken = getStoredItem('accessToken');
   const refreshToken = getStoredItem('refreshToken');
   const cachedUser = getStoredItem('cachedUser');
-  
+
   // If we have valid cached data, don't show loading
   return !(accessToken && refreshToken && cachedUser);
 };
@@ -81,44 +82,47 @@ export const AuthProvider = ({ children }) => {
   const deviceId = generateDeviceId();
   const { isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
 
-  const logout = useCallback(async (allDevices = false) => {
-    try {
-      const refreshToken = getStoredItem('refreshToken');
-      
-      if (refreshToken) {
-        // Attempt to logout on server
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getStoredItem('accessToken')}`
-          },
-          body: JSON.stringify({
-            refreshToken,
-            deviceId,
-            allDevices
-          }),
-        }).catch(() => {
-          // Ignore errors - logout locally anyway
-        });
+  const logout = useCallback(
+    async (allDevices = false) => {
+      try {
+        const refreshToken = getStoredItem('refreshToken');
+
+        if (refreshToken) {
+          // Attempt to logout on server
+          await fetch(`${API_BASE_URL}/auth/logout`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${getStoredItem('accessToken')}`,
+            },
+            body: JSON.stringify({
+              refreshToken,
+              deviceId,
+              allDevices,
+            }),
+          }).catch(() => {
+            // Ignore errors - logout locally anyway
+          });
+        }
+      } catch (error) {
+        console.error('Logout error:', error);
+      } finally {
+        // Clear all auth data from both storages
+        setUser(null);
+        clearStoredItem('accessToken');
+        clearStoredItem('refreshToken');
+        clearStoredItem('cachedUser');
+        clearStoredItem('deviceId');
+        localStorage.removeItem('rememberMe');
+
+        // Clear refresh promise
+        if (refreshPromiseRef.current) {
+          refreshPromiseRef.current = null;
+        }
       }
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      // Clear all auth data from both storages
-      setUser(null);
-      clearStoredItem('accessToken');
-      clearStoredItem('refreshToken');
-      clearStoredItem('cachedUser');
-      clearStoredItem('deviceId');
-      localStorage.removeItem('rememberMe');
-      
-      // Clear refresh promise
-      if (refreshPromiseRef.current) {
-        refreshPromiseRef.current = null;
-      }
-    }
-  }, [deviceId]);
+    },
+    [deviceId]
+  );
 
   // Force clear all corrupted data - for debugging browser issues
   const forceLogoutAndClearData = useCallback(() => {
@@ -126,12 +130,12 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     localStorage.clear();
     sessionStorage.clear();
-    
+
     // Clear refresh promise
     if (refreshPromiseRef.current) {
       refreshPromiseRef.current = null;
     }
-    
+
     // Force page reload to reset state
     window.location.reload();
   }, []);
@@ -156,7 +160,7 @@ export const AuthProvider = ({ children }) => {
           },
           body: JSON.stringify({
             refreshToken,
-            deviceId
+            deviceId,
           }),
         });
 
@@ -165,12 +169,12 @@ export const AuthProvider = ({ children }) => {
         }
 
         const data = await response.json();
-        
+
         // Update stored tokens using appropriate storage
         setStoredItem('accessToken', data.accessToken);
         setStoredItem('refreshToken', data.refreshToken);
         setStoredItem('cachedUser', JSON.stringify(data.user));
-        
+
         setUser(data.user);
         return data;
       } catch (error) {
@@ -223,10 +227,10 @@ export const AuthProvider = ({ children }) => {
       try {
         const accessToken = getStoredItem('accessToken');
         const refreshToken = getStoredItem('refreshToken');
-        
+
         if (accessToken && refreshToken) {
           setLoading(false);
-          
+
           // Verify token in background
           try {
             const userData = await authAPI.getCurrentUser();
@@ -234,7 +238,7 @@ export const AuthProvider = ({ children }) => {
             setStoredItem('cachedUser', JSON.stringify(userData));
           } catch (verifyError) {
             console.error('Token verification failed:', verifyError);
-            
+
             // If access token is expired, try to refresh
             if (verifyError.message?.includes('expired') || verifyError.status === 401) {
               try {
@@ -243,9 +247,11 @@ export const AuthProvider = ({ children }) => {
                 console.error('Token refresh failed during verification:', refreshError);
                 logout();
               }
-            } else if (!verifyError.message?.includes('ECONNREFUSED') && 
-                      !verifyError.message?.includes('Failed to fetch') &&
-                      !verifyError.message?.includes('timeout')) {
+            } else if (
+              !verifyError.message?.includes('ECONNREFUSED') &&
+              !verifyError.message?.includes('Failed to fetch') &&
+              !verifyError.message?.includes('timeout')
+            ) {
               logout();
             }
           }
@@ -270,7 +276,7 @@ export const AuthProvider = ({ children }) => {
       setUser({
         ...auth0User,
         fullName: auth0User.name,
-        profilePicture: auth0User.picture
+        profilePicture: auth0User.picture,
       });
       setLoading(false);
     }
@@ -279,9 +285,9 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       setLoading(true);
-      
+
       const { rememberMe, ...restCredentials } = credentials;
-      
+
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
@@ -290,18 +296,18 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({
           ...restCredentials,
           deviceId,
-          rememberMe: !!rememberMe
+          rememberMe: !!rememberMe,
         }),
       });
-      
+
       if (!response.ok) {
         const data = await response.json().catch(() => ({ error: 'Network error' }));
-        
+
         if (data.errors && Array.isArray(data.errors)) {
-          const errorMessages = data.errors.map(err => err.msg).join('. ');
+          const errorMessages = data.errors.map((err) => err.msg).join('. ');
           throw new Error(errorMessages);
         }
-        
+
         throw new Error(data.error || `HTTP ${response.status}: Login failed`);
       }
 
@@ -309,16 +315,16 @@ export const AuthProvider = ({ children }) => {
 
       // Store rememberMe preference in localStorage (always)
       localStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
-      
+
       setUser(data.user);
       setStoredItem('accessToken', data.accessToken, !!rememberMe);
       setStoredItem('refreshToken', data.refreshToken, !!rememberMe);
       setStoredItem('cachedUser', JSON.stringify(data.user), !!rememberMe);
 
-      setLoading(false); 
+      setLoading(false);
       return data;
     } catch (error) {
-      setLoading(false); 
+      setLoading(false);
       throw error;
     }
   };
@@ -326,9 +332,9 @@ export const AuthProvider = ({ children }) => {
   const signup = async (userData) => {
     try {
       setLoading(true);
-      
+
       const { rememberMe, ...restUserData } = userData;
-      
+
       const response = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: {
@@ -337,18 +343,18 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({
           ...restUserData,
           deviceId,
-          rememberMe: !!rememberMe
+          rememberMe: !!rememberMe,
         }),
       });
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({ error: 'Network error' }));
-        
+
         if (data.errors && Array.isArray(data.errors)) {
-          const errorMessages = data.errors.map(err => err.msg).join('. ');
+          const errorMessages = data.errors.map((err) => err.msg).join('. ');
           throw new Error(errorMessages);
         }
-        
+
         throw new Error(data.error || `HTTP ${response.status}: Signup failed`);
       }
 
@@ -356,7 +362,7 @@ export const AuthProvider = ({ children }) => {
 
       // Store rememberMe preference in localStorage (always)
       localStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
-      
+
       // Store tokens in appropriate storage based on rememberMe
       setUser(data.user);
       setStoredItem('accessToken', data.accessToken, !!rememberMe);
@@ -375,10 +381,10 @@ export const AuthProvider = ({ children }) => {
     const response = await authAPI.updateProfile(updateData);
 
     setUser(response.user);
-    
+
     // Update cached user data
     setStoredItem('cachedUser', JSON.stringify(response.user));
-    
+
     return response;
   };
 
@@ -389,7 +395,7 @@ export const AuthProvider = ({ children }) => {
     const response = await fetch(`${API_BASE_URL}/upload/profile-picture`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${getStoredItem('accessToken')}`
+        Authorization: `Bearer ${getStoredItem('accessToken')}`,
       },
       body: formData,
     });
@@ -405,22 +411,22 @@ export const AuthProvider = ({ children }) => {
           const retryResponse = await fetch(`${API_BASE_URL}/upload/profile-picture`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${getStoredItem('accessToken')}`
+              Authorization: `Bearer ${getStoredItem('accessToken')}`,
             },
             body: formData,
           });
-          
+
           if (retryResponse.ok) {
             const retryData = await retryResponse.json();
-            
+
             const updatedUser = {
               ...user,
-              profilePicture: retryData.profilePicture
+              profilePicture: retryData.profilePicture,
             };
-            
+
             setUser(updatedUser);
             setStoredItem('cachedUser', JSON.stringify(updatedUser));
-            
+
             return retryData;
           } else {
             const retryError = await retryResponse.json();
@@ -436,9 +442,9 @@ export const AuthProvider = ({ children }) => {
 
     const updatedUser = {
       ...user,
-      profilePicture: data.profilePicture
+      profilePicture: data.profilePicture,
     };
-    
+
     setUser(updatedUser);
     setStoredItem('cachedUser', JSON.stringify(updatedUser));
 
@@ -451,13 +457,13 @@ export const AuthProvider = ({ children }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getStoredItem('accessToken')}`
+          Authorization: `Bearer ${getStoredItem('accessToken')}`,
         },
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ password }),
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to retrieve AWS credentials');
       }
@@ -475,20 +481,20 @@ export const AuthProvider = ({ children }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getStoredItem('accessToken')}`
-        }
+          Authorization: `Bearer ${getStoredItem('accessToken')}`,
+        },
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to mark credentials as viewed');
       }
 
       // Update user state
-      setUser(prevUser => ({
+      setUser((prevUser) => ({
         ...prevUser,
-        hasViewedAwsCredentials: true
+        hasViewedAwsCredentials: true,
       }));
 
       return data;
@@ -509,12 +515,8 @@ export const AuthProvider = ({ children }) => {
     refreshTokens,
     forceLogoutAndClearData,
     getAwsCredentials,
-    markAwsCredentialsViewed
+    markAwsCredentialsViewed,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
