@@ -5,7 +5,7 @@ let sharp;
 try {
   sharp = require('sharp');
 } catch (error) {
-  console.warn('⚠️ Sharp module not available - image processing disabled:', error.message);
+  console.warn('Sharp module not available - image processing disabled:', error.message);
   sharp = null;
 }
 
