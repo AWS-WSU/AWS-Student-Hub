@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/2560px-Amazon_Web_Services_Logo.svg.png" alt="AWS Logo" width="150"/>
-</p>
-
 # Wayne State University - AWS Student Hub
 
 ![Code Quality](https://github.com/AWS-WSU/AWS-Student-Hub/workflows/Code%20Quality/badge.svg)
@@ -14,11 +10,9 @@
   <img src="https://github.com/user-attachments/assets/2057d3aa-a3e2-4566-b2f6-b89b0dd165f5" width="300" alt="Student Hub Banner"/>
 </p>
 
-## Project Leads
+## Project Lead(s)
 
-- **Natali Chaaban** - *Senior Cloud Architect* | nchaaban1@wayne.edu
-- **Akshath Reddy** - *Senior Cloud Architect* | akshathreddy@wayne.edu 
-- **Akrm Al-Hakimi** - *President* | gv7723@wayne.edu
+- **Akrm Al-Hakimi - [@cachebag](https://github.com/cacheag)** - *Former President* | gv7723@wayne.edu
 
 ---
 
