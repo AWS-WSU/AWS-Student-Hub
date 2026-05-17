@@ -41,6 +41,7 @@ dump/
 .idea/
 *.sublime-project
 *.sublime-workspace
+*.cursor
 
 # Misc
 *.tgz

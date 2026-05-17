@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { adminAPI } from '../utils/api';
@@ -37,7 +35,7 @@ const GmailIcon = ({ className }) => (
  <img src="/email.svg" alt="Gmail" className={className} style={{ width: '24px', height: '24px' }} />
 );
 
-function AdminDashboard({ theme, toggleTheme }) {
+function AdminDashboard({ theme }) {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
@@ -238,19 +236,9 @@ function AdminDashboard({ theme, toggleTheme }) {
     }
   };
 
-  const scrollToSection = (sectionId) => {
-    navigate(`/#${sectionId}`);
-  };
-
   if (authLoading) {
     return (
       <div className="admin-dashboard-container">
-        <Navbar 
-          theme={theme} 
-          toggleTheme={toggleTheme} 
-          activeSection="" 
-          scrollToSection={scrollToSection}
-        />
         <div className="admin-content">
           <div className="loading-stats">Loading...</div>
         </div>
@@ -260,13 +248,6 @@ function AdminDashboard({ theme, toggleTheme }) {
 
   return (
     <div className="admin-dashboard-container">
-      <Navbar 
-        theme={theme} 
-        toggleTheme={toggleTheme} 
-        activeSection="" 
-        scrollToSection={scrollToSection}
-      />
-      
       <div className="admin-content">
         <motion.div 
           className="admin-header"
@@ -760,7 +741,6 @@ function AdminDashboard({ theme, toggleTheme }) {
         </div>
       )}
       
-      <Footer theme={theme} />
     </div>
   );
 }

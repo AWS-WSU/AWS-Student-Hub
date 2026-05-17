@@ -67,3 +67,18 @@
 .read-the-docs {
   color: #888;
 }
+
+.layout-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-content {
+  flex: 1;
+  padding-top: 64px;
+}
+
+.layout-content--no-pad {
+  padding-top: 0;
+}

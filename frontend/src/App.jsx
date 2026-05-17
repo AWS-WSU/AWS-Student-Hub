@@ -1,8 +1,11 @@
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { useState, useEffect } from 'react';
+import Layout from './components/Layout';
 import Landing from './pages/Landing';
+import About from './pages/About';
+import Resources from './pages/Resources';
 import Events from './pages/Events';
 import Auth from './pages/Auth';
 import Account from './pages/Account';
@@ -14,38 +17,11 @@ import './App.css';
 
 function AppContent() {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-  const location = useLocation();
-  const navigate = useNavigate();
   
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
-
-  useEffect(() => {
-    if (location.pathname === '/' && location.hash) {
-      setTimeout(() => {
-        const element = document.getElementById(location.hash.substring(1));
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-    }
-  }, [location.pathname, location.hash]);
-
-  useEffect(() => {
-    const validPaths = ['/', '/auth', '/account', '/admin', '/setup', '/events'];
-    const isValidProfilePath = location.pathname.startsWith('/profile/');
-    const isValidPath = validPaths.includes(location.pathname) || isValidProfilePath;
-    
-    if (!isValidPath && !location.state?.fromApp) {
-      const timer = setTimeout(() => {
-        navigate('/', { replace: true, state: { fromApp: true } });
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [location.pathname, location.state?.fromApp, navigate]);
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -55,20 +31,18 @@ function AppContent() {
   return (
     <div className={`app ${theme}`}>
       <Routes>
-        <Route path="/" element={<Landing theme={theme} toggleTheme={toggleTheme} />} />
-        <Route path="/auth" element={<Auth theme={theme} />} />
-        <Route path="/events" element={<Events theme={theme} toggleTheme={toggleTheme} />} />
-        <Route path="/setup" element={<QuickSetup theme={theme} />} />
-        <Route 
-          path="/account" 
-          element={<Account theme={theme} toggleTheme={toggleTheme} />} 
-        />
-        <Route 
-          path="/profile/:username" 
-          element={<PublicProfile theme={theme} toggleTheme={toggleTheme} />} 
-        />
-        <Route path="/admin" element={<AdminDashboard theme={theme} toggleTheme={toggleTheme} />} />
-        <Route path="*" element={<NotFoundPage theme={theme} toggleTheme={toggleTheme} />} />
+        <Route element={<Layout theme={theme} toggleTheme={toggleTheme} />}>
+          <Route path="/" element={<Landing theme={theme} />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/resources" element={<Resources />} />
+          <Route path="/events" element={<Events theme={theme} />} />
+          <Route path="/auth" element={<Auth theme={theme} />} />
+          <Route path="/setup" element={<QuickSetup theme={theme} />} />
+          <Route path="/account" element={<Account theme={theme} />} />
+          <Route path="/profile/:username" element={<PublicProfile theme={theme} />} />
+          <Route path="/admin" element={<AdminDashboard theme={theme} />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
       </Routes>
     </div>
   );

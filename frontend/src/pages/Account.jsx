@@ -3,8 +3,6 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAuth } from '../context/AuthContext';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 import './styles/Account.css';
 import { validateImageFile, compressImage } from '../utils/imageUtils';
 import CyberChallengeModal from '../components/CyberChallengeModal';
@@ -37,8 +35,7 @@ const languageIcons = {
 
 const grades = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Other'];
 
-function Account({ theme, toggleTheme }) {
-  const [activeSection] = useState('profile');
+function Account({ theme }) {
   const [profileImage, setProfileImage] = useState('/avatar.jpg');
   const [isEditing, setIsEditing] = useState({
     name: false,
@@ -108,11 +105,6 @@ function Account({ theme, toggleTheme }) {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
-
-  const scrollToSection = (sectionId) => {
-    // Navigate to home page with section anchor
-    navigate(`/#${sectionId}`);
-  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -428,24 +420,8 @@ function Account({ theme, toggleTheme }) {
 
   return (
     <div className="account-container">
-      <Navbar 
-        theme={theme} 
-        toggleTheme={toggleTheme} 
-        activeSection={activeSection} 
-        scrollToSection={scrollToSection}
-      />
-      
       <div className="account-content">
         <div className="account-header">
-          <motion.button 
-            className="back-button"
-            onClick={() => navigate('/')}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            ← Back to Home
-          </motion.button>
-          
           <motion.div 
             className="account-title"
             initial={{ opacity: 0, y: 20 }}
@@ -922,8 +898,6 @@ function Account({ theme, toggleTheme }) {
           </motion.section>
         </div>
       </div>
-
-      <Footer theme={theme} />
 
       {showCredentialsModal && (
         <div className="modal-overlay" onClick={() => setShowCredentialsModal(false)}>
