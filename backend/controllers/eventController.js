@@ -219,7 +219,9 @@ exports.deleteEvent = async (req, res) => {
           );
         }
       }
-    } catch {}
+    } catch (_) {
+      /* S3 cleanup is best-effort */
+    }
     res.json({ success: true, message: 'Event deleted' });
   } catch (error) {
     console.error('Delete event error:', error);
