@@ -2,10 +2,19 @@ name: Deploy Lambda Backend
 
 on:
   push:
-    branches: [ prod ]
+    branches: [dev, prod]
     paths:
       - 'backend/**'
-  workflow_dispatch: # manual trigger
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
 
 env:
   AWS_REGION: us-east-1
@@ -14,113 +23,113 @@ jobs:
   deploy-dev:
     name: Deploy to Development
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/prod'
-    
+    if: github.ref == 'refs/heads/dev' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'dev')
+    environment: development
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: backend/package-lock.json
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
 
-    - name: Setup AWS SAM
-      uses: aws-actions/setup-sam@v2
-      with:
-        use-installer: true
+      - name: Setup AWS SAM
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Deploy to Development
-      working-directory: backend
-      run: |
-        chmod +x ./deploy.sh
-        ./deploy.sh dev \
-          "${{ secrets.MONGODB_URI }}" \
-          "${{ secrets.ADMIN_TOKEN }}" \
-          "${{ secrets.JWT_SECRET }}" \
-          "${{ secrets.CORS_ORIGIN }}" \
-          "${{ secrets.S3_BUCKET_NAME }}" \
-          "${{ secrets.S3_ACCESS_KEY_ID }}" \
-          "${{ secrets.S3_SECRET_ACCESS_KEY }}" \
-          "${{ secrets.S3_REGION }}" \
-          "${{ secrets.AWS_ADMIN_ACCESS_KEY_ID }}" \
-          "${{ secrets.AWS_ADMIN_SECRET_ACCESS_KEY }}" \
-          "${{ secrets.CUSTOM_AWS_REGION }}" \
-          "${{ secrets.AWS_S3_BUCKET }}" \
-          "${{ secrets.SMTP_HOST }}" \
-          "${{ secrets.SMTP_PORT }}" \
-          "${{ secrets.SMTP_ENCRYPTION }}" \
-          "${{ secrets.SMTP_USER }}" \
-          "${{ secrets.SMTP_PASS }}" \
-          "${{ secrets.DISCORD_BOT_TOKEN }}" \
-          "${{ secrets.DISCORD_GUILD_ID }}" \
-          "${{ secrets.DISCORD_CHANNEL_ID }}" \
-          "${{ secrets.AWS_CRED_ENCRYPTION_KEY }}" \
-          "${{ secrets.AWS_HUB_EVENT_THUMBNAILS }}"
+      - name: Deploy to Development
+        working-directory: backend
+        run: |
+          chmod +x ./deploy.sh
+          ./deploy.sh dev \
+            "${{ secrets.MONGODB_URI }}" \
+            "${{ secrets.ADMIN_TOKEN }}" \
+            "${{ secrets.JWT_SECRET }}" \
+            "${{ secrets.CORS_ORIGIN }}" \
+            "${{ secrets.S3_BUCKET_NAME }}" \
+            "${{ secrets.S3_ACCESS_KEY_ID }}" \
+            "${{ secrets.S3_SECRET_ACCESS_KEY }}" \
+            "${{ secrets.S3_REGION }}" \
+            "${{ secrets.AWS_ADMIN_ACCESS_KEY_ID }}" \
+            "${{ secrets.AWS_ADMIN_SECRET_ACCESS_KEY }}" \
+            "${{ secrets.CUSTOM_AWS_REGION }}" \
+            "${{ secrets.AWS_S3_BUCKET }}" \
+            "${{ secrets.SMTP_HOST }}" \
+            "${{ secrets.SMTP_PORT }}" \
+            "${{ secrets.SMTP_ENCRYPTION }}" \
+            "${{ secrets.SMTP_USER }}" \
+            "${{ secrets.SMTP_PASS }}" \
+            "${{ secrets.DISCORD_BOT_TOKEN }}" \
+            "${{ secrets.DISCORD_GUILD_ID }}" \
+            "${{ secrets.DISCORD_CHANNEL_ID }}" \
+            "${{ secrets.AWS_CRED_ENCRYPTION_KEY }}" \
+            "${{ secrets.AWS_HUB_EVENT_THUMBNAILS }}"
 
   deploy-prod:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: deploy-dev
-    if: github.ref == 'refs/heads/prod'
-    environment: production 
-    
+    if: github.ref == 'refs/heads/prod' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'prod')
+    environment: production
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: backend/package-lock.json
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
 
-    - name: Setup AWS SAM
-      uses: aws-actions/setup-sam@v2
-      with:
-        use-installer: true
+      - name: Setup AWS SAM
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Deploy to Production
-      working-directory: backend
-      run: |
-        chmod +x ./deploy.sh
-        ./deploy.sh prod \
-          "${{ secrets.MONGODB_URI }}" \
-          "${{ secrets.ADMIN_TOKEN }}" \
-          "${{ secrets.JWT_SECRET }}" \
-          "${{ secrets.CORS_ORIGIN }}" \
-          "${{ secrets.S3_BUCKET_NAME }}" \
-          "${{ secrets.S3_ACCESS_KEY_ID }}" \
-          "${{ secrets.S3_SECRET_ACCESS_KEY }}" \
-          "${{ secrets.S3_REGION }}" \
-          "${{ secrets.AWS_ADMIN_ACCESS_KEY_ID }}" \
-          "${{ secrets.AWS_ADMIN_SECRET_ACCESS_KEY }}" \
-          "${{ secrets.CUSTOM_AWS_REGION }}" \
-          "${{ secrets.AWS_S3_BUCKET }}" \
-          "${{ secrets.SMTP_HOST }}" \
-          "${{ secrets.SMTP_PORT }}" \
-          "${{ secrets.SMTP_ENCRYPTION }}" \
-          "${{ secrets.SMTP_USER }}" \
-          "${{ secrets.SMTP_PASS }}" \
-          "${{ secrets.DISCORD_BOT_TOKEN }}" \
-          "${{ secrets.DISCORD_GUILD_ID }}" \
-          "${{ secrets.DISCORD_CHANNEL_ID }}" \
-          "${{ secrets.AWS_CRED_ENCRYPTION_KEY }}" \
-          "${{ secrets.AWS_HUB_EVENT_THUMBNAILS }}"
+      - name: Deploy to Production
+        working-directory: backend
+        run: |
+          chmod +x ./deploy.sh
+          ./deploy.sh prod \
+            "${{ secrets.MONGODB_URI }}" \
+            "${{ secrets.ADMIN_TOKEN }}" \
+            "${{ secrets.JWT_SECRET }}" \
+            "${{ secrets.CORS_ORIGIN }}" \
+            "${{ secrets.S3_BUCKET_NAME }}" \
+            "${{ secrets.S3_ACCESS_KEY_ID }}" \
+            "${{ secrets.S3_SECRET_ACCESS_KEY }}" \
+            "${{ secrets.S3_REGION }}" \
+            "${{ secrets.AWS_ADMIN_ACCESS_KEY_ID }}" \
+            "${{ secrets.AWS_ADMIN_SECRET_ACCESS_KEY }}" \
+            "${{ secrets.CUSTOM_AWS_REGION }}" \
+            "${{ secrets.AWS_S3_BUCKET }}" \
+            "${{ secrets.SMTP_HOST }}" \
+            "${{ secrets.SMTP_PORT }}" \
+            "${{ secrets.SMTP_ENCRYPTION }}" \
+            "${{ secrets.SMTP_USER }}" \
+            "${{ secrets.SMTP_PASS }}" \
+            "${{ secrets.DISCORD_BOT_TOKEN }}" \
+            "${{ secrets.DISCORD_GUILD_ID }}" \
+            "${{ secrets.DISCORD_CHANNEL_ID }}" \
+            "${{ secrets.AWS_CRED_ENCRYPTION_KEY }}" \
+            "${{ secrets.AWS_HUB_EVENT_THUMBNAILS }}"
