@@ -67,6 +67,7 @@ sam deploy \
   --region "us-east-1" \
   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
   --resolve-s3 \
+  --no-fail-on-empty-changeset \
   --parameter-overrides \
     Environment="$ENVIRONMENT" \
     MongoDbUri="$MONGODB_URI" \
