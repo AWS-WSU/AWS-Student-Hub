@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { eventsAPI } from '../utils/api';
 import Cropper from 'react-easy-crop';
 
-function Events({ theme }) {
+function Events({ theme: _theme }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
