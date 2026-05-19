@@ -13,21 +13,29 @@ const {
 } = require('@aws-sdk/client-iam');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
-const iamClient = new IAMClient({
-  region: 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ADMIN_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_ADMIN_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY,
-  },
-});
+const getClients = () => {
+  const accessKeyId = process.env.AWS_ADMIN_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey =
+    process.env.AWS_ADMIN_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
 
-const s3Client = new S3Client({
-  region: 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ADMIN_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_ADMIN_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY,
-  },
-});
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error(
+      'AWS credentials not configured. Check AWS_ADMIN_ACCESS_KEY_ID and AWS_ADMIN_SECRET_ACCESS_KEY environment variables.'
+    );
+  }
+
+  const iamClient = new IAMClient({
+    region: 'us-east-1',
+    credentials: { accessKeyId, secretAccessKey },
+  });
+
+  const s3Client = new S3Client({
+    region: 'us-east-1',
+    credentials: { accessKeyId, secretAccessKey },
+  });
+
+  return { iamClient, s3Client };
+};
 
 const generateRandomPassword = (length = 12) => {
   const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -54,6 +62,8 @@ const createIAMPolicy = (username) => {
 };
 
 const createChallengeUser = async (username) => {
+  const { iamClient, s3Client } = getClients();
+
   try {
     console.log(`Creating challenge user for: ${username}`);
     console.log('AWS Config check:', {
