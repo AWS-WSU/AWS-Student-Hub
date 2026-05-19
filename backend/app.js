@@ -175,7 +175,7 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   console.error(err.stack);
   // CORS headers are handled by lambda.js response hook
   res.status(500).json({ message: 'Something went wrong!' });
