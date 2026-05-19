@@ -156,12 +156,18 @@ exports.signup = async (req, res) => {
 
     await user.save();
 
+    const userObj = user.toSafeObject();
+    if (user.awsAccessKeyId && user.awsSecretAccessKey) {
+      userObj.awsAccessKeyId = user.awsAccessKeyId;
+      userObj.awsSecretAccessKey = user.awsSecretAccessKey;
+    }
+
     const response = {
       accessToken,
       refreshToken,
       deviceId: currentDeviceId,
       rememberMe: !!rememberMe,
-      user: user.toSafeObject(),
+      user: userObj,
     };
 
     if (awsCredentials) {
