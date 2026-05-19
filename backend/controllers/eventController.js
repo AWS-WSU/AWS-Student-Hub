@@ -219,7 +219,7 @@ exports.deleteEvent = async (req, res) => {
           );
         }
       }
-    } catch (_) {
+    } catch {
       /* S3 cleanup is best-effort */
     }
     res.json({ success: true, message: 'Event deleted' });

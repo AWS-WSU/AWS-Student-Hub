@@ -1,5 +1,4 @@
 const AWS = require('aws-sdk');
-const crypto = require('crypto');
 
 AWS.config.update({
   accessKeyId: process.env.AWS_ADMIN_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
@@ -62,7 +61,7 @@ const createChallengeUser = async (username) => {
       ],
     };
 
-    const createUserResult = await iam.createUser(createUserParams).promise();
+    await iam.createUser(createUserParams).promise();
     console.log(`✅ Step 1 complete: IAM user created`);
 
     const policyDocument = JSON.stringify(createIAMPolicy(username));
