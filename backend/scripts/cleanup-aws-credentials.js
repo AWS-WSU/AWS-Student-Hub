@@ -12,11 +12,7 @@ const {
   RemoveUserFromGroupCommand,
   DeleteUserCommand,
 } = require('@aws-sdk/client-iam');
-const {
-  S3Client,
-  ListObjectsV2Command,
-  DeleteObjectsCommand,
-} = require('@aws-sdk/client-s3');
+const { S3Client, ListObjectsV2Command, DeleteObjectsCommand } = require('@aws-sdk/client-s3');
 const readline = require('readline');
 const chalk = require('chalk');
 const path = require('path');
@@ -128,9 +124,7 @@ const deleteUser = async (username) => {
     console.log(chalk.yellow(`🗑️  Deleting user: ${username}`));
 
     try {
-      const accessKeys = await iamClient.send(
-        new ListAccessKeysCommand({ UserName: username })
-      );
+      const accessKeys = await iamClient.send(new ListAccessKeysCommand({ UserName: username }));
       for (const key of accessKeys.AccessKeyMetadata) {
         await iamClient.send(
           new DeleteAccessKeyCommand({
@@ -192,9 +186,7 @@ const deleteUser = async (username) => {
     }
 
     try {
-      const groups = await iamClient.send(
-        new ListGroupsForUserCommand({ UserName: username })
-      );
+      const groups = await iamClient.send(new ListGroupsForUserCommand({ UserName: username }));
       for (const group of groups.Groups) {
         await iamClient.send(
           new RemoveUserFromGroupCommand({
