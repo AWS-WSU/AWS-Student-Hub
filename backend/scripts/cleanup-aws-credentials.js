@@ -1,18 +1,43 @@
-const AWS = require('aws-sdk');
+const {
+  IAMClient,
+  ListUsersCommand,
+  ListAccessKeysCommand,
+  DeleteAccessKeyCommand,
+  ListAttachedUserPoliciesCommand,
+  DetachUserPolicyCommand,
+  DeletePolicyCommand,
+  ListUserPoliciesCommand,
+  DeleteUserPolicyCommand,
+  ListGroupsForUserCommand,
+  RemoveUserFromGroupCommand,
+  DeleteUserCommand,
+} = require('@aws-sdk/client-iam');
+const {
+  S3Client,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
+} = require('@aws-sdk/client-s3');
 const readline = require('readline');
 const chalk = require('chalk');
 const path = require('path');
 
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-AWS.config.update({
-  accessKeyId: process.env.AWS_ADMIN_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_ADMIN_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY,
+const iamClient = new IAMClient({
   region: 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ADMIN_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_ADMIN_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY,
+  },
 });
 
-const iam = new AWS.IAM();
-const s3 = new AWS.S3();
+const s3Client = new S3Client({
+  region: 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ADMIN_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_ADMIN_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -41,7 +66,6 @@ const displayWarning = () => {
   console.log('='.repeat(80) + '\n');
 };
 
-// Get all club users
 const getClubUsers = async () => {
   try {
     console.log(chalk.blue('🔍 Finding all club users...'));
@@ -49,14 +73,13 @@ const getClubUsers = async () => {
     let marker;
 
     do {
-      const params = {
-        MaxItems: 100,
-        ...(marker && { Marker: marker }),
-      };
+      const result = await iamClient.send(
+        new ListUsersCommand({
+          MaxItems: 100,
+          ...(marker && { Marker: marker }),
+        })
+      );
 
-      const result = await iam.listUsers(params).promise();
-
-      // Filter users that start with "club_"
       const clubUsers = result.Users.filter((user) => user.UserName.startsWith('club_'));
       users.push(...clubUsers);
 
@@ -71,7 +94,6 @@ const getClubUsers = async () => {
   }
 };
 
-// Get all S3 objects in secrets folder
 const getS3SecretFiles = async () => {
   try {
     console.log(chalk.blue('🔍 Finding all secret files in S3...'));
@@ -79,15 +101,17 @@ const getS3SecretFiles = async () => {
     let continuationToken;
 
     do {
-      const params = {
-        Bucket: 'wayne-aws-club-secrets',
-        Prefix: 'secrets/',
-        MaxKeys: 1000,
-        ...(continuationToken && { ContinuationToken: continuationToken }),
-      };
-
-      const result = await s3.listObjectsV2(params).promise();
-      objects.push(...result.Contents);
+      const result = await s3Client.send(
+        new ListObjectsV2Command({
+          Bucket: 'wayne-aws-club-secrets',
+          Prefix: 'secrets/',
+          MaxKeys: 1000,
+          ...(continuationToken && { ContinuationToken: continuationToken }),
+        })
+      );
+      if (result.Contents) {
+        objects.push(...result.Contents);
+      }
       continuationToken = result.NextContinuationToken;
     } while (continuationToken);
 
@@ -99,43 +123,43 @@ const getS3SecretFiles = async () => {
   }
 };
 
-// Delete a single IAM user and all associated resources
 const deleteUser = async (username) => {
   try {
     console.log(chalk.yellow(`🗑️  Deleting user: ${username}`));
 
-    // 1. List and delete all access keys
     try {
-      const accessKeys = await iam.listAccessKeys({ UserName: username }).promise();
+      const accessKeys = await iamClient.send(
+        new ListAccessKeysCommand({ UserName: username })
+      );
       for (const key of accessKeys.AccessKeyMetadata) {
-        await iam
-          .deleteAccessKey({
+        await iamClient.send(
+          new DeleteAccessKeyCommand({
             UserName: username,
             AccessKeyId: key.AccessKeyId,
           })
-          .promise();
+        );
         console.log(chalk.gray(`   🔑 Deleted access key: ${key.AccessKeyId}`));
       }
     } catch (error) {
       console.log(chalk.red(`   ❌ Error deleting access keys: ${error.message}`));
     }
 
-    // 2. List and detach all user policies
     try {
-      const attachedPolicies = await iam.listAttachedUserPolicies({ UserName: username }).promise();
+      const attachedPolicies = await iamClient.send(
+        new ListAttachedUserPoliciesCommand({ UserName: username })
+      );
       for (const policy of attachedPolicies.AttachedPolicies) {
-        await iam
-          .detachUserPolicy({
+        await iamClient.send(
+          new DetachUserPolicyCommand({
             UserName: username,
             PolicyArn: policy.PolicyArn,
           })
-          .promise();
+        );
         console.log(chalk.gray(`   📋 Detached policy: ${policy.PolicyName}`));
 
-        // Delete the policy if it's a club-specific policy
         if (policy.PolicyName.startsWith('club_')) {
           try {
-            await iam.deletePolicy({ PolicyArn: policy.PolicyArn }).promise();
+            await iamClient.send(new DeletePolicyCommand({ PolicyArn: policy.PolicyArn }));
             console.log(chalk.gray(`   🗑️  Deleted policy: ${policy.PolicyName}`));
           } catch (deletePolicyError) {
             console.log(
@@ -150,40 +174,41 @@ const deleteUser = async (username) => {
       console.log(chalk.red(`   ❌ Error handling policies: ${error.message}`));
     }
 
-    // 3. List and delete all inline policies
     try {
-      const inlinePolicies = await iam.listUserPolicies({ UserName: username }).promise();
+      const inlinePolicies = await iamClient.send(
+        new ListUserPoliciesCommand({ UserName: username })
+      );
       for (const policyName of inlinePolicies.PolicyNames) {
-        await iam
-          .deleteUserPolicy({
+        await iamClient.send(
+          new DeleteUserPolicyCommand({
             UserName: username,
             PolicyName: policyName,
           })
-          .promise();
+        );
         console.log(chalk.gray(`   📄 Deleted inline policy: ${policyName}`));
       }
     } catch (error) {
       console.log(chalk.red(`   ❌ Error deleting inline policies: ${error.message}`));
     }
 
-    // 4. Remove user from all groups
     try {
-      const groups = await iam.getGroupsForUser({ UserName: username }).promise();
+      const groups = await iamClient.send(
+        new ListGroupsForUserCommand({ UserName: username })
+      );
       for (const group of groups.Groups) {
-        await iam
-          .removeUserFromGroup({
+        await iamClient.send(
+          new RemoveUserFromGroupCommand({
             UserName: username,
             GroupName: group.GroupName,
           })
-          .promise();
+        );
         console.log(chalk.gray(`   👥 Removed from group: ${group.GroupName}`));
       }
     } catch (error) {
       console.log(chalk.red(`   ❌ Error removing from groups: ${error.message}`));
     }
 
-    // 5. Finally, delete the user
-    await iam.deleteUser({ UserName: username }).promise();
+    await iamClient.send(new DeleteUserCommand({ UserName: username }));
     console.log(chalk.green(`   ✅ User deleted successfully`));
 
     return true;
@@ -193,7 +218,6 @@ const deleteUser = async (username) => {
   }
 };
 
-// Delete S3 objects
 const deleteS3Objects = async (objects) => {
   if (objects.length === 0) {
     console.log(chalk.gray('📁 No S3 objects to delete'));
@@ -203,20 +227,19 @@ const deleteS3Objects = async (objects) => {
   try {
     console.log(chalk.yellow(`🗑️  Deleting ${objects.length} S3 objects...`));
 
-    // Delete objects in batches of 1000 (S3 limit)
     const batchSize = 1000;
     for (let i = 0; i < objects.length; i += batchSize) {
       const batch = objects.slice(i, i + batchSize);
 
-      const deleteParams = {
-        Bucket: 'wayne-aws-club-secrets',
-        Delete: {
-          Objects: batch.map((obj) => ({ Key: obj.Key })),
-          Quiet: false,
-        },
-      };
-
-      const result = await s3.deleteObjects(deleteParams).promise();
+      const result = await s3Client.send(
+        new DeleteObjectsCommand({
+          Bucket: 'wayne-aws-club-secrets',
+          Delete: {
+            Objects: batch.map((obj) => ({ Key: obj.Key })),
+            Quiet: false,
+          },
+        })
+      );
 
       if (result.Deleted) {
         result.Deleted.forEach((deleted) => {
@@ -239,12 +262,10 @@ const deleteS3Objects = async (objects) => {
   }
 };
 
-// Test AWS credentials
 const testAWSCredentials = async () => {
   try {
     console.log(chalk.blue('🧪 Testing AWS credentials...'));
-    // Use a less restrictive operation - list users instead of getUser
-    await iam.listUsers({ MaxItems: 1 }).promise();
+    await iamClient.send(new ListUsersCommand({ MaxItems: 1 }));
     console.log(chalk.green('✅ AWS credentials are valid'));
     return true;
   } catch (error) {
@@ -256,12 +277,10 @@ const testAWSCredentials = async () => {
   }
 };
 
-// Main cleanup function
 const runCleanup = async () => {
   try {
     displayWarning();
 
-    // Double confirmation
     const confirm1 = await askQuestion(chalk.red('Type "DELETE" to continue: '));
     if (confirm1.toUpperCase() !== 'DELETE') {
       console.log(chalk.yellow('❌ Operation cancelled'));
@@ -280,7 +299,6 @@ const runCleanup = async () => {
 
     console.log('\n' + chalk.blue.bold('🚀 Starting cleanup process...\n'));
 
-    // Get all resources
     const [users, s3Objects] = await Promise.all([getClubUsers(), getS3SecretFiles()]);
 
     if (users.length === 0 && s3Objects.length === 0) {
@@ -304,19 +322,17 @@ const runCleanup = async () => {
     console.log(chalk.blue.bold('Starting IAM User Cleanup'));
     console.log('='.repeat(50));
 
-    // Delete IAM users
     let successCount = 0;
     for (const user of users) {
       const success = await deleteUser(user.UserName);
       if (success) successCount++;
-      console.log(''); // Empty line for readability
+      console.log('');
     }
 
     console.log('='.repeat(50));
     console.log(chalk.blue.bold('Starting S3 Cleanup'));
     console.log('='.repeat(50));
 
-    // Delete S3 objects
     await deleteS3Objects(s3Objects);
 
     console.log('\n' + '='.repeat(50));
@@ -333,7 +349,6 @@ const runCleanup = async () => {
   }
 };
 
-// Check if AWS credentials are configured
 const checkAWSCredentials = () => {
   console.log(chalk.cyan('🔍 Checking environment variables...'));
   console.log(
@@ -359,7 +374,6 @@ const checkAWSCredentials = () => {
   return true;
 };
 
-// Run the script
 if (require.main === module) {
   checkAWSCredentials();
   console.log(chalk.cyan('Environment file path:'), path.join(__dirname, '../.env'));

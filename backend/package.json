@@ -12,9 +12,9 @@
     "cleanup-aws": "node scripts/cleanup-aws-credentials.js"
   },
   "dependencies": {
+    "@aws-sdk/client-iam": "^3.1050.0",
     "@aws-sdk/client-s3": "^3.987.0",
     "@aws-sdk/lib-storage": "^3.500.0",
-    "aws-sdk": "^2.1693.0",
     "axios": "^1.15.2",
     "bad-words": "^1.0.0",
     "bcryptjs": "^2.4.3",
