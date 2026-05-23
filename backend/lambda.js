@@ -47,7 +47,7 @@ module.exports.handler = async (event, context) => {
 
   // Handle OPTIONS requests directly
   if (event.httpMethod === 'OPTIONS') {
-    return handleCors(event, context);
+    return handleCors(event);
   }
 
   if (process.env.NODE_ENV !== 'production') {
@@ -102,7 +102,22 @@ module.exports.handler = async (event, context) => {
     },
   });
 
-  return handler(event, context);
+  try {
+    return await handler(event, context);
+  } catch (error) {
+    console.error('Lambda handler error:', error);
+    const origin = event.headers?.origin || event.headers?.Origin;
+    const headers = { 'Content-Type': 'application/json' };
+    if (origin) {
+      headers['Access-Control-Allow-Origin'] = origin;
+      headers['Access-Control-Allow-Credentials'] = 'true';
+    }
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ message: 'Internal server error' }),
+    };
+  }
 };
 
 // Scheduled handler for processing email queue

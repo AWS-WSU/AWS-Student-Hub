@@ -59,25 +59,31 @@ if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
   });
 }
 
+const DEFAULT_ALLOWED_ORIGINS = [
+  'https://wayneaws.dev',
+  'https://www.wayneaws.dev',
+  'https://prizeversity.com',
+  'https://www.prizeversity.com',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
 
-    const allowedOrigins = process.env.CORS_ORIGIN
-      ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
-      : [
-          'https://wayneaws.dev',
-          'https://www.wayneaws.dev',
-          'https://prizeversity.com',
-          'https://www.prizeversity.com',
-          'http://localhost:5173',
-          'http://localhost:3000',
-        ];
+    const configuredOrigins = process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',')
+          .map((o) => o.trim())
+          .filter(Boolean)
+      : [];
+
+    const allowedOrigins = [...new Set([...DEFAULT_ALLOWED_ORIGINS, ...configuredOrigins])];
 
     // Check for Amplify domains
-    const isAmplifyDomain = origin && origin.includes('.amplifyapp.com');
+    const isAmplifyDomain = origin.includes('.amplifyapp.com');
 
-    if (allowedOrigins.includes(origin) || isAmplifyDomain) {
+    if (allowedOrigins.includes(origin) || isAmplifyDomain || configuredOrigins.includes('*')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
