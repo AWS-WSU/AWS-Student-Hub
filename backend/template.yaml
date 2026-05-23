@@ -212,12 +212,6 @@ Resources:
     Properties:
       Name: !Sub 'student-hub-api-gateway-${Environment}'
       StageName: !Ref Environment
-      Cors:
-        AllowOrigin: "'*'"
-        AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
-        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
-        AllowCredentials: false
-        MaxAge: "'600'"
       BinaryMediaTypes:
         - 'multipart/form-data'
         - 'image/*'
