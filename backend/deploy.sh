@@ -9,7 +9,7 @@ echo "🚀 Starting AWS Student Hub Lambda Deployment"
 if [ -z "$1" ]; then
     echo "❌ Error: Environment parameter required"
     echo "Usage: ./deploy.sh [dev|staging|prod] [mongodb-uri] [admin-token] [jwt-secret] [cors-origin] [s3-bucket] [s3-access-key] [s3-secret-key] [s3-region] [aws-admin-access-key] [aws-admin-secret-key] [aws-region] [aws-s3-bucket] [smtp-host] [smtp-port] [smtp-encryption] [smtp-user] [smtp-pass] [discord-token] [discord-guild-id] [discord-channel-id] [aws-cred-key] [aws-event-thumbnails-bucket]"
-    echo "Example: ./deploy.sh dev 'mongodb://...' 'your-admin-token' 'your-jwt-secret' 'https://mydomain.com,http://localhost:3000' 'my-bucket' 'AKIAXXXXX' 'secret' 'us-east-1' 'discord-token' 'guild-id' 'channel-id' 'smtp@email.com' 'smtp-pass' 'encryption-key'"
+    echo "Example: ./deploy.sh dev 'mongodb://...' 'your-admin-token' 'your-jwt-secret' 'https://mydomain.com,http://localhost:3000' 'my-bucket' 'AKIAXXXXX' 'secret' 'us-east-2' 'discord-token' 'guild-id' 'channel-id' 'smtp@email.com' 'smtp-pass' 'encryption-key'"
     exit 1
 fi
 
@@ -21,7 +21,7 @@ CORS_ORIGIN=${5:-"*"}
 S3_BUCKET_NAME=${6:-""}
 S3_ACCESS_KEY_ID=${7:-""}
 S3_SECRET_ACCESS_KEY=${8:-""}
-S3_REGION=${9:-"us-east-1"}
+S3_REGION=${9:-"us-east-2"}
 AWS_ADMIN_ACCESS_KEY_ID=${10:-""}
 AWS_ADMIN_SECRET_ACCESS_KEY=${11:-""}
 CUSTOM_AWS_REGION=${12:-"us-east-1"}

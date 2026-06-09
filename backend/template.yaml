@@ -17,17 +17,17 @@ Parameters:
     Default: dev
     AllowedValues: [dev, staging, prod]
     Description: Environment name
-  
+
   MongoDbUri:
     Type: String
     Description: MongoDB connection string
     NoEcho: true
-  
+
   CorsOrigin:
     Type: String
     Default: '*'
     Description: CORS allowed origins (comma-separated)
-  
+
   JwtSecret:
     Type: String
     Description: JWT secret key for token signing
@@ -41,20 +41,20 @@ Parameters:
   S3BucketName:
     Type: String
     Description: S3 bucket name for file uploads
-    
+
   S3AccessKeyId:
     Type: String
     Description: S3 access key ID
     NoEcho: true
-    
+
   S3SecretAccessKey:
     Type: String
     Description: S3 secret access key
     NoEcho: true
-    
+
   S3Region:
     Type: String
-    Default: us-east-1
+    Default: us-east-2
     Description: S3 bucket region
 
   AwsAdminAccessKeyId:
@@ -75,27 +75,27 @@ Parameters:
   AwsS3Bucket:
     Type: String
     Description: AWS S3 bucket for secrets
-    
+
   SmtpHost:
     Type: String
     Default: smtp.gmail.com
     Description: SMTP host for email notifications
-    
+
   SmtpPort:
     Type: String
-    Default: "587"
+    Default: '587'
     Description: SMTP port for email notifications
-    
+
   SmtpEncryption:
     Type: String
     Default: STARTTLS
     Description: SMTP encryption method
-    
+
   SmtpUser:
     Type: String
     Description: SMTP username for email notifications
     NoEcho: true
-    
+
   SmtpPass:
     Type: String
     Description: SMTP password for email notifications
@@ -105,17 +105,17 @@ Parameters:
     Type: String
     Description: Discord bot token
     NoEcho: true
-    
+
   DiscordGuildId:
     Type: String
     Description: Discord guild (server) ID
     NoEcho: true
-    
+
   DiscordChannelId:
     Type: String
     Description: Discord channel ID for invites
     NoEcho: true
-    
+
   AwsCredEncryptionKey:
     Type: String
     Description: AWS credentials encryption key
@@ -137,13 +137,13 @@ Resources:
       MemorySize: 1024
       Timeout: 30
       Role: !GetAtt StudentHubApiRole.Arn
-      Description: "Student Hub API v2 - Complete Environment Variables"
+      Description: 'Student Hub API v2 - Complete Environment Variables'
       Environment:
         Variables:
           MONGODB_URI: !Ref MongoDbUri
           ADMIN_TOKEN: !Ref AdminToken
           JWT_SECRET: !Ref JwtSecret
-          PORT: "5001"
+          PORT: '5001'
           NODE_ENV: !Ref Environment
           CORS_ORIGIN: !Ref CorsOrigin
           S3_ACCESS_KEY_ID: !Ref S3AccessKeyId
@@ -189,7 +189,7 @@ Resources:
       MemorySize: 512
       Timeout: 60
       Role: !GetAtt StudentHubApiRole.Arn
-      Description: "Scheduled email queue processor - retries failed emails"
+      Description: 'Scheduled email queue processor - retries failed emails'
       Environment:
         Variables:
           MONGODB_URI: !Ref MongoDbUri
@@ -265,13 +265,13 @@ Outputs:
     Value: !Sub 'https://${StudentHubApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/'
     Export:
       Name: !Sub '${AWS::StackName}-api-url'
-  
+
   StudentHubApiFunction:
     Description: Lambda Function ARN
     Value: !GetAtt StudentHubApi.Arn
     Export:
       Name: !Sub '${AWS::StackName}-function-arn'
-  
+
   EmailQueueProcessorFunction:
     Description: Email Queue Processor Lambda Function ARN
     Value: !GetAtt EmailQueueProcessor.Arn

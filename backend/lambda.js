@@ -73,8 +73,8 @@ module.exports.handler = async (event, context) => {
       'text/text',
       'text/xml',
     ],
-    request: () => {},
-    response: (response, event) => {
+    request: (_request, _event, _context) => {},
+    response: (response, event, _context) => {
       // Ensure headers object exists
       if (!response.headers) {
         response.headers = {};
@@ -122,7 +122,7 @@ module.exports.handler = async (event, context) => {
 
 // Scheduled handler for processing email queue
 // Triggered by CloudWatch Events/EventBridge (e.g., every 5 minutes)
-module.exports.processEmailQueueHandler = async (event, context) => {
+module.exports.processEmailQueueHandler = async (_event, context) => {
   context.callbackWaitsForEmptyEventLoop = false;
 
   console.log('Starting scheduled email queue processing...');

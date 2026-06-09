@@ -10,7 +10,7 @@ function Challenges({ theme: _theme }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
-  const [challenges, setChallenges] = useState([]);
+  const [challenges] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
