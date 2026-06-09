@@ -201,9 +201,7 @@ const deleteS3Objects = async (objects: AWS.S3.Object[]): Promise<boolean> => {
     const batchSize = 1000;
     for (let i = 0; i < objects.length; i += batchSize) {
       const batch = objects.slice(i, i + batchSize);
-      const keys = batch
-        .map((obj) => obj.Key)
-        .filter((key): key is string => Boolean(key));
+      const keys = batch.map((obj) => obj.Key).filter((key): key is string => Boolean(key));
 
       if (keys.length === 0) continue;
 
@@ -246,7 +244,9 @@ const testAWSCredentials = async (): Promise<boolean> => {
     return true;
   } catch (error: unknown) {
     console.error(chalk.red('❌ AWS credentials test failed:'), getErrorMessage(error));
-    console.log(chalk.yellow('Please verify your AWS credentials have the necessary IAM permissions'));
+    console.log(
+      chalk.yellow('Please verify your AWS credentials have the necessary IAM permissions')
+    );
     return false;
   }
 };
@@ -262,7 +262,9 @@ const runCleanup = async (): Promise<void> => {
       return;
     }
 
-    const confirm2 = await askQuestion(chalk.red('Are you absolutely sure? Type "YES" to proceed: '));
+    const confirm2 = await askQuestion(
+      chalk.red('Are you absolutely sure? Type "YES" to proceed: ')
+    );
     if (confirm2.toUpperCase() !== 'YES') {
       console.log(chalk.yellow('❌ Operation cancelled'));
       rl.close();
@@ -332,7 +334,8 @@ const checkAWSCredentials = (): boolean => {
   );
 
   const accessKeyId = process.env.AWS_ADMIN_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_ADMIN_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+  const secretAccessKey =
+    process.env.AWS_ADMIN_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
 
   if (!accessKeyId || !secretAccessKey) {
     console.log(chalk.red('❌ AWS credentials not found!'));

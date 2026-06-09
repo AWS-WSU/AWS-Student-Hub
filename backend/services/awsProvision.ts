@@ -144,10 +144,14 @@ export const createChallengeUser = async (username: string): Promise<ChallengeUs
       const iamUsername = `club_${username}`;
 
       try {
-        const listPoliciesResult = await iam.listAttachedUserPolicies({ UserName: iamUsername }).promise();
+        const listPoliciesResult = await iam
+          .listAttachedUserPolicies({ UserName: iamUsername })
+          .promise();
         for (const policy of listPoliciesResult.AttachedPolicies || []) {
           if (!policy.PolicyArn) continue;
-          await iam.detachUserPolicy({ UserName: iamUsername, PolicyArn: policy.PolicyArn }).promise();
+          await iam
+            .detachUserPolicy({ UserName: iamUsername, PolicyArn: policy.PolicyArn })
+            .promise();
           if (policy.PolicyName?.startsWith(`club_${username}_policy`)) {
             await iam.deletePolicy({ PolicyArn: policy.PolicyArn }).promise();
           }
