@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# AWS Student Hub Lambda Deployment Script
-
 set -e
 
 echo "🚀 Starting AWS Student Hub Lambda Deployment"
@@ -37,7 +35,6 @@ DISCORD_CHANNEL_ID=${21:-""}
 AWS_CRED_ENCRYPTION_KEY=${22:-""}
 AWS_HUB_EVENT_THUMBNAILS=${23:-"aws-student-hub-event-thumbnails"}
 
-# Validate required parameters
 if [ -z "$MONGODB_URI" ] || [ -z "$ADMIN_TOKEN" ] || [ -z "$JWT_SECRET" ] || [ -z "$S3_BUCKET_NAME" ] || [ -z "$S3_ACCESS_KEY_ID" ] || [ -z "$S3_SECRET_ACCESS_KEY" ] || [ -z "$AWS_ADMIN_ACCESS_KEY_ID" ] || [ -z "$AWS_ADMIN_SECRET_ACCESS_KEY" ] || [ -z "$AWS_S3_BUCKET" ] || [ -z "$SMTP_USER" ] || [ -z "$SMTP_PASS" ] || [ -z "$DISCORD_BOT_TOKEN" ] || [ -z "$DISCORD_GUILD_ID" ] || [ -z "$DISCORD_CHANNEL_ID" ] || [ -z "$AWS_CRED_ENCRYPTION_KEY" ]; then
     echo "❌ Error: Missing required parameters"
     echo "Usage: ./deploy.sh [env] [mongodb-uri] [admin-token] [jwt-secret] [cors-origin] [s3-bucket] [s3-access-key] [s3-secret-key] [s3-region] [aws-admin-access-key] [aws-admin-secret-key] [aws-region] [aws-s3-bucket] [smtp-host] [smtp-port] [smtp-encryption] [smtp-user] [smtp-pass] [discord-token] [discord-guild-id] [discord-channel-id] [aws-cred-key]"
@@ -56,7 +53,13 @@ echo "  SMTP Port: $SMTP_PORT"
 echo "  All sensitive values: [HIDDEN]"
 
 echo "📦 Installing dependencies..."
-npm install --production
+npm ci
+
+echo "🔨 Compiling TypeScript..."
+npm run build
+
+echo "📦 Pruning development dependencies..."
+npm prune --omit=dev
 
 echo "🔨 Building deployment package..."
 sam build
