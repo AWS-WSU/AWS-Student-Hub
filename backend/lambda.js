@@ -4,7 +4,7 @@ const connectDB = require('./config/database');
 const { processEmailQueue } = require('./services/emailService');
 
 // Handle CORS for OPTIONS requests directly
-const handleCors = (event, context) => {
+const handleCors = (event) => {
   const origin = event.headers?.origin || event.headers?.Origin;
   const allowedOrigins = [
     'https://wayneaws.dev',
@@ -47,7 +47,7 @@ module.exports.handler = async (event, context) => {
 
   // Handle OPTIONS requests directly
   if (event.httpMethod === 'OPTIONS') {
-    return handleCors(event, context);
+    return handleCors(event);
   }
 
   if (process.env.NODE_ENV !== 'production') {
@@ -73,8 +73,8 @@ module.exports.handler = async (event, context) => {
       'text/text',
       'text/xml',
     ],
-    request: (request, event, context) => {},
-    response: (response, event, context) => {
+    request: (_request, _event, _context) => {},
+    response: (response, event, _context) => {
       // Ensure headers object exists
       if (!response.headers) {
         response.headers = {};
@@ -107,7 +107,7 @@ module.exports.handler = async (event, context) => {
 
 // Scheduled handler for processing email queue
 // Triggered by CloudWatch Events/EventBridge (e.g., every 5 minutes)
-module.exports.processEmailQueueHandler = async (event, context) => {
+module.exports.processEmailQueueHandler = async (_event, context) => {
   context.callbackWaitsForEmptyEventLoop = false;
 
   console.log('Starting scheduled email queue processing...');

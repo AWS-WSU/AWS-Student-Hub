@@ -4,12 +4,15 @@ const { Upload } = require('@aws-sdk/lib-storage');
 const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { sendBulkEventNotification } = require('../services/emailService');
 
+const s3Region = process.env.S3_REGION || process.env.AWS_REGION || 'us-east-1';
+
 const s3Client = new S3Client({
   credentials: {
     accessKeyId: process.env.S3_ACCESS_KEY_ID,
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
   },
-  region: process.env.S3_REGION,
+  region: s3Region,
+  followRegionRedirects: true,
 });
 
 exports.createEvent = async (req, res) => {
@@ -219,7 +222,7 @@ exports.deleteEvent = async (req, res) => {
           );
         }
       }
-    } catch (_) {
+    } catch {
       /* S3 cleanup is best-effort */
     }
     res.json({ success: true, message: 'Event deleted' });

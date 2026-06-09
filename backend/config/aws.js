@@ -2,12 +2,15 @@ const { S3Client } = require('@aws-sdk/client-s3');
 const { Upload } = require('@aws-sdk/lib-storage');
 const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
+const s3Region = process.env.S3_REGION || process.env.AWS_REGION || 'us-east-1';
+
 const s3Client = new S3Client({
   credentials: {
     accessKeyId: process.env.S3_ACCESS_KEY_ID,
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
   },
-  region: process.env.S3_REGION,
+  region: s3Region,
+  followRegionRedirects: true,
 });
 
 const uploadToS3 = async (file, key) => {

@@ -61,10 +61,14 @@ You can test most functionalities without about 50% of the environment variables
 | `PORT`                    | Port for backend server                                                     | Yes       | Backend        |
 | `NODE_ENV`                | Application environment mode                                                | Yes       | Backend        |
 | `CORS_ORIGIN`             | Allowed origins for CORS requests                                           | Yes       | Backend        |
-| `AWS_ACCESS_KEY_ID`       | AWS credential for accessing services (e.g., S3)                            | Optional  | Backend        |
-| `AWS_SECRET_ACCESS_KEY`   | Secret AWS key paired with access key ID                                    | Optional  | Backend        |
-| `AWS_REGION`              | AWS region for services                                                     | Optional  | Backend        |
-| `AWS_S3_BUCKET`           | S3 bucket name used for file uploads                                        | Optional  | Backend        |
+| `S3_ACCESS_KEY_ID`        | AWS credential for profile picture/event thumbnail S3 uploads               | Optional  | Backend        |
+| `S3_SECRET_ACCESS_KEY`    | Secret AWS key paired with the S3 upload access key                         | Optional  | Backend        |
+| `S3_REGION`               | Region for the upload buckets                                               | Optional  | Backend        |
+| `S3_BUCKET_NAME`          | S3 bucket name used for profile picture uploads                             | Optional  | Backend        |
+| `AWS_ADMIN_ACCESS_KEY_ID` | AWS admin credential for challenge-user provisioning                        | Optional  | Backend        |
+| `AWS_ADMIN_SECRET_ACCESS_KEY` | Secret AWS admin key for challenge-user provisioning                    | Optional  | Backend        |
+| `CUSTOM_AWS_REGION`       | AWS region for challenge-user provisioning                                  | Optional  | Backend        |
+| `AWS_S3_BUCKET`           | S3 bucket name used for challenge secret files                              | Optional  | Backend        |
 | `SMTP_HOST`               | SMTP server address for sending emails                                      | Optional  | Backend        |
 | `SMTP_PORT`               | SMTP port number                                                            | Optional  | Backend        |
 | `SMTP_ENCRYPTION`         | Email encryption method (e.g., `STARTTLS`)                                  | Optional  | Backend        |
@@ -108,10 +112,17 @@ NODE_ENV=development
 # CORS configuration
 CORS_ORIGIN=http://localhost:5173,http://localhost:3000
 
-# AWS Configuration
-AWS_ACCESS_KEY_ID=your-aws-access-key-id
-AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
-AWS_REGION=us-east-1
+# S3 upload configuration
+S3_ACCESS_KEY_ID=your-s3-upload-access-key-id
+S3_SECRET_ACCESS_KEY=your-s3-upload-secret-access-key
+S3_REGION=us-east-2
+S3_BUCKET_NAME=aws-student-hub-profile-pictures
+AWS_HUB_EVENT_THUMBNAILS=aws-student-hub-event-thumbnails
+
+# AWS challenge provisioning configuration
+AWS_ADMIN_ACCESS_KEY_ID=your-aws-admin-access-key-id
+AWS_ADMIN_SECRET_ACCESS_KEY=your-aws-admin-secret-access-key
+CUSTOM_AWS_REGION=us-east-1
 AWS_S3_BUCKET=wayne-aws-club-secrets
 
 # SMTP configuration for email

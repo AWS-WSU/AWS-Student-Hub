@@ -172,7 +172,15 @@ function Auth({ theme }) {
         navigate(redirectPath, { replace: true });
       }
     }
-  }, [authUser, isAuth0Authenticated, auth0User, navigate, isLoading, showCyberModal]);
+  }, [
+    authUser,
+    isAuth0Authenticated,
+    auth0User,
+    navigate,
+    isLoading,
+    showCyberModal,
+    redirectPath,
+  ]);
 
   useEffect(() => {
     console.log('Auth useEffect - State check:', {

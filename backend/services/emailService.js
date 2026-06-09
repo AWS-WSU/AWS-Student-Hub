@@ -71,7 +71,7 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
 
   const isRemote = event.isRemote === true || event.isRemote === 'true';
 
-  let locationHtml; // eslint-disable-line no-useless-assignment
+  let locationHtml;
   if (isRemote) {
     locationHtml = `
       <div class="location-badge remote">
@@ -111,10 +111,10 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-          body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            line-height: 1.6; 
-            color: #232f3e; 
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #232f3e;
             margin: 0;
             padding: 0;
             background-color: #f4f4f4;
@@ -307,10 +307,10 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
             <h1>☁️ AWS Cloud Club</h1>
             <p>Wayne State University</p>
           </div>
-          
+
           <div class="content">
             <p class="greeting">Hey ${fullName}! 👋</p>
-            
+
             ${
               customMessage
                 ? `
@@ -321,14 +321,14 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
             `
                 : ''
             }
-            
+
             <p>Great news! We have a new event coming up that you won't want to miss:</p>
-            
+
             <div class="event-card">
               ${event.thumbnailUrl ? `<img src="${event.thumbnailUrl}" alt="${event.title}" class="event-image" />` : ''}
-              
+
               <h2 class="event-title">${event.title}</h2>
-              
+
               <div class="event-detail">
                 <span class="detail-icon">📅</span>
                 <div class="detail-content">
@@ -336,7 +336,7 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
                   <div class="detail-value">${formattedDate}</div>
                 </div>
               </div>
-              
+
               <div class="event-detail">
                 <span class="detail-icon">⏰</span>
                 <div class="detail-content">
@@ -344,7 +344,7 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
                   <div class="detail-value">${formattedTime}</div>
                 </div>
               </div>
-              
+
               <div class="event-detail">
                 <span class="detail-icon">📍</span>
                 <div class="detail-content">
@@ -355,7 +355,7 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
                 </div>
               </div>
             </div>
-            
+
             ${
               event.description
                 ? `
@@ -366,7 +366,7 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
             `
                 : ''
             }
-            
+
             <div class="cta-section">
               ${
                 event.meetupUrl
@@ -378,12 +378,12 @@ const sendEventNotification = async (email, fullName, event, customMessage = '')
                   : ''
               }
             </div>
-            
+
             <p style="color: #666; text-align: center; margin-top: 30px;">
               We can't wait to see you there! 🎉
             </p>
           </div>
-          
+
           <div class="footer">
             <p>AWS Cloud Club @ Wayne State University</p>
             <div class="social-links">
