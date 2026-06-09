@@ -276,7 +276,9 @@ const testAWSCredentials = async (): Promise<boolean> => {
     return true;
   } catch (error: unknown) {
     console.error(chalk.red('❌ AWS credentials test failed:'), getErrorMessage(error));
-    console.log(chalk.yellow('Please verify your AWS credentials have the necessary IAM permissions'));
+    console.log(
+      chalk.yellow('Please verify your AWS credentials have the necessary IAM permissions')
+    );
     return false;
   }
 };
@@ -292,7 +294,9 @@ const runCleanup = async (): Promise<void> => {
       return;
     }
 
-    const confirm2 = await askQuestion(chalk.red('Are you absolutely sure? Type "YES" to proceed: '));
+    const confirm2 = await askQuestion(
+      chalk.red('Are you absolutely sure? Type "YES" to proceed: ')
+    );
     if (confirm2.toUpperCase() !== 'YES') {
       console.log(chalk.yellow('❌ Operation cancelled'));
       rl.close();
