@@ -132,7 +132,7 @@ Resources:
     Properties:
       FunctionName: !Sub 'student-hub-api-${Environment}'
       CodeUri: ./
-      Handler: lambda.handler
+      Handler: dist/lambda.handler
       Runtime: nodejs20.x
       MemorySize: 1024
       Timeout: 30
@@ -184,7 +184,7 @@ Resources:
     Properties:
       FunctionName: !Sub 'student-hub-email-queue-${Environment}'
       CodeUri: ./
-      Handler: lambda.processEmailQueueHandler
+      Handler: dist/lambda.processEmailQueueHandler
       Runtime: nodejs20.x
       MemorySize: 512
       Timeout: 60
