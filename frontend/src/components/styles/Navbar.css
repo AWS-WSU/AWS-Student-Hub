@@ -438,6 +438,14 @@
   opacity: 0.8;
 }
 
+.profile-menu-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  opacity: 1;
+}
+
 /* Mobile Responsive */
 @media (max-width: 1200px) {
   .landing-header {
