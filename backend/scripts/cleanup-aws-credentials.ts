@@ -181,7 +181,9 @@ const deleteUser = async (username: string): Promise<boolean> => {
     }
 
     try {
-      const inlinePolicies = await iamClient.send(new ListUserPoliciesCommand({ UserName: username }));
+      const inlinePolicies = await iamClient.send(
+        new ListUserPoliciesCommand({ UserName: username })
+      );
       for (const policyName of inlinePolicies.PolicyNames || []) {
         await iamClient.send(
           new DeleteUserPolicyCommand({
