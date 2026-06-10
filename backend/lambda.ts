@@ -9,6 +9,9 @@ import serverless from 'serverless-http';
 import app from './app';
 import connectDB from './config/database';
 import { processEmailQueue } from './services/emailService';
+import logger from './config/logger';
+
+const log = logger.child({ module: 'lambda' });
 
 const allowedOrigins = [
   'https://wayneaws.dev',
@@ -83,7 +86,7 @@ export const handler = async (
   }
 
   if (process.env.NODE_ENV !== 'production') {
-    console.log('lambda event.', JSON.stringify(event, null, 2));
+    log.info('lambda event.', JSON.stringify(event, null, 2));
   }
 
   const lambdaHandler = serverless(app, {
@@ -118,13 +121,13 @@ export const processEmailQueueHandler = async (
 ): Promise<APIGatewayProxyResult> => {
   context.callbackWaitsForEmptyEventLoop = false;
 
-  console.log('starting scheduled email queue processing.');
+  log.info('starting scheduled email queue processing.');
 
   try {
     await connectDB();
     const result = await processEmailQueue(20);
 
-    console.log('email queue processing completed.', result);
+    log.info('email queue processing completed.', result);
 
     return {
       statusCode: 200,
@@ -136,7 +139,7 @@ export const processEmailQueueHandler = async (
     };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('email queue processing error.', error);
+    log.error('email queue processing error.', error);
 
     return {
       statusCode: 500,

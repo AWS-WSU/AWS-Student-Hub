@@ -1,5 +1,8 @@
 import type { Request } from 'express';
 import multer from 'multer';
+import logger from '../config/logger';
+
+const log = logger.child({ module: 'upload' });
 
 type SharpPipeline = {
   resize(width: number, height: number, options: Record<string, unknown>): SharpPipeline;
@@ -17,7 +20,7 @@ const loadSharp = async (): Promise<SharpFactory | null> => {
       .then((module) => (module.default ?? module) as unknown as SharpFactory)
       .catch((error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
-        console.warn('sharp module not available; image processing disabled.', message);
+        log.warn('sharp module not available; image processing disabled.', message);
         return null;
       });
   }
@@ -47,7 +50,7 @@ export const processImage = async (buffer: Buffer): Promise<Buffer> => {
   const sharp = await loadSharp();
 
   if (!sharp) {
-    console.warn('sharp not available; returning original image buffer.');
+    log.warn('sharp not available; returning original image buffer.');
     return buffer;
   }
 
@@ -61,7 +64,7 @@ export const processImage = async (buffer: Buffer): Promise<Buffer> => {
       .toBuffer();
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.warn('image processing failed; returning original image buffer.', message);
+    log.warn('image processing failed; returning original image buffer.', message);
     return buffer;
   }
 };

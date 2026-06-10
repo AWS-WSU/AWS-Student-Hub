@@ -2,6 +2,9 @@ import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
 import User from '../models/User';
+import logger from '../config/logger';
+
+const log = logger.child({ module: 'adminAuth' });
 
 type Role = Express.UserRole;
 
@@ -85,7 +88,7 @@ export const requireRole = (minRole: Role = 'member'): RequestHandler => {
 
       next();
     } catch (err: unknown) {
-      console.error('admin auth middleware error.', err);
+      log.error('admin auth middleware error.', err);
       res.status(401).json({
         error: 'Invalid token.',
       });
@@ -134,7 +137,7 @@ export const canManageUser = async (
     req.targetUser = { role: targetUserRole };
     next();
   } catch (error: unknown) {
-    console.error('can manage user check error.', error);
+    log.error('can manage user check error.', error);
     res.status(500).json({
       error: 'Error checking user permissions',
     });

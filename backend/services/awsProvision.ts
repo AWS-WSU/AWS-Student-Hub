@@ -12,6 +12,9 @@ import {
   ListAttachedUserPoliciesCommand,
 } from '@aws-sdk/client-iam';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import logger from '../config/logger';
+
+const log = logger.child({ module: 'awsProvision' });
 
 export interface ChallengeUserResult {
   access_key: string;
@@ -77,8 +80,8 @@ export const createChallengeUser = async (username: string): Promise<ChallengeUs
   const { iamClient, s3Client } = getClients();
 
   try {
-    console.log(`creating challenge user for ${username}.`);
-    console.log('aws config check.', {
+    log.info(`creating challenge user for ${username}.`);
+    log.info('aws config check.', {
       hasAdminAccessKey: !!process.env.AWS_ADMIN_ACCESS_KEY_ID,
       hasAdminSecretKey: !!process.env.AWS_ADMIN_SECRET_ACCESS_KEY,
       region: process.env.CUSTOM_AWS_REGION || 'us-east-1',
@@ -88,7 +91,7 @@ export const createChallengeUser = async (username: string): Promise<ChallengeUs
     const iamUsername = `club_${username}`;
     const challengePassword = generateRandomPassword(12);
 
-    console.log(`step 1: creating iam user ${iamUsername}.`);
+    log.info(`step 1: creating iam user ${iamUsername}.`);
     await iamClient.send(
       new CreateUserCommand({
         UserName: iamUsername,
@@ -98,12 +101,12 @@ export const createChallengeUser = async (username: string): Promise<ChallengeUs
         ],
       })
     );
-    console.log('step 1 complete: iam user created.');
+    log.info('step 1 complete: iam user created.');
 
     const policyDocument = JSON.stringify(createIAMPolicy(username));
     const policyName = `club_${username}_policy`;
 
-    console.log(`step 2: creating iam policy ${policyName}.`);
+    log.info(`step 2: creating iam policy ${policyName}.`);
     const createPolicyResult = await iamClient.send(
       new CreatePolicyCommand({
         PolicyName: policyName,
@@ -117,18 +120,18 @@ export const createChallengeUser = async (username: string): Promise<ChallengeUs
       throw new Error('IAM policy ARN was not returned');
     }
 
-    console.log('step 2 complete: iam policy created.');
+    log.info('step 2 complete: iam policy created.');
 
-    console.log(`step 3: attaching policy to user ${iamUsername}.`);
+    log.info(`step 3: attaching policy to user ${iamUsername}.`);
     await iamClient.send(
       new AttachUserPolicyCommand({
         UserName: iamUsername,
         PolicyArn: policyArn,
       })
     );
-    console.log('step 3 complete: policy attached to user.');
+    log.info('step 3 complete: policy attached to user.');
 
-    console.log(`step 4: creating access key for user ${iamUsername}.`);
+    log.info(`step 4: creating access key for user ${iamUsername}.`);
     const createAccessKeyResult = await iamClient.send(
       new CreateAccessKeyCommand({ UserName: iamUsername })
     );
@@ -138,12 +141,12 @@ export const createChallengeUser = async (username: string): Promise<ChallengeUs
       throw new Error('IAM access key was not returned');
     }
 
-    console.log('step 4 complete: access key created.');
+    log.info('step 4 complete: access key created.');
 
     const s3Key = `secrets/${username}.txt`;
     const s3Content = `next_password=${challengePassword}`;
 
-    console.log(`step 5: uploading secret file to s3 ${s3Key}.`);
+    log.info(`step 5: uploading secret file to s3 ${s3Key}.`);
     await s3Client.send(
       new PutObjectCommand({
         Bucket: CHALLENGE_BUCKET,
@@ -152,9 +155,9 @@ export const createChallengeUser = async (username: string): Promise<ChallengeUs
         ContentType: 'text/plain',
       })
     );
-    console.log('step 5 complete: secret file uploaded to s3.');
+    log.info('step 5 complete: secret file uploaded to s3.');
 
-    console.log(`successfully created challenge user ${username}.`);
+    log.info(`successfully created challenge user ${username}.`);
 
     return {
       access_key: accessKey.AccessKeyId,
@@ -162,10 +165,10 @@ export const createChallengeUser = async (username: string): Promise<ChallengeUs
       password: challengePassword,
     };
   } catch (error: unknown) {
-    console.error('error creating challenge user.', error);
+    log.error('error creating challenge user.', error);
 
     try {
-      console.log(`attempting cleanup for failed user creation ${username}.`);
+      log.info(`attempting cleanup for failed user creation ${username}.`);
       const iamUsername = `club_${username}`;
 
       try {
@@ -182,7 +185,7 @@ export const createChallengeUser = async (username: string): Promise<ChallengeUs
           }
         }
       } catch (cleanupError: unknown) {
-        console.error('error during policy cleanup.', cleanupError);
+        log.error('error during policy cleanup.', cleanupError);
       }
 
       try {
@@ -199,16 +202,16 @@ export const createChallengeUser = async (username: string): Promise<ChallengeUs
           );
         }
       } catch (cleanupError: unknown) {
-        console.error('error during access key cleanup.', cleanupError);
+        log.error('error during access key cleanup.', cleanupError);
       }
 
       try {
         await iamClient.send(new DeleteUserCommand({ UserName: iamUsername }));
       } catch (cleanupError: unknown) {
-        console.error('error during user cleanup.', cleanupError);
+        log.error('error during user cleanup.', cleanupError);
       }
     } catch (cleanupError: unknown) {
-      console.error('error during cleanup.', cleanupError);
+      log.error('error during cleanup.', cleanupError);
     }
 
     throw new Error(`Failed to create challenge user: ${getErrorMessage(error)}`, { cause: error });

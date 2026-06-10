@@ -1,4 +1,7 @@
 import mongoose from 'mongoose';
+import logger from './logger';
+
+const log = logger.child({ module: 'config-database' });
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -17,12 +20,12 @@ if (!cached) {
 
 const connectDB = async (): Promise<typeof mongoose | null> => {
   if (cached.conn && mongoose.connection.readyState === 1) {
-    console.log('database: using cached mongodb connection.');
+    log.info('database: using cached mongodb connection.');
     return cached.conn;
   }
 
   if (cached.conn && mongoose.connection.readyState !== 1) {
-    console.log('database: cached connection is not ready; reconnecting.');
+    log.info('database: cached connection is not ready; reconnecting.');
     cached.conn = null;
     cached.promise = null;
   }
@@ -37,9 +40,9 @@ const connectDB = async (): Promise<typeof mongoose | null> => {
       throw new Error('MONGODB_URI is required in Lambda environment');
     }
 
-    console.log('database: mongodb uri is missing in development mode.');
-    console.log('database: contact akrm al-hakimi for mongodb configuration.');
-    console.log('database: unavailable; server will continue without database operations.');
+    log.info('database: mongodb uri is missing in development mode.');
+    log.info('database: contact akrm al-hakimi for mongodb configuration.');
+    log.info('database: unavailable; server will continue without database operations.');
     return null;
   }
 
@@ -58,23 +61,23 @@ const connectDB = async (): Promise<typeof mongoose | null> => {
       heartbeatFrequencyMS: 10000,
     };
 
-    console.log('database: connecting to mongodb.');
+    log.info('database: connecting to mongodb.');
 
     cached.promise = mongoose
       .connect(mongoUri, options)
       .then((conn) => {
-        console.log(`database: connected to ${conn.connection.host}.`);
+        log.info(`database: connected to ${conn.connection.host}.`);
         return conn;
       })
       .catch((error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
-        console.error('database: connection error.', message);
+        log.error('database: connection error.', message);
         cached.promise = null;
         cached.conn = null;
         if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
           throw error;
         }
-        console.log('database: unavailable; continuing in development mode.');
+        log.info('database: unavailable; continuing in development mode.');
         return null;
       });
   }
@@ -86,13 +89,13 @@ const connectDB = async (): Promise<typeof mongoose | null> => {
 
     if (cached.conn && !hasErrorListener) {
       mongoose.connection.on('error', (err) => {
-        console.error('database: mongodb connection error.', err);
+        log.error('database: mongodb connection error.', err);
         cached.conn = null;
         cached.promise = null;
       });
 
       mongoose.connection.on('disconnected', () => {
-        console.log('database: disconnected from mongodb.');
+        log.info('database: disconnected from mongodb.');
         cached.conn = null;
         cached.promise = null;
       });
@@ -101,13 +104,13 @@ const connectDB = async (): Promise<typeof mongoose | null> => {
     return cached.conn;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('database: connection error.', message);
+    log.error('database: connection error.', message);
     cached.promise = null;
     cached.conn = null;
 
     if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
-      console.log('database: connection failed in development.');
-      console.log('database: unavailable; server will continue without database operations.');
+      log.info('database: connection failed in development.');
+      log.info('database: unavailable; server will continue without database operations.');
       return null;
     }
 
@@ -128,7 +131,7 @@ const checkConnection = async (): Promise<boolean> => {
     return false;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('database: health check failed.', message);
+    log.error('database: health check failed.', message);
     return false;
   }
 };

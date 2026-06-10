@@ -11,6 +11,9 @@ import eventRoutes from './routes/events';
 import newsletterRoutes from './routes/newsletter';
 import uploadRoutes from './routes/upload';
 import verifyRoutes from './routes/verify';
+import logger from './config/logger';
+
+const log = logger.child({ module: 'app' });
 
 dotenv.config();
 
@@ -36,9 +39,9 @@ const initDB = async (): Promise<void> => {
     try {
       await connectDB();
       dbInitialized = true;
-      console.log('database: initialized successfully.');
+      log.info('database: initialized successfully.');
     } catch (err: unknown) {
-      console.error('database: connection failed.', err);
+      log.error('database: connection failed.', err);
       dbInitialized = false;
       dbInitPromise = null;
       throw err;
@@ -50,11 +53,11 @@ const initDB = async (): Promise<void> => {
 
 if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
   initDB().catch((err: unknown) => {
-    console.error('database: initialization failed.', err);
+    log.error('database: initialization failed.', err);
   });
 } else {
   connectDB().catch((err: unknown) => {
-    console.error('database: connection failed.', err);
+    log.error('database: connection failed.', err);
   });
 }
 
@@ -125,7 +128,7 @@ app.use(async (req: Request, res: Response, next: NextFunction): Promise<void> =
 
       const finalCheck = await checkConnection();
       if (!finalCheck) {
-        console.error('database: not available after initialization attempt.');
+        log.error('database: not available after initialization attempt.');
         res.status(503).json({
           error: 'Service temporarily unavailable. Please try again.',
           message: 'Database connection unavailable',
@@ -133,7 +136,7 @@ app.use(async (req: Request, res: Response, next: NextFunction): Promise<void> =
         return;
       }
     } catch (error: unknown) {
-      console.error('database: initialization error.', error);
+      log.error('database: initialization error.', error);
       res.status(503).json({
         error: 'Service temporarily unavailable. Please try again.',
         message: 'Database connection failed',
@@ -167,7 +170,7 @@ app.use((_req: Request, res: Response): void => {
 });
 
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
-  console.error(err.stack || err);
+  log.error(err.stack || err);
   res.status(500).json({ message: 'Something went wrong!' });
 };
 

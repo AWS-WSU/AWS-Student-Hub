@@ -8,6 +8,9 @@ import User from '../models/User';
 import type { UserGrade } from '../models/User';
 import { createChallengeUser } from '../services/awsProvision';
 import { sendResetCode } from '../services/emailService';
+import logger from '../config/logger';
+
+const log = logger.child({ module: 'authController' });
 
 interface TokenUser {
   _id: unknown;
@@ -79,9 +82,9 @@ const generateDeviceId = (): string => {
 
 const generateTokens = (user: TokenUser, deviceId: string, rememberMe = false) => {
   if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    console.log('lambda environment detected.');
-    console.log('jwt secret exists.', !!process.env.JWT_SECRET);
-    console.log('jwt secret length.', process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0);
+    log.info('lambda environment detected.');
+    log.info('jwt secret exists.', !!process.env.JWT_SECRET);
+    log.info('jwt secret length.', process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0);
   }
 
   const accessToken = jwt.sign(
@@ -199,10 +202,10 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
 
     let awsCredentials: AuthResponseBody['awsCredentials'];
     try {
-      console.log(`creating aws challenge user for ${username}.`);
-      console.log('aws admin access key id exists.', !!process.env.AWS_ADMIN_ACCESS_KEY_ID);
-      console.log('aws admin secret access key exists.', !!process.env.AWS_ADMIN_SECRET_ACCESS_KEY);
-      console.log('aws s3 bucket.', process.env.AWS_S3_BUCKET);
+      log.info(`creating aws challenge user for ${username}.`);
+      log.info('aws admin access key id exists.', !!process.env.AWS_ADMIN_ACCESS_KEY_ID);
+      log.info('aws admin secret access key exists.', !!process.env.AWS_ADMIN_SECRET_ACCESS_KEY);
+      log.info('aws s3 bucket.', process.env.AWS_S3_BUCKET);
 
       const challengeUserResult = await createChallengeUser(username);
 
@@ -215,11 +218,11 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
         secretAccessKey: challengeUserResult.secret_key,
       };
 
-      console.log(`successfully created aws challenge user for ${username}.`);
-      console.log(`aws access key id prefix ${challengeUserResult.access_key.substring(0, 8)}.`);
+      log.info(`successfully created aws challenge user for ${username}.`);
+      log.info(`aws access key id prefix ${challengeUserResult.access_key.substring(0, 8)}.`);
     } catch (awsError: unknown) {
-      console.error(`failed to create aws challenge user for ${username}.`, awsError);
-      console.error('aws error details.', {
+      log.error(`failed to create aws challenge user for ${username}.`, awsError);
+      log.error('aws error details.', {
         message: getErrorMessage(awsError),
         code: getErrorCode(awsError),
         stack: awsError instanceof Error ? awsError.stack : undefined,
@@ -248,7 +251,7 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
 
     res.status(201).json(response);
   } catch (error: unknown) {
-    console.error('signup error.', error);
+    log.error('signup error.', error);
 
     if (getErrorCode(error) === 11000) {
       res.status(400).json({
@@ -310,7 +313,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     setImmediate(() => {
       user.lastLogin = new Date();
-      user.save().catch((err: unknown) => console.error('failed to update user data.', err));
+      user.save().catch((err: unknown) => log.error('failed to update user data.', err));
     });
 
     const userObj = user.toSafeObject();
@@ -327,7 +330,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       user: userObj,
     });
   } catch (error: unknown) {
-    console.error('login error.', error);
+    log.error('login error.', error);
 
     if (hasConnectionError(error)) {
       res.status(503).json({
@@ -365,7 +368,7 @@ export const getCurrentUser = async (req: Request, res: Response): Promise<void>
 
     res.json(userObj);
   } catch (error: unknown) {
-    console.error('get current user error.', error);
+    log.error('get current user error.', error);
     res.status(500).json({
       error: 'Server error while fetching user',
     });
@@ -401,7 +404,7 @@ export const checkUsername = async (req: Request, res: Response): Promise<void> 
       message: existingUser ? 'Username is already taken' : 'Username is available',
     });
   } catch (error: unknown) {
-    console.error('check username error.', error);
+    log.error('check username error.', error);
     res.status(500).json({
       success: false,
       message: 'Server error while checking username',
@@ -462,7 +465,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       user: user.toSafeObject(),
     });
   } catch (error: unknown) {
-    console.error('update profile error.', error);
+    log.error('update profile error.', error);
     res.status(500).json({
       error: 'Server error while updating profile',
     });
@@ -529,7 +532,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
       message: 'If an account exists with this email, a reset code has been sent.',
     });
   } catch (error: unknown) {
-    console.error('forgot password error.', error);
+    log.error('forgot password error.', error);
     res.status(500).json({
       error: 'Server error while processing password reset request',
     });
@@ -578,7 +581,7 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
       message: 'If the email matches the username, a reset code has been sent.',
     });
   } catch (error: unknown) {
-    console.error('email verification error.', error);
+    log.error('email verification error.', error);
     res.status(500).json({
       error: 'Server error while verifying email',
     });
@@ -626,7 +629,7 @@ export const verifyResetCode = async (req: Request, res: Response): Promise<void
       resetToken: code,
     });
   } catch (error: unknown) {
-    console.error('verify reset code error.', error);
+    log.error('verify reset code error.', error);
     res.status(500).json({
       error: 'Server error while verifying reset code',
     });
@@ -688,7 +691,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
       message: 'Password has been reset successfully. You can now sign in with your new password.',
     });
   } catch (error: unknown) {
-    console.error('reset password error.', error);
+    log.error('reset password error.', error);
     res.status(500).json({
       error: 'Server error while resetting password',
     });
@@ -709,7 +712,7 @@ export const getRecentUsers = async (req: Request, res: Response): Promise<void>
       users: recentUsers,
     });
   } catch (error: unknown) {
-    console.error('get recent users error.', error);
+    log.error('get recent users error.', error);
     if (hasConnectionError(error)) {
       res.status(503).json({
         success: false,
@@ -776,7 +779,7 @@ export const getPublicProfile = async (req: Request, res: Response): Promise<voi
       profile: profileData,
     });
   } catch (error: unknown) {
-    console.error('get public profile error.', error);
+    log.error('get public profile error.', error);
     res.status(500).json({
       error: 'Server error while fetching profile',
     });
@@ -811,7 +814,7 @@ export const searchUsers = async (req: Request, res: Response): Promise<void> =>
       users,
     });
   } catch (error: unknown) {
-    console.error('search users error.', error);
+    log.error('search users error.', error);
     res.status(500).json({
       success: false,
       error: 'Server error while searching users',
@@ -863,7 +866,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       user: user.toSafeObject(),
     });
   } catch (error: unknown) {
-    console.error('refresh token error.', error);
+    log.error('refresh token error.', error);
     res.status(500).json({
       error: 'Server error during token refresh',
     });
@@ -909,7 +912,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
       message: allDevices ? 'Logged out from all devices' : 'Logged out successfully',
     });
   } catch (error: unknown) {
-    console.error('logout error.', error);
+    log.error('logout error.', error);
     res.status(500).json({
       error: 'Server error during logout',
     });
@@ -969,7 +972,7 @@ export const getAwsCredentials = async (req: Request, res: Response): Promise<vo
       },
     });
   } catch (error: unknown) {
-    console.error('get aws credentials error.', error);
+    log.error('get aws credentials error.', error);
     res.status(500).json({
       error: 'Server error while retrieving AWS credentials',
     });
@@ -1001,7 +1004,7 @@ export const markAwsCredentialsViewed = async (req: Request, res: Response): Pro
       message: 'AWS credentials marked as viewed',
     });
   } catch (error: unknown) {
-    console.error('mark aws credentials viewed error.', error);
+    log.error('mark aws credentials viewed error.', error);
     res.status(500).json({
       error: 'Server error while updating credentials status',
     });

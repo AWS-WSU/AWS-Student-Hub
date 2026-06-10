@@ -5,6 +5,9 @@ import path from 'path';
 import { deleteFromS3, uploadToS3 } from '../config/aws';
 import { processImage } from '../middleware/upload';
 import User from '../models/User';
+import logger from '../config/logger';
+
+const log = logger.child({ module: 'uploadController' });
 
 const getErrorMessage = (error: unknown): string => {
   return error instanceof Error ? error.message : String(error);
@@ -47,12 +50,12 @@ export const uploadProfilePicture = async (req: Request, res: Response): Promise
     let mimetype = 'image/jpeg';
 
     try {
-      console.log('processing image with sharp.');
+      log.info('processing image with sharp.');
       imageBuffer = await processImage(req.file.buffer);
-      console.log('sharp processing successful.');
+      log.info('sharp processing successful.');
     } catch (sharpError: unknown) {
-      console.error('sharp processing failed.', sharpError);
-      console.log('using original image buffer as fallback.');
+      log.error('sharp processing failed.', sharpError);
+      log.info('using original image buffer as fallback.');
       imageBuffer = req.file.buffer;
       mimetype = req.file.mimetype;
     }
@@ -62,7 +65,7 @@ export const uploadProfilePicture = async (req: Request, res: Response): Promise
     const randomHash = crypto.randomBytes(8).toString('hex');
     const fileName = `profile-pictures/${userId}-${timestamp}-${randomHash}${fileExtension}`;
 
-    console.log('uploading to s3.', fileName);
+    log.info('uploading to s3.', fileName);
     const uploadResult = await uploadToS3(
       {
         buffer: imageBuffer,
@@ -70,7 +73,7 @@ export const uploadProfilePicture = async (req: Request, res: Response): Promise
       },
       fileName
     );
-    console.log('s3 upload successful.', uploadResult.Location);
+    log.info('s3 upload successful.', uploadResult.Location);
 
     if (
       user.profilePicture &&
@@ -84,7 +87,7 @@ export const uploadProfilePicture = async (req: Request, res: Response): Promise
           await deleteFromS3(oldKey);
         }
       } catch (deleteError: unknown) {
-        console.error('error deleting old profile picture.', deleteError);
+        log.error('error deleting old profile picture.', deleteError);
       }
     }
 
@@ -98,8 +101,8 @@ export const uploadProfilePicture = async (req: Request, res: Response): Promise
       user: user.toSafeObject(),
     });
   } catch (error: unknown) {
-    console.error('upload profile picture error.', error);
-    console.error('error stack.', getErrorStack(error));
+    log.error('upload profile picture error.', error);
+    log.error('error stack.', getErrorStack(error));
     res.status(500).json({
       success: false,
       message: 'Error uploading profile picture',

@@ -2,6 +2,9 @@ import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
 import User from '../models/User';
+import logger from '../config/logger';
+
+const log = logger.child({ module: 'auth' });
 
 interface AccessTokenPayload extends jwt.JwtPayload {
   id: string;
@@ -87,7 +90,7 @@ const checkJwt = async (req: Request, res: Response, next: NextFunction): Promis
       return;
     }
 
-    console.error('jwt verification error.', err);
+    log.error('jwt verification error.', err);
     res.status(401).json({
       error: 'Token is not valid',
     });

@@ -2,6 +2,9 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 
 import User from '../models/User';
+import logger from '../config/logger';
+
+const log = logger.child({ module: 'createSuperuser' });
 
 dotenv.config();
 
@@ -12,18 +15,18 @@ async function createSuperuser(email: string): Promise<void> {
     }
 
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('connected to mongodb.');
+    log.info('connected to mongodb.');
 
     const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
-      console.log(`user with email ${email} not found.`);
-      console.log('user must register first before being promoted to superuser.');
+      log.info(`user with email ${email} not found.`);
+      log.info('user must register first before being promoted to superuser.');
       process.exit(1);
     }
 
     if (user.role === 'superuser') {
-      console.log(`user ${email} is already a superuser.`);
+      log.info(`user ${email} is already a superuser.`);
       process.exit(0);
     }
 
@@ -32,27 +35,27 @@ async function createSuperuser(email: string): Promise<void> {
       status: 'active',
     });
 
-    console.log(`successfully promoted ${email} to superuser.`);
-    console.log('user details.');
-    console.log(`name: ${user.fullName}.`);
-    console.log(`username: ${user.username}.`);
-    console.log(`email: ${user.email}.`);
-    console.log(`previous role: ${user.role}.`);
-    console.log('new role: superuser.');
-    console.log('');
-    console.log('user can now.');
-    console.log('access admin dashboard at /admin.');
-    console.log('manage all users and roles.');
-    console.log('create other admins and moderators.');
-    console.log('ban/unban users.');
-    console.log('view system analytics.');
+    log.info(`successfully promoted ${email} to superuser.`);
+    log.info('user details.');
+    log.info(`name: ${user.fullName}.`);
+    log.info(`username: ${user.username}.`);
+    log.info(`email: ${user.email}.`);
+    log.info(`previous role: ${user.role}.`);
+    log.info('new role: superuser.');
+    log.info('');
+    log.info('user can now.');
+    log.info('access admin dashboard at /admin.');
+    log.info('manage all users and roles.');
+    log.info('create other admins and moderators.');
+    log.info('ban/unban users.');
+    log.info('view system analytics.');
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('error creating superuser.', message);
+    log.error('error creating superuser.', message);
     process.exit(1);
   } finally {
     await mongoose.disconnect();
-    console.log('disconnected from mongodb.');
+    log.info('disconnected from mongodb.');
     process.exit(0);
   }
 }
@@ -60,25 +63,25 @@ async function createSuperuser(email: string): Promise<void> {
 const email = process.argv[2];
 
 if (!email) {
-  console.log('email address is required.');
-  console.log('');
-  console.log('usage.');
-  console.log('   bun run create-superuser -- <email>');
-  console.log('');
-  console.log('example.');
-  console.log('   bun run create-superuser -- admin@example.com');
-  console.log('');
-  console.log('note: user must register through the website first before being promoted.');
+  log.info('email address is required.');
+  log.info('');
+  log.info('usage.');
+  log.info('   bun run create-superuser -- <email>');
+  log.info('');
+  log.info('example.');
+  log.info('   bun run create-superuser -- admin@example.com');
+  log.info('');
+  log.info('note: user must register through the website first before being promoted.');
   process.exit(1);
 }
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 if (!emailRegex.test(email)) {
-  console.log('invalid email format.');
+  log.info('invalid email format.');
   process.exit(1);
 }
 
-console.log(`creating superuser for ${email}.`);
-console.log('');
+log.info(`creating superuser for ${email}.`);
+log.info('');
 
 void createSuperuser(email);

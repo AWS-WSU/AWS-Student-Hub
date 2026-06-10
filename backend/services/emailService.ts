@@ -2,6 +2,9 @@ import nodemailer from 'nodemailer';
 
 import EmailQueue from '../models/EmailQueue';
 import type { EmailEventSnapshot } from '../models/EmailQueue';
+import logger from '../config/logger';
+
+const log = logger.child({ module: 'emailService' });
 
 interface EventNotificationData extends Omit<EmailEventSnapshot, 'startTime' | 'isRemote'> {
   _id?: unknown;
@@ -487,9 +490,9 @@ const queueFailedEmail = async (
       },
       { upsert: true, new: true }
     );
-    console.log(`queued failed email for retry ${email}.`);
+    log.info(`queued failed email for retry ${email}.`);
   } catch (queueError: unknown) {
-    console.error(`failed to queue email for ${email}.`, queueError);
+    log.error(`failed to queue email for ${email}.`, queueError);
   }
 };
 
@@ -554,7 +557,7 @@ export const processEmailQueue = async (batchSize = 10): Promise<QueueProcessing
         queuedEmail.completedAt = new Date();
         await queuedEmail.save();
         results.succeeded++;
-        console.log(`successfully sent queued email to ${queuedEmail.email}.`);
+        log.info(`successfully sent queued email to ${queuedEmail.email}.`);
 
         await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (error: unknown) {
@@ -565,14 +568,14 @@ export const processEmailQueue = async (batchSize = 10): Promise<QueueProcessing
         if (queuedEmail.attempts >= queuedEmail.maxAttempts) {
           queuedEmail.status = 'failed';
           results.permanentlyFailed++;
-          console.error(
+          log.error(
             `email to ${queuedEmail.email} permanently failed after ${queuedEmail.attempts} attempts.`
           );
         } else {
           queuedEmail.status = 'pending';
           queuedEmail.nextAttempt = getNextRetryTime(queuedEmail.attempts);
           results.failed++;
-          console.log(
+          log.info(
             `email to ${queuedEmail.email} failed, retry scheduled for ${queuedEmail.nextAttempt}.`
           );
         }
@@ -581,7 +584,7 @@ export const processEmailQueue = async (batchSize = 10): Promise<QueueProcessing
       }
     }
   } catch (error: unknown) {
-    console.error('error processing email queue.', error);
+    log.error('error processing email queue.', error);
   }
 
   return results;
