@@ -1,9 +1,37 @@
 import { useState, useRef, useCallback } from 'react';
+import type { ChangeEvent, MouseEvent } from 'react';
 import Cropper from 'react-easy-crop';
+import type { Area, Point } from 'react-easy-crop';
 import { eventsAPI } from '../utils/api';
 import { Mail } from 'lucide-react';
+import type { Event as HubEvent, EventFormPayload } from '../types/event';
 
-const easternToISO = (dateStr, timeStr) => {
+type EventFormErrors = Partial<Record<'title' | 'date' | 'time', string>>;
+
+type CropSource = {
+  url: string;
+  file: File;
+};
+
+type EmailStatus =
+  | null
+  | 'sending'
+  | {
+      success: true;
+      sent: number;
+      failed: number;
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+interface CreateEventModalProps {
+  onClose: () => void;
+  onEventCreated?: (event: HubEvent) => void;
+}
+
+const easternToISO = (dateStr: string, timeStr: string): string => {
   const testDate = new Date(`${dateStr}T12:00:00`);
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Detroit',
@@ -12,7 +40,7 @@ const easternToISO = (dateStr, timeStr) => {
   const parts = formatter.formatToParts(testDate);
   const offsetPart = parts.find((p) => p.type === 'timeZoneName');
   const offsetMatch = offsetPart?.value?.match(/GMT([+-]?\d+)/);
-  const offsetHours = offsetMatch ? parseInt(offsetMatch[1]) : -5;
+  const offsetHours = offsetMatch ? parseInt(offsetMatch[1], 10) : -5;
   const sign = offsetHours >= 0 ? '+' : '-';
   const absHours = Math.abs(offsetHours).toString().padStart(2, '0');
   const offsetStr = `${sign}${absHours}:00`;
@@ -20,7 +48,7 @@ const easternToISO = (dateStr, timeStr) => {
   return new Date(`${dateStr}T${timeStr}:00${offsetStr}`).toISOString();
 };
 
-function CreateEventModal({ onClose, onEventCreated }) {
+function CreateEventModal({ onClose, onEventCreated }: CreateEventModalProps) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -30,22 +58,22 @@ function CreateEventModal({ onClose, onEventCreated }) {
   const [directions, setDirections] = useState('');
   const [locationName, setLocationName] = useState('');
   const [meetupUrl, setMeetupUrl] = useState('');
-  const [thumbnail] = useState(null);
+  const [thumbnail] = useState<File | Blob | null>(null);
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<EventFormErrors>({});
   const [sendEmailNotification, setSendEmailNotification] = useState(false);
   const [emailCustomMessage, setEmailCustomMessage] = useState('');
-  const [emailStatus, setEmailStatus] = useState(null);
+  const [emailStatus, setEmailStatus] = useState<EmailStatus>(null);
 
-  const [cropSrc, setCropSrc] = useState(null);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [cropSrc, setCropSrc] = useState<CropSource | null>(null);
+  const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
-  const [croppedBlob, setCroppedBlob] = useState(null);
-  const fileInputRef = useRef(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const onFileChange = (e) => {
+  const onFileChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
     const url = URL.createObjectURL(f);
@@ -55,15 +83,15 @@ function CreateEventModal({ onClose, onEventCreated }) {
     setCroppedBlob(null);
   };
 
-  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+  const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area): void => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
-  const createCroppedImage = async (imageSrc, pixelCrop) => {
-    const image = await new Promise((resolve, reject) => {
+  const createCroppedImage = async (imageSrc: string, pixelCrop: Area): Promise<Blob | null> => {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
       img.addEventListener('load', () => resolve(img));
-      img.addEventListener('error', reject);
+      img.addEventListener('error', () => reject(new Error('Failed to load image for cropping')));
       img.src = imageSrc;
     });
 
@@ -71,6 +99,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
     canvas.width = pixelCrop.width;
     canvas.height = pixelCrop.height;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
 
     ctx.drawImage(
       image,
@@ -84,7 +113,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
       pixelCrop.height
     );
 
-    return new Promise((resolve) => {
+    return new Promise<Blob | null>((resolve) => {
       canvas.toBlob(
         (blob) => {
           resolve(blob);
@@ -95,7 +124,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
     });
   };
 
-  const saveCropped = async () => {
+  const saveCropped = async (): Promise<void> => {
     if (!croppedAreaPixels || !cropSrc) return;
     const blob = await createCroppedImage(cropSrc.url, croppedAreaPixels);
     if (!blob) return;
@@ -104,8 +133,8 @@ function CreateEventModal({ onClose, onEventCreated }) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const validateForm = () => {
-    const newErrors = {};
+  const validateForm = (): boolean => {
+    const newErrors: EventFormErrors = {};
     if (!title.trim()) newErrors.title = 'Title is required';
     if (!date) newErrors.date = 'Date is required';
     if (!time) newErrors.time = 'Time is required';
@@ -113,14 +142,14 @@ function CreateEventModal({ onClose, onEventCreated }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const submit = async () => {
+  const submit = async (): Promise<void> => {
     if (!validateForm()) return;
 
     setSubmitting(true);
     setEmailStatus(null);
     try {
       const startTime = easternToISO(date, time);
-      const payload = {
+      const payload: EventFormPayload = {
         title,
         startTime,
         isRemote: String(isRemote),
@@ -139,9 +168,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
       }
       const res = await eventsAPI.create(payload);
 
-      if (onEventCreated) {
-        onEventCreated(res.event);
-      }
+      onEventCreated?.(res.event);
 
       if (sendEmailNotification && res.event?._id) {
         setEmailStatus('sending');
@@ -149,13 +176,17 @@ function CreateEventModal({ onClose, onEventCreated }) {
           const emailRes = await eventsAPI.sendNotification(res.event._id, emailCustomMessage);
           setEmailStatus({
             success: true,
-            sent: emailRes.emailsSent,
-            failed: emailRes.emailsFailed,
+            sent: emailRes.emailsSent ?? 0,
+            failed: emailRes.emailsFailed ?? 0,
           });
           setTimeout(() => onClose(), 2000);
         } catch (emailError) {
           console.error('Error sending email notifications:', emailError);
-          setEmailStatus({ success: false, error: emailError.message });
+          setEmailStatus({
+            success: false,
+            error:
+              emailError instanceof Error ? emailError.message : 'Unable to send notifications',
+          });
           setTimeout(() => onClose(), 3000);
         }
       } else {
@@ -168,9 +199,11 @@ function CreateEventModal({ onClose, onEventCreated }) {
     }
   };
 
+  const emailResult = typeof emailStatus === 'object' && emailStatus !== null ? emailStatus : null;
+
   return (
     <div className="hub-modal-overlay" onClick={onClose}>
-      <div className="hub-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="hub-modal" onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
         <div className="hub-modal-header">Create Event</div>
         <div className="hub-modal-content">
           <div className="hub-form-row">
@@ -378,7 +411,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
                     resize: 'vertical',
                     fontFamily: 'inherit',
                   }}
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e: MouseEvent<HTMLTextAreaElement>) => e.stopPropagation()}
                 />
                 <div
                   style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}
@@ -408,7 +441,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
                 Sending email notifications...
               </div>
             )}
-            {emailStatus && emailStatus.success && (
+            {emailResult?.success && (
               <div
                 style={{
                   marginTop: '12px',
@@ -419,11 +452,11 @@ function CreateEventModal({ onClose, onEventCreated }) {
                   fontWeight: 500,
                 }}
               >
-                Successfully sent {emailStatus.sent} emails!
-                {emailStatus.failed > 0 && ` (${emailStatus.failed} failed)`}
+                Successfully sent {emailResult.sent} emails!
+                {emailResult.failed > 0 && ` (${emailResult.failed} failed)`}
               </div>
             )}
-            {emailStatus && emailStatus.success === false && (
+            {emailResult?.success === false && (
               <div
                 style={{
                   marginTop: '12px',
@@ -434,7 +467,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
                   fontWeight: 500,
                 }}
               >
-                Failed to send emails: {emailStatus.error}
+                Failed to send emails: {emailResult.error}
               </div>
             )}
           </div>

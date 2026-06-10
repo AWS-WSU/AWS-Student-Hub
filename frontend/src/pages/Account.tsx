@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -7,10 +8,45 @@ import './styles/Account.css';
 import { validateImageFile, compressImage } from '../utils/imageUtils';
 import { Target, Copy } from 'lucide-react';
 import CyberChallengeModal from '../components/CyberChallengeModal';
+import type { AwsCredentials } from '../types/auth';
+import type { User } from '../types/user';
+import type { Theme } from '../types/ui';
 
-const getStoredItem = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
+interface AccountProps {
+  theme?: Theme;
+}
 
-const programmingLanguages = [
+interface AccountUser extends Partial<User> {
+  name?: string;
+  picture?: string;
+  [key: string]: any;
+}
+
+interface AccountFormData {
+  name: string;
+  username: string;
+  email: string;
+  wantsEmails: boolean;
+  bio: string;
+  major: string;
+  grade: string;
+  programmingLanguages: string[];
+}
+
+type AccountField = keyof AccountFormData;
+type AccountTextField = 'name' | 'username' | 'email' | 'major';
+type AccountInputElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+
+type EditingState = Partial<Record<AccountField, boolean>>;
+type FieldLoadingState = Partial<Record<AccountField, boolean>>;
+
+const getStoredItem = (key: string): string | null =>
+  localStorage.getItem(key) || sessionStorage.getItem(key);
+
+const getErrorMessage = (err: unknown, fallback: string): string =>
+  err instanceof Error ? err.message : fallback;
+
+const programmingLanguages: string[] = [
   'JavaScript',
   'Python',
   'Java',
@@ -29,7 +65,7 @@ const programmingLanguages = [
   'SQL',
 ];
 
-const languageIcons = {
+const languageIcons: Record<string, string> = {
   JavaScript: '/js.svg',
   Python: '/py.svg',
   Java: '/java.svg',
@@ -50,9 +86,9 @@ const languageIcons = {
 
 const grades = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Other'];
 
-function Account({ theme: _theme }) {
-  const [profileImage, setProfileImage] = useState('/avatar.jpg');
-  const [isEditing, setIsEditing] = useState({
+function Account({ theme: _theme }: AccountProps) {
+  const [profileImage, setProfileImage] = useState<string>('/avatar.jpg');
+  const [isEditing, setIsEditing] = useState<EditingState>({
     name: false,
     username: false,
     bio: false,
@@ -60,7 +96,7 @@ function Account({ theme: _theme }) {
     grade: false,
     programmingLanguages: false,
   });
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<AccountFormData>({
     name: '',
     username: '',
     email: '',
@@ -70,27 +106,36 @@ function Account({ theme: _theme }) {
     grade: '',
     programmingLanguages: [],
   });
-  const [originalData, setOriginalData] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [fieldLoading, setFieldLoading] = useState({});
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [successField, setSuccessField] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
-  const [awsCredentials, setAwsCredentials] = useState(null);
-  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
-  const [credentialsPassword, setCredentialsPassword] = useState('');
-  const [isLoadingCredentials, setIsLoadingCredentials] = useState(false);
-  const [showCyberModal, setShowCyberModal] = useState(false);
-  const fileInputRef = useRef(null);
-  const inputRefs = useRef({});
+  const [originalData, setOriginalData] = useState<AccountFormData>({
+    name: '',
+    username: '',
+    email: '',
+    wantsEmails: false,
+    bio: '',
+    major: '',
+    grade: '',
+    programmingLanguages: [],
+  });
+  const [loading, setLoading] = useState<boolean>(false);
+  const [fieldLoading, setFieldLoading] = useState<FieldLoadingState>({});
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
+  const [successField, setSuccessField] = useState<AccountField | ''>('');
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [awsCredentials, setAwsCredentials] = useState<AwsCredentials | null>(null);
+  const [showCredentialsModal, setShowCredentialsModal] = useState<boolean>(false);
+  const [credentialsPassword, setCredentialsPassword] = useState<string>('');
+  const [isLoadingCredentials, setIsLoadingCredentials] = useState<boolean>(false);
+  const [showCyberModal, setShowCyberModal] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const inputRefs = useRef<Partial<Record<AccountField, AccountInputElement | null>>>({});
 
   const navigate = useNavigate();
   const { isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
   const { user: authUser, updateUser, uploadProfilePicture, getAwsCredentials } = useAuth();
 
   const isAuthenticated = isAuth0Authenticated || !!authUser;
-  const currentUser = auth0User || authUser;
+  const currentUser = (auth0User || authUser) as AccountUser | undefined;
   const isSocialLogin = !!auth0User;
 
   useEffect(() => {
@@ -121,16 +166,26 @@ function Account({ theme: _theme }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+  const handleInputChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    const nextValue =
+      e.target instanceof HTMLInputElement && e.target.type === 'checkbox'
+        ? e.target.checked
+        : value;
+
+    setFormData(
+      (prev) =>
+        ({
+          ...prev,
+          [name]: nextValue,
+        }) as AccountFormData
+    );
     setError('');
   };
 
-  const handleLanguageToggle = (language) => {
+  const handleLanguageToggle = (language: string) => {
     setFormData((prev) => ({
       ...prev,
       programmingLanguages: prev.programmingLanguages.includes(language)
@@ -140,11 +195,14 @@ function Account({ theme: _theme }) {
     setError('');
   };
 
-  const handleCancel = (field) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: originalData[field],
-    }));
+  const handleCancel = (field: AccountField) => {
+    setFormData(
+      (prev) =>
+        ({
+          ...prev,
+          [field]: originalData[field],
+        }) as AccountFormData
+    );
     setIsEditing((prev) => ({
       ...prev,
       [field]: false,
@@ -152,20 +210,20 @@ function Account({ theme: _theme }) {
     setError('');
   };
 
-  const handleFileSelect = (event) => {
-    const file = event.target.files[0];
+  const handleFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (file) {
       handleProfilePictureUpload(file);
     }
   };
 
-  const handleProfilePictureUpload = async (file) => {
+  const handleProfilePictureUpload = async (file: File) => {
     if (!file) return;
 
     // Validate file using utility
     const validation = validateImageFile(file, 5);
     if (!validation.valid) {
-      setError(validation.error);
+      setError(validation.error || 'Please select a valid image file');
       return;
     }
 
@@ -176,17 +234,17 @@ function Account({ theme: _theme }) {
     try {
       // Compress image for better upload performance
       const compressedFile = await compressImage(file, 400, 0.9);
-      const finalFile = new File([compressedFile], file.name, {
+      const finalFile = new File([compressedFile || file], file.name, {
         type: 'image/jpeg',
         lastModified: Date.now(),
       });
 
       const response = await uploadProfilePicture(finalFile);
-      setProfileImage(response.profilePicture);
+      setProfileImage(String(response.profilePicture || '/avatar.jpg'));
       setSuccess('Profile picture updated successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err.message || 'Failed to upload profile picture');
+      setError(getErrorMessage(err, 'Failed to upload profile picture'));
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -195,7 +253,7 @@ function Account({ theme: _theme }) {
     }
   };
 
-  const handleFieldClick = (field) => {
+  const handleFieldClick = (field: AccountField) => {
     if (isSocialLogin && (field === 'name' || field === 'username')) return;
 
     setIsEditing((prev) => ({
@@ -207,13 +265,11 @@ function Account({ theme: _theme }) {
     // So we use a timeout to ensure it does. This also
     // Stops the text from being selected when clicking the field.
     setTimeout(() => {
-      if (inputRefs.current[field]) {
-        inputRefs.current[field].focus();
-      }
+      inputRefs.current[field]?.focus();
     }, 100);
   };
 
-  const handleInputBlur = async (field) => {
+  const handleInputBlur = async (field: AccountField) => {
     if (formData[field] !== originalData[field]) {
       await handleSave(field);
     } else {
@@ -224,7 +280,7 @@ function Account({ theme: _theme }) {
     }
   };
 
-  const handleInputKeyDown = async (e, field) => {
+  const handleInputKeyDown = async (e: KeyboardEvent<AccountInputElement>, field: AccountField) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       if (formData[field] !== originalData[field]) {
@@ -236,10 +292,13 @@ function Account({ theme: _theme }) {
         }));
       }
     } else if (e.key === 'Escape') {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: originalData[field],
-      }));
+      setFormData(
+        (prev) =>
+          ({
+            ...prev,
+            [field]: originalData[field],
+          }) as AccountFormData
+      );
       setIsEditing((prev) => ({
         ...prev,
         [field]: false,
@@ -248,7 +307,7 @@ function Account({ theme: _theme }) {
     }
   };
 
-  const handleSave = async (field) => {
+  const handleSave = async (field: AccountField) => {
     setFieldLoading((prev) => ({ ...prev, [field]: true }));
     setError('');
     setSuccess('');
@@ -267,7 +326,7 @@ function Account({ theme: _theme }) {
           }
         );
 
-        const data = await response.json();
+        const data = (await response.json()) as { available?: boolean; message?: string };
         if (!response.ok) {
           throw new Error(data.message || 'Username validation failed');
         }
@@ -277,7 +336,7 @@ function Account({ theme: _theme }) {
         }
       }
 
-      const updateData = {};
+      const updateData: Record<string, any> = {};
       if (field === 'name') {
         updateData.fullName = formData.name;
       } else if (field === 'username') {
@@ -294,10 +353,13 @@ function Account({ theme: _theme }) {
 
       await updateUser(updateData);
 
-      setOriginalData((prev) => ({
-        ...prev,
-        [field]: formData[field],
-      }));
+      setOriginalData(
+        (prev) =>
+          ({
+            ...prev,
+            [field]: formData[field],
+          }) as AccountFormData
+      );
 
       setIsEditing((prev) => ({
         ...prev,
@@ -307,11 +369,14 @@ function Account({ theme: _theme }) {
       setSuccessField(field);
       setTimeout(() => setSuccessField(''), 600);
     } catch (err) {
-      setError(err.message || `Failed to update ${field}`);
-      setFormData((prev) => ({
-        ...prev,
-        [field]: originalData[field],
-      }));
+      setError(getErrorMessage(err, `Failed to update ${field}`));
+      setFormData(
+        (prev) =>
+          ({
+            ...prev,
+            [field]: originalData[field],
+          }) as AccountFormData
+      );
       setIsEditing((prev) => ({
         ...prev,
         [field]: false,
@@ -343,7 +408,7 @@ function Account({ theme: _theme }) {
     }
   };
 
-  const handleRevealCredentials = async (e) => {
+  const handleRevealCredentials = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!credentialsPassword) {
       setError('Password is required');
@@ -362,7 +427,7 @@ function Account({ theme: _theme }) {
       setSuccess('AWS credentials revealed successfully!');
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
-      setError(err.message || 'Failed to retrieve AWS credentials');
+      setError(getErrorMessage(err, 'Failed to retrieve AWS credentials'));
     } finally {
       setIsLoadingCredentials(false);
     }
@@ -376,7 +441,13 @@ function Account({ theme: _theme }) {
     }
   };
 
-  const renderEditableField = (field, label, value, placeholder, readonly = false) => {
+  const renderEditableField = (
+    field: AccountTextField,
+    label: string,
+    value: string,
+    placeholder: string,
+    readonly = false
+  ) => {
     const isCurrentlyEditing = isEditing[field];
     const isFieldLoading = fieldLoading[field];
     const showSuccessFlash = successField === field;
@@ -401,7 +472,9 @@ function Account({ theme: _theme }) {
 
           <div className={`edit-overlay ${isCurrentlyEditing ? 'active' : ''}`}>
             <input
-              ref={(el) => (inputRefs.current[field] = el)}
+              ref={(el) => {
+                inputRefs.current[field] = el;
+              }}
               type="text"
               name={field}
               value={formData[field]}
@@ -490,8 +563,8 @@ function Account({ theme: _theme }) {
                   alt="Profile"
                   className="profile-picture"
                   onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = '/avatar.jpg';
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/avatar.jpg';
                     setProfileImage('/avatar.jpg');
                   }}
                   referrerPolicy="no-referrer"
@@ -572,7 +645,9 @@ function Account({ theme: _theme }) {
 
                   <div className={`edit-overlay ${isEditing.bio ? 'active' : ''}`}>
                     <textarea
-                      ref={(el) => (inputRefs.current.bio = el)}
+                      ref={(el) => {
+                        inputRefs.current.bio = el;
+                      }}
                       name="bio"
                       value={formData.bio}
                       onChange={handleInputChange}
@@ -629,7 +704,9 @@ function Account({ theme: _theme }) {
 
                   <div className={`edit-overlay ${isEditing.grade ? 'active' : ''}`}>
                     <select
-                      ref={(el) => (inputRefs.current.grade = el)}
+                      ref={(el) => {
+                        inputRefs.current.grade = el;
+                      }}
                       name="grade"
                       value={formData.grade}
                       onChange={handleInputChange}

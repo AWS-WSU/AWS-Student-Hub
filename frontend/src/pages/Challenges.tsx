@@ -3,14 +3,31 @@ import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Target, Star, Trophy } from 'lucide-react';
+import type { ThemeProps } from '../types';
 import './styles/Challenges.css';
 import '../pages/styles/Landing.css';
 
-function Challenges({ theme: _theme }) {
+type ChallengeTab = 'all' | 'single' | 'multi' | 'completed';
+type ChallengeType = 'single' | 'multi';
+type ChallengeDifficulty = 'Easy' | 'Medium' | 'Hard' | string;
+
+interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  difficulty: ChallengeDifficulty;
+  points: number;
+  type: ChallengeType;
+  completed?: boolean;
+  completedParts?: number;
+  parts?: number;
+}
+
+function Challenges({ theme: _theme }: ThemeProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('all');
-  const [challenges] = useState([]);
+  const [activeTab, setActiveTab] = useState<ChallengeTab>('all');
+  const [challenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,7 +49,7 @@ function Challenges({ theme: _theme }) {
     return true;
   });
 
-  const getDifficultyColor = (difficulty) => {
+  const getDifficultyColor = (difficulty: ChallengeDifficulty): string => {
     switch (difficulty) {
       case 'Easy':
         return '#4ade80';

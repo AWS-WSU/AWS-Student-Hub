@@ -1,12 +1,22 @@
 import { useState } from 'react';
+import type { MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, Copy } from 'lucide-react';
+import type { AwsCredentials } from '../types/auth';
 import './styles/CyberChallengeModal.css';
 
-function CyberChallengeModal({ isOpen, onClose, awsCredentials }) {
-  const [copiedField, setCopiedField] = useState(null);
+type CopiedField = 'accessKey' | 'secretKey' | 'region';
 
-  const copyToClipboard = async (text, field) => {
+interface CyberChallengeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  awsCredentials: AwsCredentials | null;
+}
+
+function CyberChallengeModal({ isOpen, onClose, awsCredentials }: CyberChallengeModalProps) {
+  const [copiedField, setCopiedField] = useState<CopiedField | null>(null);
+
+  const copyToClipboard = async (text: string, field: CopiedField): Promise<void> => {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedField(field);
@@ -32,7 +42,7 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }) {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.8, opacity: 0 }}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
         >
           <div className="cyber-modal-header">
             <div className="challenge-icon">🔐</div>

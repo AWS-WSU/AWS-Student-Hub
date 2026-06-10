@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { ChangeEvent, FocusEventHandler, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -8,23 +9,110 @@ import { authAPI } from '../utils/api';
 import { Check, Circle } from 'lucide-react';
 import CyberChallengeModal from '../components/CyberChallengeModal';
 import './styles/Auth.css';
+import type { AuthResponse, AwsCredentials } from '../types/auth';
+import type { Theme } from '../types/ui';
+import type { User } from '../types/user';
 
-const PasswordRequirements = ({ password, isVisible }) => {
+interface AuthProps {
+  theme?: Theme;
+}
+
+interface AuthUserLike extends Partial<User> {
+  name?: string;
+  picture?: string;
+  [key: string]: any;
+}
+
+interface PasswordRequirementsProps {
+  password: string;
+  isVisible: boolean;
+}
+
+type PasswordVisibilityField =
+  | 'password'
+  | 'confirmPassword'
+  | 'newPassword'
+  | 'confirmResetPassword';
+
+type PasswordVisibilityState = Record<PasswordVisibilityField, boolean>;
+
+interface PasswordInputProps {
+  name: string;
+  placeholder: string;
+  value: string;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onFocus?: FocusEventHandler<HTMLInputElement>;
+  onBlur?: FocusEventHandler<HTMLInputElement>;
+  required?: boolean;
+  minLength?: number;
+  showField?: PasswordVisibilityField;
+  showPassword: PasswordVisibilityState;
+  togglePasswordVisibility: (field: PasswordVisibilityField) => void;
+}
+
+interface ResetData {
+  identifier: string;
+  email: string;
+  code: string;
+  newPassword: string;
+  confirmPassword: string;
+  censoredEmail: string;
+  needsEmailVerification: boolean;
+}
+
+interface AuthFormData {
+  username: string;
+  fullName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  rememberMe: boolean;
+}
+
+type ForgotPasswordStep =
+  | 'forgot-password'
+  | 'verify-email'
+  | 'verify-code'
+  | 'reset-password'
+  | null;
+
+type AuthRequestData = Omit<AuthFormData, 'confirmPassword'>;
+
+interface ForgotPasswordResponse {
+  needsEmailVerification?: boolean;
+  censoredEmail?: string;
+  [key: string]: any;
+}
+
+const initialResetData: ResetData = {
+  identifier: '',
+  email: '',
+  code: '',
+  newPassword: '',
+  confirmPassword: '',
+  censoredEmail: '',
+  needsEmailVerification: false,
+};
+
+const getErrorMessage = (err: unknown, fallback: string): string =>
+  err instanceof Error ? err.message : fallback;
+
+const PasswordRequirements = ({ password, isVisible }: PasswordRequirementsProps) => {
   const requirements = [
     {
-      test: (pwd) => pwd.length >= 6,
+      test: (pwd: string) => pwd.length >= 6,
       text: 'At least 6 characters long',
     },
     {
-      test: (pwd) => /\d/.test(pwd),
+      test: (pwd: string) => /\d/.test(pwd),
       text: 'Contains at least one number',
     },
     {
-      test: (pwd) => /[A-Z]/.test(pwd),
+      test: (pwd: string) => /[A-Z]/.test(pwd),
       text: 'Contains at least one uppercase letter',
     },
     {
-      test: (pwd) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pwd),
+      test: (pwd: string) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pwd),
       text: 'Contains at least one special character',
     },
   ];
@@ -66,8 +154,8 @@ const PasswordInput = ({
   showField,
   showPassword,
   togglePasswordVisibility,
-}) => {
-  const fieldKey = showField || name;
+}: PasswordInputProps) => {
+  const fieldKey = showField || (name as PasswordVisibilityField);
   return (
     <div className="form-group password-input-container">
       <input
@@ -96,24 +184,16 @@ const PasswordInput = ({
   );
 };
 
-function Auth({ theme }) {
+function Auth({ theme }: AuthProps) {
   const [searchParams] = useSearchParams();
-  const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup');
+  const [isLogin, setIsLogin] = useState<boolean>(searchParams.get('mode') !== 'signup');
   const redirectPath = searchParams.get('redirect') || '/';
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
-  const [forgotPasswordStep, setForgotPasswordStep] = useState(null);
-  const [resetData, setResetData] = useState({
-    identifier: '',
-    email: '',
-    code: '',
-    newPassword: '',
-    confirmPassword: '',
-    censoredEmail: '',
-    needsEmailVerification: false,
-  });
-  const [formData, setFormData] = useState({
+  const [error, setError] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState<boolean>(false);
+  const [forgotPasswordStep, setForgotPasswordStep] = useState<ForgotPasswordStep>(null);
+  const [resetData, setResetData] = useState<ResetData>(initialResetData);
+  const [formData, setFormData] = useState<AuthFormData>({
     username: '',
     fullName: '',
     email: '',
@@ -121,14 +201,14 @@ function Auth({ theme }) {
     confirmPassword: '',
     rememberMe: false,
   });
-  const [showPassword, setShowPassword] = useState({
+  const [showPassword, setShowPassword] = useState<PasswordVisibilityState>({
     password: false,
     confirmPassword: false,
     newPassword: false,
     confirmResetPassword: false,
   });
-  const [showCyberModal, setShowCyberModal] = useState(false);
-  const [awsCredentials, setAwsCredentials] = useState(null);
+  const [showCyberModal, setShowCyberModal] = useState<boolean>(false);
+  const [awsCredentials, setAwsCredentials] = useState<AwsCredentials | null>(null);
 
   const { loginWithRedirect, isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
   const {
@@ -143,7 +223,7 @@ function Auth({ theme }) {
 
   useEffect(() => {
     if ((authUser || (isAuth0Authenticated && auth0User)) && !isLoading) {
-      const currentUser = auth0User || authUser;
+      const currentUser = (auth0User || authUser) as AuthUserLike | undefined;
 
       if (
         currentUser &&
@@ -194,31 +274,38 @@ function Auth({ theme }) {
 
   console.log('Auth render - showCyberModal:', showCyberModal, 'awsCredentials:', !!awsCredentials);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value,
-    });
+    setFormData(
+      (prev) =>
+        ({
+          ...prev,
+          [name]: type === 'checkbox' ? checked : value,
+        }) as AuthFormData
+    );
     setError('');
   };
 
-  const handleResetInputChange = (e) => {
-    setResetData({
-      ...resetData,
-      [e.target.name]: e.target.value,
-    });
+  const handleResetInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setResetData(
+      (prev) =>
+        ({
+          ...prev,
+          [name]: value,
+        }) as ResetData
+    );
     setError('');
   };
 
-  const togglePasswordVisibility = (field) => {
+  const togglePasswordVisibility = (field: PasswordVisibilityField) => {
     setShowPassword((prev) => ({
       ...prev,
       [field]: !prev[field],
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
@@ -228,15 +315,18 @@ function Auth({ theme }) {
         throw new Error('Passwords do not match');
       }
 
-      const { confirmPassword: _, rememberMe, ...authData } = formData;
-      authData.rememberMe = rememberMe;
+      const { confirmPassword: _confirmPassword, ...authData } = formData;
+      const requestData: AuthRequestData = authData;
 
-      const timeoutPromise = new Promise((_, reject) =>
+      const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Connection timeout - backend may be starting up')), 5000)
       );
 
       if (isLogin) {
-        const loginResult = await Promise.race([login(authData), timeoutPromise]);
+        const loginResult = (await Promise.race([
+          login(requestData),
+          timeoutPromise,
+        ])) as AuthResponse;
         console.log('Login result:', loginResult);
 
         if (
@@ -259,7 +349,10 @@ function Auth({ theme }) {
         setIsLoading(false);
         navigate(redirectPath, { replace: true });
       } else {
-        const signupResult = await Promise.race([signup(authData), timeoutPromise]);
+        const signupResult = (await Promise.race([
+          signup(requestData),
+          timeoutPromise,
+        ])) as AuthResponse;
         console.log('Signup result:', signupResult);
 
         if (signupResult && signupResult.awsCredentials) {
@@ -274,30 +367,30 @@ function Auth({ theme }) {
         navigate(redirectPath, { replace: true });
       }
     } catch (err) {
-      setError(err.message || 'Authentication failed');
+      setError(getErrorMessage(err, 'Authentication failed'));
       setIsLoading(false);
     }
   };
 
-  const handleForgotPassword = async (e) => {
+  const handleForgotPassword = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
     try {
-      const timeoutPromise = new Promise((_, reject) =>
+      const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Request timeout - please check your connection')), 10000)
       );
 
-      const data = await Promise.race([
+      const data = (await Promise.race([
         authAPI.forgotPassword(resetData.identifier),
         timeoutPromise,
-      ]);
+      ])) as ForgotPasswordResponse;
 
       if (data.needsEmailVerification) {
         setResetData((prev) => ({
           ...prev,
-          censoredEmail: data.censoredEmail,
+          censoredEmail: data.censoredEmail || '',
           needsEmailVerification: true,
         }));
         setForgotPasswordStep('verify-email');
@@ -306,13 +399,13 @@ function Auth({ theme }) {
         showToast('Reset code sent to your email address', 'success');
       }
     } catch (err) {
-      setError(err.message || 'Failed to send reset code');
+      setError(getErrorMessage(err, 'Failed to send reset code'));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleVerifyEmail = async (e) => {
+  const handleVerifyEmail = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
@@ -323,13 +416,13 @@ function Auth({ theme }) {
       setForgotPasswordStep('verify-code');
       showToast('Reset code sent to your email address', 'success');
     } catch (err) {
-      setError(err.message);
+      setError(getErrorMessage(err, 'Failed to verify email'));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleVerifyCode = async (e) => {
+  const handleVerifyCode = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
@@ -340,13 +433,13 @@ function Auth({ theme }) {
       setForgotPasswordStep('reset-password');
       showToast('Code verified successfully', 'success');
     } catch (err) {
-      setError(err.message);
+      setError(getErrorMessage(err, 'Failed to verify reset code'));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleResetPassword = async (e) => {
+  const handleResetPassword = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
@@ -359,15 +452,7 @@ function Auth({ theme }) {
       await authAPI.resetPassword(resetData.identifier, resetData.code, resetData.newPassword);
 
       setForgotPasswordStep(null);
-      setResetData({
-        identifier: '',
-        email: '',
-        code: '',
-        newPassword: '',
-        confirmPassword: '',
-        censoredEmail: '',
-        needsEmailVerification: false,
-      });
+      setResetData(initialResetData);
       setError('');
       showToast(
         'Password reset successful! You can now sign in with your new password.',
@@ -375,7 +460,7 @@ function Auth({ theme }) {
         5000
       );
     } catch (err) {
-      setError(err.message);
+      setError(getErrorMessage(err, 'Failed to reset password'));
     } finally {
       setIsLoading(false);
     }
@@ -401,15 +486,7 @@ function Auth({ theme }) {
 
   const resetForgotPassword = () => {
     setForgotPasswordStep(null);
-    setResetData({
-      identifier: '',
-      email: '',
-      code: '',
-      newPassword: '',
-      confirmPassword: '',
-      censoredEmail: '',
-      needsEmailVerification: false,
-    });
+    setResetData(initialResetData);
     setError('');
   };
 
@@ -593,7 +670,7 @@ function Auth({ theme }) {
                   placeholder="6-Digit Code"
                   value={resetData.code}
                   onChange={handleResetInputChange}
-                  maxLength="6"
+                  maxLength={6}
                   pattern="[0-9]{6}"
                   required
                 />
@@ -632,7 +709,7 @@ function Auth({ theme }) {
                 placeholder="New Password"
                 value={resetData.newPassword}
                 onChange={handleResetInputChange}
-                minLength="8"
+                minLength={8}
                 required
                 showField="newPassword"
                 showPassword={showPassword}
@@ -643,7 +720,7 @@ function Auth({ theme }) {
                 placeholder="Confirm New Password"
                 value={resetData.confirmPassword}
                 onChange={handleResetInputChange}
-                minLength="8"
+                minLength={8}
                 required
                 showField="confirmResetPassword"
                 showPassword={showPassword}

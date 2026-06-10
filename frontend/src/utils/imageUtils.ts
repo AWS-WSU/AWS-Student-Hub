@@ -3,7 +3,7 @@
 /**
  * Get optimized image URL with fallback
  */
-export const getImageUrl = (url, fallback = '/avatar.jpg') => {
+export const getImageUrl = (url?: string | null, fallback = '/avatar.jpg'): string => {
   if (!url || url === '/avatar.jpg') {
     return fallback;
   }
@@ -20,7 +20,7 @@ export const getImageUrl = (url, fallback = '/avatar.jpg') => {
 /**
  * Preload an image and return a promise
  */
-export const preloadImage = (src) => {
+export const preloadImage = (src: string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
@@ -36,7 +36,7 @@ export const preloadImage = (src) => {
 /**
  * Create a blob URL from file for immediate preview
  */
-export const createPreviewUrl = (file) => {
+export const createPreviewUrl = (file?: Blob | MediaSource | null): string | null => {
   if (!file) return null;
   return URL.createObjectURL(file);
 };
@@ -44,7 +44,7 @@ export const createPreviewUrl = (file) => {
 /**
  * Clean up blob URLs to prevent memory leaks
  */
-export const revokePreviewUrl = (url) => {
+export const revokePreviewUrl = (url?: string | null): void => {
   if (url && url.startsWith('blob:')) {
     URL.revokeObjectURL(url);
   }
@@ -53,10 +53,18 @@ export const revokePreviewUrl = (url) => {
 /**
  * Compress image file for upload
  */
-export const compressImage = (file, maxWidth = 400, quality = 0.9) => {
+export const compressImage = (
+  file: File | Blob,
+  maxWidth = 400,
+  quality = 0.9
+): Promise<Blob | null> => {
   return new Promise((resolve) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      resolve(null);
+      return;
+    }
     const img = new Image();
 
     img.onload = () => {
@@ -86,14 +94,22 @@ export const compressImage = (file, maxWidth = 400, quality = 0.9) => {
       canvas.toBlob(resolve, 'image/jpeg', quality);
     };
 
-    img.src = createPreviewUrl(file);
+    const previewUrl = createPreviewUrl(file);
+    if (!previewUrl) {
+      resolve(null);
+      return;
+    }
+    img.src = previewUrl;
   });
 };
 
 /**
  * Validate image file
  */
-export const validateImageFile = (file, maxSizeMB = 5) => {
+export const validateImageFile = (
+  file?: File | null,
+  maxSizeMB = 5
+): { valid: boolean; error?: string } => {
   const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
   if (!file) {
@@ -114,7 +130,9 @@ export const validateImageFile = (file, maxSizeMB = 5) => {
 /**
  * Get image dimensions from file
  */
-export const getImageDimensions = (file) => {
+export const getImageDimensions = (
+  file: File | Blob
+): Promise<{ width: number; height: number }> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -122,6 +140,11 @@ export const getImageDimensions = (file) => {
       URL.revokeObjectURL(img.src);
     };
     img.onerror = reject;
-    img.src = createPreviewUrl(file);
+    const previewUrl = createPreviewUrl(file);
+    if (!previewUrl) {
+      reject(new Error('Unable to create image preview URL'));
+      return;
+    }
+    img.src = previewUrl;
   });
 };

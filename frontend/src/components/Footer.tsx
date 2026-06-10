@@ -1,15 +1,17 @@
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { newsletterAPI } from '../utils/api';
+import type { ThemeProps } from '../types/ui';
 import './styles/Footer.css';
 
-function Footer({ theme }) {
+function Footer({ theme }: ThemeProps) {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState({ text: '', type: '' });
+  const [message, setMessage] = useState<{ text?: string; type: string }>({ text: '', type: '' });
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!email.trim()) {
@@ -32,7 +34,8 @@ function Footer({ theme }) {
     } catch (error) {
       console.error('Newsletter subscription error:', error);
       setMessage({
-        text: error.message || 'Unable to subscribe. Please try again later.',
+        text:
+          error instanceof Error ? error.message : 'Unable to subscribe. Please try again later.',
         type: 'error',
       });
     } finally {

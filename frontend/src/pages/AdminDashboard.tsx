@@ -5,8 +5,53 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { adminAPI } from '../utils/api';
 import './styles/AdminDashboard.css';
+import type { AdminStats, AdminUser, EmailQueueEntry } from '../types/admin';
+import type { Theme } from '../types/ui';
+import type { UserRole, UserStatus } from '../types/user';
 
-const DashBoardIcon = ({ className }) => (
+interface AdminDashboardProps {
+  theme?: Theme;
+}
+
+interface IconProps {
+  className?: string;
+}
+
+type AdminTab = 'dashboard' | 'users' | 'queue';
+type RoleFilter = UserRole | '';
+type StatusFilter = UserStatus | '';
+type QueueStats = Record<string, any>;
+
+interface DashboardStats extends AdminStats {
+  newsletterSubscribers?: number;
+}
+
+interface DashboardQueueEntry extends EmailQueueEntry {
+  _id?: string;
+  id?: string;
+  fullName?: string;
+  email?: string;
+  eventSnapshot?: {
+    title?: string;
+    [key: string]: any;
+  };
+  status?: string;
+  attempts?: number;
+  createdAt?: string;
+}
+
+const adminRoles: UserRole[] = ['moderator', 'admin', 'superuser'];
+
+const getErrorMessage = (err: unknown, fallback: string): string =>
+  err instanceof Error ? err.message : fallback;
+
+const getUserId = (targetUser?: AdminUser | null): string =>
+  String(targetUser?._id || targetUser?.id || '');
+
+const getQueueEntryId = (entry?: DashboardQueueEntry | null): string =>
+  String(entry?._id || entry?.id || '');
+
+const DashBoardIcon = ({ className }: IconProps) => (
   <img
     src="/dashboard.svg"
     alt="Dashboard"
@@ -15,7 +60,7 @@ const DashBoardIcon = ({ className }) => (
   />
 );
 
-const AccountIcon = ({ className }) => (
+const AccountIcon = ({ className }: IconProps) => (
   <img
     src="/users.svg"
     alt="User"
@@ -24,7 +69,7 @@ const AccountIcon = ({ className }) => (
   />
 );
 
-const ActivityIcon = ({ className }) => (
+const ActivityIcon = ({ className }: IconProps) => (
   <img
     src="/trend.svg"
     alt="Activity"
@@ -33,7 +78,7 @@ const ActivityIcon = ({ className }) => (
   />
 );
 
-const CheckIcon = ({ className }) => (
+const CheckIcon = ({ className }: IconProps) => (
   <img
     src="/activity.svg"
     alt="Check"
@@ -42,7 +87,7 @@ const CheckIcon = ({ className }) => (
   />
 );
 
-const EyeClosedIcon = ({ className }) => (
+const EyeClosedIcon = ({ className }: IconProps) => (
   <img
     src="/ban.svg"
     alt="Eye Closed"
@@ -51,11 +96,11 @@ const EyeClosedIcon = ({ className }) => (
   />
 );
 
-const AwsIcon = ({ className }) => (
+const AwsIcon = ({ className }: IconProps) => (
   <img src="/aws.svg" alt="AWS" className={className} style={{ width: '24px', height: '24px' }} />
 );
 
-const GmailIcon = ({ className }) => (
+const GmailIcon = ({ className }: IconProps) => (
   <img
     src="/email.svg"
     alt="Gmail"
@@ -64,36 +109,36 @@ const GmailIcon = ({ className }) => (
   />
 );
 
-function AdminDashboard({ theme }) {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [stats, setStats] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [error, setError] = useState('');
+function AdminDashboard({ theme }: AdminDashboardProps) {
+  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [usersLoading, setUsersLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('');
 
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [showBanModal, setShowBanModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [banReason, setBanReason] = useState('');
-  const [newRole, setNewRole] = useState('');
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [showRoleModal, setShowRoleModal] = useState<boolean>(false);
+  const [showBanModal, setShowBanModal] = useState<boolean>(false);
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [banReason, setBanReason] = useState<string>('');
+  const [newRole, setNewRole] = useState<RoleFilter>('');
 
   // Email Queue state
-  const [queueStats, setQueueStats] = useState(null);
-  const [queueEntries, setQueueEntries] = useState([]);
-  const [queueLoading, setQueueLoading] = useState(false);
-  const [queueStatusFilter, setQueueStatusFilter] = useState('');
-  const [queuePage, setQueuePage] = useState(1);
-  const [queueTotalPages, setQueueTotalPages] = useState(1);
-  const [processingQueue, setProcessingQueue] = useState(false);
-  const [retryingId, setRetryingId] = useState(null);
+  const [queueStats, setQueueStats] = useState<QueueStats | null>(null);
+  const [queueEntries, setQueueEntries] = useState<DashboardQueueEntry[]>([]);
+  const [queueLoading, setQueueLoading] = useState<boolean>(false);
+  const [queueStatusFilter, setQueueStatusFilter] = useState<string>('');
+  const [queuePage, setQueuePage] = useState<number>(1);
+  const [queueTotalPages, setQueueTotalPages] = useState<number>(1);
+  const [processingQueue, setProcessingQueue] = useState<boolean>(false);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -109,7 +154,7 @@ function AdminDashboard({ theme }) {
       return;
     }
 
-    if (!['moderator', 'admin', 'superuser'].includes(user.role)) {
+    if (!user.role || !adminRoles.includes(user.role)) {
       navigate('/');
       showToast('Access denied. Admin privileges required.', 'error');
       return;
@@ -126,8 +171,8 @@ function AdminDashboard({ theme }) {
         roleFilter,
         statusFilter
       );
-      setUsers(response.users);
-      setTotalPages(response.pagination.totalPages);
+      setUsers(response.users as AdminUser[]);
+      setTotalPages(response.pagination?.totalPages || 1);
     } catch {
       showToast('Failed to load users', 'error');
     } finally {
@@ -139,7 +184,7 @@ function AdminDashboard({ theme }) {
     const loadStats = async () => {
       try {
         const response = await adminAPI.getDashboardStats();
-        setStats(response.stats);
+        setStats(response.stats as DashboardStats);
       } catch {
         setError('Failed to load dashboard stats');
       } finally {
@@ -147,7 +192,7 @@ function AdminDashboard({ theme }) {
       }
     };
 
-    if (user && ['moderator', 'admin', 'superuser'].includes(user.role)) {
+    if (user?.role && adminRoles.includes(user.role)) {
       loadStats();
     }
   }, [user]);
@@ -176,7 +221,7 @@ function AdminDashboard({ theme }) {
         queuePage,
         20
       );
-      setQueueEntries(response.entries || []);
+      setQueueEntries((response.entries || []) as DashboardQueueEntry[]);
       setQueueTotalPages(response.pagination?.totalPages || 1);
     } catch {
       showToast('Failed to load queue entries', 'error');
@@ -192,7 +237,12 @@ function AdminDashboard({ theme }) {
     }
   }, [activeTab, loadQueueStats, loadQueueEntries]);
 
-  const handleRetryEmail = async (queueId) => {
+  const handleRetryEmail = async (queueId: string) => {
+    if (!queueId) {
+      showToast('Unable to retry email: missing queue ID', 'error');
+      return;
+    }
+
     setRetryingId(queueId);
     try {
       await adminAPI.retryQueuedEmail(queueId);
@@ -200,7 +250,7 @@ function AdminDashboard({ theme }) {
       loadQueueEntries();
       loadQueueStats();
     } catch (err) {
-      showToast(err.message || 'Failed to retry email', 'error');
+      showToast(getErrorMessage(err, 'Failed to retry email'), 'error');
     } finally {
       setRetryingId(null);
     }
@@ -218,53 +268,76 @@ function AdminDashboard({ theme }) {
       loadQueueEntries();
       loadQueueStats();
     } catch (err) {
-      showToast(err.message || 'Failed to process queue', 'error');
+      showToast(getErrorMessage(err, 'Failed to process queue'), 'error');
     } finally {
       setProcessingQueue(false);
     }
   };
 
   const handleRoleUpdate = async () => {
+    const selectedUserId = getUserId(selectedUser);
+    if (!selectedUserId || !newRole) {
+      showToast('Unable to update role: missing user or role', 'error');
+      return;
+    }
+
     try {
-      await adminAPI.updateUserRole(selectedUser._id, newRole);
+      await adminAPI.updateUserRole(selectedUserId, newRole as UserRole);
       showToast(`User role updated to ${newRole}`, 'success');
       setShowRoleModal(false);
       loadUsers();
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(getErrorMessage(err, 'Failed to update user role'), 'error');
     }
   };
 
   const handleBanUser = async () => {
+    const selectedUserId = getUserId(selectedUser);
+    if (!selectedUserId) {
+      showToast('Unable to ban user: missing user ID', 'error');
+      return;
+    }
+
     try {
-      await adminAPI.banUser(selectedUser._id, banReason);
+      await adminAPI.banUser(selectedUserId, banReason);
       showToast('User banned successfully', 'success');
       setShowBanModal(false);
       setBanReason('');
       loadUsers();
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(getErrorMessage(err, 'Failed to ban user'), 'error');
     }
   };
 
-  const handleUnbanUser = async (userId) => {
+  const handleUnbanUser = async (userId: string) => {
+    if (!userId) {
+      showToast('Unable to unban user: missing user ID', 'error');
+      return;
+    }
+
     try {
       await adminAPI.unbanUser(userId);
       showToast('User unbanned successfully', 'success');
       loadUsers();
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(getErrorMessage(err, 'Failed to unban user'), 'error');
     }
   };
 
   const handleDeleteUser = async () => {
+    const selectedUserId = getUserId(selectedUser);
+    if (!selectedUserId) {
+      showToast('Unable to delete user: missing user ID', 'error');
+      return;
+    }
+
     try {
-      await adminAPI.deleteUser(selectedUser._id);
+      await adminAPI.deleteUser(selectedUserId);
       showToast('User deleted successfully', 'success');
       setShowDeleteModal(false);
       loadUsers();
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(getErrorMessage(err, 'Failed to delete user'), 'error');
     }
   };
 
@@ -420,7 +493,7 @@ function AdminDashboard({ theme }) {
 
               <select
                 value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
+                onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
                 className="filter-select"
               >
                 <option value="">All Roles</option>
@@ -432,7 +505,7 @@ function AdminDashboard({ theme }) {
 
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
                 className="filter-select"
               >
                 <option value="">All Status</option>
@@ -456,7 +529,7 @@ function AdminDashboard({ theme }) {
                   </div>
 
                   {users.map((userData) => (
-                    <div key={userData._id} className="table-row">
+                    <div key={getUserId(userData) || userData.email} className="table-row">
                       <div className="user-info">
                         <img
                           src={userData.profilePicture || '/avatar.jpg'}
@@ -478,15 +551,17 @@ function AdminDashboard({ theme }) {
                       </div>
 
                       <div className="user-joined">
-                        {new Date(userData.createdAt).toLocaleDateString()}
+                        {userData.createdAt
+                          ? new Date(userData.createdAt).toLocaleDateString()
+                          : 'N/A'}
                       </div>
 
                       <div className="user-actions">
-                        {user.role === 'admin' || user.role === 'superuser' ? (
+                        {user?.role === 'admin' || user?.role === 'superuser' ? (
                           <button
                             onClick={() => {
                               setSelectedUser(userData);
-                              setNewRole(userData.role);
+                              setNewRole(userData.role || '');
                               setShowRoleModal(true);
                             }}
                             className="action-btn role-btn"
@@ -507,15 +582,15 @@ function AdminDashboard({ theme }) {
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleUnbanUser(userData._id)}
+                            onClick={() => handleUnbanUser(getUserId(userData))}
                             className="action-btn unban-btn"
                           >
                             Unban
                           </button>
                         )}
 
-                        {(user.role === 'admin' || user.role === 'superuser') &&
-                        userData._id !== user.id ? (
+                        {(user?.role === 'admin' || user?.role === 'superuser') &&
+                        getUserId(userData) !== String(user?.id || user?._id || '') ? (
                           <button
                             onClick={() => {
                               setSelectedUser(userData);
@@ -636,36 +711,42 @@ function AdminDashboard({ theme }) {
                     <div>Actions</div>
                   </div>
 
-                  {queueEntries.map((entry) => (
-                    <div key={entry._id} className="table-row">
-                      <div className="queue-recipient">
-                        <div className="recipient-name">{entry.fullName}</div>
-                        <div className="recipient-email">{entry.email}</div>
+                  {queueEntries.map((entry, index) => {
+                    const entryId = getQueueEntryId(entry);
+
+                    return (
+                      <div key={entryId || index} className="table-row">
+                        <div className="queue-recipient">
+                          <div className="recipient-name">{entry.fullName}</div>
+                          <div className="recipient-email">{entry.email}</div>
+                        </div>
+
+                        <div className="queue-event">{entry.eventSnapshot?.title || 'N/A'}</div>
+
+                        <div className="queue-status" data-status={entry.status}>
+                          {entry.status}
+                        </div>
+
+                        <div className="queue-attempts">{entry.attempts || 0}</div>
+
+                        <div className="queue-date">
+                          {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : 'N/A'}
+                        </div>
+
+                        <div className="queue-entry-actions">
+                          {(entry.status === 'failed' || entry.status === 'pending') && (
+                            <button
+                              onClick={() => handleRetryEmail(entryId)}
+                              className="action-btn retry-btn"
+                              disabled={retryingId === entryId}
+                            >
+                              {retryingId === entryId ? 'Retrying...' : 'Retry'}
+                            </button>
+                          )}
+                        </div>
                       </div>
-
-                      <div className="queue-event">{entry.eventSnapshot?.title || 'N/A'}</div>
-
-                      <div className="queue-status" data-status={entry.status}>
-                        {entry.status}
-                      </div>
-
-                      <div className="queue-attempts">{entry.attempts || 0}</div>
-
-                      <div className="queue-date">{new Date(entry.createdAt).toLocaleString()}</div>
-
-                      <div className="queue-entry-actions">
-                        {(entry.status === 'failed' || entry.status === 'pending') && (
-                          <button
-                            onClick={() => handleRetryEmail(entry._id)}
-                            className="action-btn retry-btn"
-                            disabled={retryingId === entry._id}
-                          >
-                            {retryingId === entry._id ? 'Retrying...' : 'Retry'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {queueTotalPages > 1 && (
@@ -705,13 +786,13 @@ function AdminDashboard({ theme }) {
 
             <select
               value={newRole}
-              onChange={(e) => setNewRole(e.target.value)}
+              onChange={(e) => setNewRole(e.target.value as RoleFilter)}
               className="role-select"
             >
               <option value="member">Member</option>
               <option value="moderator">Moderator</option>
-              {user.role === 'superuser' && <option value="admin">Admin</option>}
-              {user.role === 'superuser' && <option value="superuser">Superuser</option>}
+              {user?.role === 'superuser' && <option value="admin">Admin</option>}
+              {user?.role === 'superuser' && <option value="superuser">Superuser</option>}
             </select>
 
             <div className="modal-actions">
