@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { MouseEvent } from 'react';
 import { eventsAPI } from '../utils/api';
-import { Calendar, MapPin, Link2 } from 'lucide-react';
+import { Calendar, ClipboardList, Info, Link2, MapPin, Pencil, Trash2 } from 'lucide-react';
 import type { Event as HubEvent, EventFormPayload } from '../types/event';
 
 type EventFormErrors = Partial<Record<'title' | 'date' | 'time', string>>;
@@ -351,9 +351,15 @@ function EventModal({
                   e.stopPropagation();
                   setIsEditing(true);
                 }}
-                style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
+                style={{
+                  padding: '0.5rem 1rem',
+                  fontSize: '0.9rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                }}
               >
-                ✏️ Edit
+                <Pencil size={14} aria-hidden="true" /> Edit
               </button>
               <button
                 className="hub-btn ghost"
@@ -366,9 +372,12 @@ function EventModal({
                   fontSize: '0.9rem',
                   borderColor: '#dc2626',
                   color: '#dc2626',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
                 }}
               >
-                🗑️ Delete
+                <Trash2 size={14} aria-hidden="true" /> Delete
               </button>
             </div>
           )}
@@ -431,13 +440,17 @@ function EventModal({
 
               {event.description && (
                 <div className="hub-detail-item">
-                  <span className="hub-detail-label">📝 Description</span>
+                  <span className="hub-detail-label">
+                    <ClipboardList size={14} aria-hidden="true" /> Description
+                  </span>
                   <div className="hub-detail-value hub-description">{event.description}</div>
                 </div>
               )}
 
               <div className="hub-detail-item">
-                <span className="hub-detail-label">ℹ️ Event Info</span>
+                <span className="hub-detail-label">
+                  <Info size={14} aria-hidden="true" /> Event Info
+                </span>
                 <div className="hub-detail-value">
                   <div className="hub-event-meta">
                     <span className="hub-meta-item">

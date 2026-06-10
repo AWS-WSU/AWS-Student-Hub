@@ -6,7 +6,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useAuth } from '../context/AuthContext';
 import './styles/Account.css';
 import { validateImageFile, compressImage } from '../utils/imageUtils';
-import { Target, Copy } from 'lucide-react';
+import { Copy, Lock, Shield, Target, X } from 'lucide-react';
 import CyberChallengeModal from '../components/CyberChallengeModal';
 import type { AwsCredentials } from '../types/auth';
 import type { User } from '../types/user';
@@ -782,7 +782,7 @@ function Account({ theme: _theme }: AccountProps) {
                           handleCancel('programmingLanguages');
                         }}
                       >
-                        ×
+                        <X size={18} aria-hidden="true" />
                       </button>
                       <h3>Select Programming Languages & Technologies</h3>
                       <div className="languages-grid">
@@ -858,11 +858,15 @@ function Account({ theme: _theme }: AccountProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
-            <h2>🔐 Cyber Challenge #5 Info</h2>
+            <h2>
+              <Lock size={28} aria-hidden="true" /> Cyber Challenge #5 Info
+            </h2>
 
             <div className="challenge-card">
               <div className="challenge-header">
-                <div className="challenge-icon">🛡️</div>
+                <div className="challenge-icon">
+                  <Shield size={30} aria-hidden="true" />
+                </div>
                 <div className="challenge-title">
                   <h3>AWS Cloud Security Challenge</h3>
                   <p>Access your personalized AWS environment</p>
@@ -900,7 +904,7 @@ function Account({ theme: _theme }: AccountProps) {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
-                        🔐 Reveal AWS Credentials
+                        <Lock size={16} aria-hidden="true" /> Reveal AWS Credentials
                       </motion.button>
 
                       <motion.button

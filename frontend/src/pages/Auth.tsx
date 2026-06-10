@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { authAPI } from '../utils/api';
-import { Check, Circle } from 'lucide-react';
+import { ArrowLeft, Check, Circle } from 'lucide-react';
 import CyberChallengeModal from '../components/CyberChallengeModal';
 import './styles/Auth.css';
 import type { AuthResponse, AwsCredentials } from '../types/auth';
@@ -609,7 +609,7 @@ function Auth({ theme }: AuthProps) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                ← Back to Sign In
+                <ArrowLeft size={16} aria-hidden="true" /> Back to Sign In
               </motion.button>
             </motion.form>
           )}
@@ -653,7 +653,7 @@ function Auth({ theme }: AuthProps) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                ← Back to Sign In
+                <ArrowLeft size={16} aria-hidden="true" /> Back to Sign In
               </motion.button>
             </motion.form>
           )}
@@ -694,7 +694,7 @@ function Auth({ theme }: AuthProps) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                ← Back to Sign In
+                <ArrowLeft size={16} aria-hidden="true" /> Back to Sign In
               </motion.button>
             </motion.form>
           )}
@@ -745,7 +745,7 @@ function Auth({ theme }: AuthProps) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                ← Back to Sign In
+                <ArrowLeft size={16} aria-hidden="true" /> Back to Sign In
               </motion.button>
             </motion.form>
           )}
@@ -905,7 +905,7 @@ function Auth({ theme }: AuthProps) {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              ← Back to Home
+              <ArrowLeft size={16} aria-hidden="true" /> Back to Home
             </motion.button>
           </>
         )}

@@ -898,6 +898,15 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cyber-challenge-section h2 svg {
+  color: #ff6b6b;
+  -webkit-text-fill-color: #ff6b6b;
+  flex-shrink: 0;
 }
 
 .challenge-card {
@@ -915,14 +924,18 @@
 }
 
 .challenge-icon {
-  font-size: 2rem;
   background: linear-gradient(135deg, #ff6b6b, #4ecdc4);
   border-radius: 50%;
   width: 60px;
   height: 60px;
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.challenge-icon svg {
+  flex-shrink: 0;
 }
 
 .challenge-title h3 {
@@ -1255,6 +1268,14 @@
 .modal-actions button[type='button']:hover {
   background: rgba(var(--text-primary-rgb), 0.12);
   transform: translateY(-1px);
+}
+
+.reveal-credentials-btn,
+.show-modal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .show-modal-btn {

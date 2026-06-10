@@ -61,9 +61,11 @@
   background-clip: text;
 }
 
-.challenge-icon {
-  font-size: 4rem;
+.cyber-challenge-icon {
+  width: 4rem;
+  height: 4rem;
   margin-bottom: 1rem;
+  color: var(--accent);
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
 }
 
@@ -339,9 +341,9 @@
   gap: 0.5rem;
 }
 
-.aws-cli-example h4::before {
-  content: '💻';
-  font-size: 1.2rem;
+.aws-cli-example h4 svg {
+  color: var(--accent);
+  flex-shrink: 0;
 }
 
 .code-block {
@@ -496,8 +498,9 @@
     font-size: 1.6rem;
   }
 
-  .challenge-icon {
-    font-size: 3rem;
+  .cyber-challenge-icon {
+    width: 3rem;
+    height: 3rem;
   }
 
   .cyber-modal-body,
@@ -544,8 +547,9 @@
     font-size: 1.4rem;
   }
 
-  .challenge-icon {
-    font-size: 2.5rem;
+  .cyber-challenge-icon {
+    width: 2.5rem;
+    height: 2.5rem;
   }
 
   .step {

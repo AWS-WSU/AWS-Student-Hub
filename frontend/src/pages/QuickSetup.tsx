@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { validateImageFile, compressImage } from '../utils/imageUtils';
-import { BookOpen, Code } from 'lucide-react';
+import { BookOpen, Camera, Code, UserCircle } from 'lucide-react';
 import type { ProfileUpdatePayload, ThemeProps, UserGrade } from '../types';
 import './styles/QuickSetup.css';
 
@@ -210,12 +210,17 @@ function QuickSetup({ theme }: ThemeProps) {
       className="setup-step"
     >
       <div className="step-header">
-        <h2>Welcome, {user?.fullName?.split(' ')[0] || 'there'}! 👋</h2>
+        <h2>
+          <UserCircle size={24} aria-hidden="true" /> Welcome,{' '}
+          {user?.fullName?.split(' ')[0] || 'there'}!
+        </h2>
         <p>Let's complete your profile to get the most out of AWS Club</p>
       </div>
 
       <div className="current-info">
-        <h3>Your current information:</h3>
+        <h3>
+          <UserCircle size={20} aria-hidden="true" /> Your current information:
+        </h3>
         <div className="info-grid">
           <div className="info-item">
             <span className="label">Name:</span>
@@ -233,7 +238,9 @@ function QuickSetup({ theme }: ThemeProps) {
       </div>
 
       <div className="profile-picture-section">
-        <h3>Profile Picture</h3>
+        <h3>
+          <Camera size={20} aria-hidden="true" /> Profile Picture
+        </h3>
         <div className="image-upload-container">
           <div className="image-preview">
             <img

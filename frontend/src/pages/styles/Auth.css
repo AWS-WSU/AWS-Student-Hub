@@ -408,6 +408,10 @@
   transition: all 0.2s ease;
   opacity: 0.6;
   margin-top: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
 }
 
 .back-home:hover {

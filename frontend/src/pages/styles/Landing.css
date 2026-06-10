@@ -567,7 +567,10 @@ section {
 
 .divider-icon {
   margin: 0 1rem;
-  font-size: 1.5rem;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Welcome Section */
@@ -756,7 +759,10 @@ section {
 }
 
 .placeholder-icon {
-  font-size: 1.5rem;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0.7;
 }
 
@@ -2679,8 +2685,11 @@ body.modal-open {
   margin: 0 auto;
 }
 
-.no-results-icon {
-  font-size: 3rem;
+.no-results-icon,
+.no-events-icon {
+  color: var(--accent);
+  display: flex;
+  justify-content: center;
   margin-bottom: 1rem;
   opacity: 0.7;
 }

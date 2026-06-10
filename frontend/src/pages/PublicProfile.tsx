@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { SyntheticEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
+import { ArrowLeft, Code2, Frown, GraduationCap, LoaderCircle } from 'lucide-react';
 import { authAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import type { PublicProfile as PublicProfileType, ThemeProps } from '../types';
@@ -119,7 +120,7 @@ function PublicProfile({ theme }: ThemeProps) {
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
           >
-            ⚙️
+            <LoaderCircle size={48} aria-hidden="true" />
           </motion.div>
           <p>Loading profile...</p>
         </div>
@@ -137,7 +138,9 @@ function PublicProfile({ theme }: ThemeProps) {
             transition={{ duration: 0.6 }}
             className="error-content"
           >
-            <div className="error-icon">😞</div>
+            <div className="error-icon">
+              <Frown size={64} aria-hidden="true" />
+            </div>
             <h2>Profile Not Found</h2>
             <p>{error || 'Failed to load profile'}</p>
             <motion.button
@@ -166,7 +169,7 @@ function PublicProfile({ theme }: ThemeProps) {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          ← Back
+          <ArrowLeft size={18} aria-hidden="true" /> Back
         </motion.button>
 
         <motion.div
@@ -287,7 +290,9 @@ function PublicProfile({ theme }: ThemeProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
             >
-              <h4>Academic Information</h4>
+              <h4>
+                <GraduationCap size={18} aria-hidden="true" /> Academic Information
+              </h4>
               <div className="academic-details">
                 {profile.major && (
                   <div className="academic-item">
@@ -312,7 +317,9 @@ function PublicProfile({ theme }: ThemeProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.6 }}
             >
-              <h4>Programming Skills</h4>
+              <h4>
+                <Code2 size={18} aria-hidden="true" /> Programming Skills
+              </h4>
               <div className="skills-grid">
                 {profile.programmingLanguages.map((language, index) => {
                   const icon = languageIcons[language];

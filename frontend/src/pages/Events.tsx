@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import type { ChangeEvent, MouseEvent } from 'react';
 import { eventsAPI } from '../utils/api';
-import { Calendar, MapPin, Link2 } from 'lucide-react';
+import { Calendar, ClipboardList, Info, Link2, MapPin } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import type { Event as HubEvent, ThemeProps } from '../types';
 
@@ -264,13 +264,17 @@ function Events({ theme: _theme }: ThemeProps) {
 
                 {event.description && (
                   <div className="hub-detail-item">
-                    <span className="hub-detail-label">📝 Description</span>
+                    <span className="hub-detail-label">
+                      <ClipboardList size={14} aria-hidden="true" /> Description
+                    </span>
                     <div className="hub-detail-value hub-description">{event.description}</div>
                   </div>
                 )}
 
                 <div className="hub-detail-item">
-                  <span className="hub-detail-label">ℹ️ Event Info</span>
+                  <span className="hub-detail-label">
+                    <Info size={14} aria-hidden="true" /> Event Info
+                  </span>
                   <div className="hub-detail-value">
                     <div className="hub-event-meta">
                       <span className="hub-meta-item">

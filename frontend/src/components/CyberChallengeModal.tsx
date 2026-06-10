@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy, Lock, Terminal, X } from 'lucide-react';
 import type { AwsCredentials } from '../types/auth';
 import './styles/CyberChallengeModal.css';
 
@@ -45,10 +45,10 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }: CyberChallenge
           onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
         >
           <div className="cyber-modal-header">
-            <div className="challenge-icon">🔐</div>
+            <Lock className="cyber-challenge-icon" size={64} aria-hidden="true" />
             <h2>Cyber Challenge #5 - AWS Access</h2>
-            <button className="close-button" onClick={onClose}>
-              ×
+            <button className="close-button" onClick={onClose} aria-label="Close modal">
+              <X size={18} aria-hidden="true" />
             </button>
           </div>
 
@@ -138,7 +138,9 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }: CyberChallenge
             </div>
 
             <div className="aws-cli-example">
-              <h4>AWS CLI Setup Example:</h4>
+              <h4>
+                <Terminal size={18} aria-hidden="true" /> AWS CLI Setup Example:
+              </h4>
               <div className="code-block">
                 <code>
                   aws configure set aws_access_key_id {awsCredentials.accessKeyId}
