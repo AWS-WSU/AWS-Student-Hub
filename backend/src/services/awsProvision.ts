@@ -12,6 +12,8 @@ import {
   ListAttachedUserPoliciesCommand,
 } from '@aws-sdk/client-iam';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+
+import env from '../config/env';
 import logger from '../config/logger';
 
 const log = logger.child({ module: 'awsProvision' });
@@ -22,16 +24,15 @@ export interface ChallengeUserResult {
   password: string;
 }
 
-const CHALLENGE_BUCKET = process.env.AWS_CHALLENGE_BUCKET || 'wayne-aws-club-secrets-prod';
+const CHALLENGE_BUCKET = env.AWS_S3_BUCKET || env.AWS_CHALLENGE_BUCKET;
 
 const getErrorMessage = (error: unknown): string => {
   return error instanceof Error ? error.message : String(error);
 };
 
 const getClients = () => {
-  const accessKeyId = process.env.AWS_ADMIN_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey =
-    process.env.AWS_ADMIN_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+  const accessKeyId = env.AWS_ADMIN_ACCESS_KEY_ID || env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = env.AWS_ADMIN_SECRET_ACCESS_KEY || env.AWS_SECRET_ACCESS_KEY;
 
   if (!accessKeyId || !secretAccessKey) {
     throw new Error(
@@ -42,12 +43,12 @@ const getClients = () => {
   const credentials = { accessKeyId, secretAccessKey };
 
   const iamClient = new IAMClient({
-    region: 'us-east-1',
+    region: env.CUSTOM_AWS_REGION,
     credentials,
   });
 
   const s3Client = new S3Client({
-    region: 'us-east-1',
+    region: env.CUSTOM_AWS_REGION,
     credentials,
   });
 
@@ -82,10 +83,10 @@ export const createChallengeUser = async (username: string): Promise<ChallengeUs
   try {
     log.info(`creating challenge user for ${username}.`);
     log.info('aws config check.', {
-      hasAdminAccessKey: !!process.env.AWS_ADMIN_ACCESS_KEY_ID,
-      hasAdminSecretKey: !!process.env.AWS_ADMIN_SECRET_ACCESS_KEY,
-      region: process.env.CUSTOM_AWS_REGION || 'us-east-1',
-      s3Bucket: process.env.AWS_S3_BUCKET,
+      hasAdminAccessKey: !!env.AWS_ADMIN_ACCESS_KEY_ID,
+      hasAdminSecretKey: !!env.AWS_ADMIN_SECRET_ACCESS_KEY,
+      region: env.CUSTOM_AWS_REGION,
+      s3Bucket: CHALLENGE_BUCKET,
     });
 
     const iamUsername = `club_${username}`;

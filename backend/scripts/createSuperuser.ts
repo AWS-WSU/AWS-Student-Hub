@@ -1,20 +1,18 @@
-import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 
-import User from '../models/User';
-import logger from '../config/logger';
+import env from '../src/config/env';
+import logger from '../src/config/logger';
+import User from '../src/models/User';
 
 const log = logger.child({ module: 'createSuperuser' });
 
-dotenv.config();
-
 async function createSuperuser(email: string): Promise<void> {
   try {
-    if (!process.env.MONGODB_URI) {
+    if (!env.MONGODB_URI) {
       throw new Error('MONGODB_URI is required');
     }
 
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(env.MONGODB_URI);
     log.info('connected to mongodb.');
 
     const user = await User.findOne({ email: email.toLowerCase() });

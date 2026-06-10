@@ -1,8 +1,9 @@
 import nodemailer from 'nodemailer';
 
+import env from '../config/env';
+import logger from '../config/logger';
 import EmailQueue from '../models/EmailQueue';
 import type { EmailEventSnapshot } from '../models/EmailQueue';
-import logger from '../config/logger';
 
 const log = logger.child({ module: 'emailService' });
 
@@ -33,12 +34,12 @@ interface QueueProcessingResults {
 }
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: Number(process.env.SMTP_PORT || 587),
+  host: env.SMTP_HOST,
+  port: env.SMTP_PORT,
   secure: false,
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: env.SMTP_USER,
+    pass: env.SMTP_PASS,
   },
 });
 
@@ -52,7 +53,7 @@ export const sendResetCode = async (
   fullName: string
 ): Promise<void> => {
   const mailOptions = {
-    from: `"AWS Student Hub" <${process.env.SMTP_USER}>`,
+    from: `"AWS Student Hub" <${env.SMTP_USER}>`,
     to: email,
     subject: 'Password Reset Code - AWS Student Hub',
     html: `
@@ -145,7 +146,7 @@ export const sendEventNotification = async (
   }
 
   const mailOptions = {
-    from: `"AWS Cloud Club @ WSU" <${process.env.SMTP_USER}>`,
+    from: `"AWS Cloud Club @ WSU" <${env.SMTP_USER}>`,
     to: email,
     subject: `🚀 New Event: ${event.title} - AWS Cloud Club`,
     html: `

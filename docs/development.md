@@ -115,8 +115,9 @@ bun run --cwd backend typecheck
 ## Project layout
 
 ```txt
-backend/     express api, lambda handler, database models, aws/email services
-frontend/    react/vite app
-docs/        project documentation
-.github/     ci and deployment workflows
+backend/src/  express api, lambda handler, database models, aws/email services
+backend/scripts/ operational backend scripts
+frontend/     react/vite app
+docs/         project documentation
+.github/      ci and deployment workflows
 ```

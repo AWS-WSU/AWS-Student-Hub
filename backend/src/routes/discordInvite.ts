@@ -1,17 +1,16 @@
 import axios from 'axios';
 import express from 'express';
-import dotenv from 'dotenv';
+
+import env from '../config/env';
 import logger from '../config/logger';
 
 const log = logger.child({ module: 'discordInvite' });
-
-dotenv.config();
 
 const router = express.Router();
 
 router.get('/discord-invite', async (_req, res): Promise<void> => {
   try {
-    const { DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID } = process.env;
+    const { DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID } = env;
 
     if (!DISCORD_BOT_TOKEN || !DISCORD_CHANNEL_ID) {
       log.error('missing discord configuration.');

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import env from './env';
 import logger from './logger';
 
 const log = logger.child({ module: 'config-database' });
@@ -30,13 +31,13 @@ const connectDB = async (): Promise<typeof mongoose | null> => {
     cached.promise = null;
   }
 
-  const mongoUri = process.env.MONGODB_URI;
+  const mongoUri = env.MONGODB_URI;
 
   if (!mongoUri) {
     cached.promise = null;
     cached.conn = null;
 
-    if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    if (env.IS_LAMBDA) {
       throw new Error('MONGODB_URI is required in Lambda environment');
     }
 
@@ -50,7 +51,7 @@ const connectDB = async (): Promise<typeof mongoose | null> => {
     const options = {
       serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 15000,
-      maxPoolSize: process.env.AWS_LAMBDA_FUNCTION_NAME ? 1 : 5,
+      maxPoolSize: env.IS_LAMBDA ? 1 : 5,
       minPoolSize: 0,
       maxIdleTimeMS: 30000,
       retryWrites: true,
@@ -74,7 +75,7 @@ const connectDB = async (): Promise<typeof mongoose | null> => {
         log.error('database: connection error.', message);
         cached.promise = null;
         cached.conn = null;
-        if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+        if (env.IS_LAMBDA) {
           throw error;
         }
         log.info('database: unavailable; continuing in development mode.');
@@ -108,7 +109,7 @@ const connectDB = async (): Promise<typeof mongoose | null> => {
     cached.promise = null;
     cached.conn = null;
 
-    if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    if (!env.IS_LAMBDA) {
       log.info('database: connection failed in development.');
       log.info('database: unavailable; server will continue without database operations.');
       return null;

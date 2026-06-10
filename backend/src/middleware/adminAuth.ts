@@ -1,6 +1,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
+import env from '../config/env';
 import User from '../models/User';
 import logger from '../config/logger';
 
@@ -20,10 +21,10 @@ const roleHierarchy: Record<Role, number> = {
 };
 
 const getJwtSecret = (): string => {
-  if (!process.env.JWT_SECRET) {
+  if (!env.JWT_SECRET) {
     throw new Error('JWT_SECRET is not configured');
   }
-  return process.env.JWT_SECRET;
+  return env.JWT_SECRET;
 };
 
 const isAdminTokenPayload = (decoded: string | jwt.JwtPayload): decoded is AdminTokenPayload => {

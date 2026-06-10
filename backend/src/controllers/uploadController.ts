@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import path from 'path';
 
 import { deleteFromS3, uploadToS3 } from '../config/aws';
+import env from '../config/env';
 import { processImage } from '../middleware/upload';
 import User from '../models/User';
 import logger from '../config/logger';
@@ -78,8 +79,8 @@ export const uploadProfilePicture = async (req: Request, res: Response): Promise
     if (
       user.profilePicture &&
       user.profilePicture !== '/avatar.jpg' &&
-      process.env.S3_BUCKET_NAME &&
-      user.profilePicture.includes(process.env.S3_BUCKET_NAME)
+      env.S3_BUCKET_NAME &&
+      user.profilePicture.includes(env.S3_BUCKET_NAME)
     ) {
       try {
         const oldKey = user.profilePicture.split('.amazonaws.com/')[1];
@@ -106,7 +107,7 @@ export const uploadProfilePicture = async (req: Request, res: Response): Promise
     res.status(500).json({
       success: false,
       message: 'Error uploading profile picture',
-      error: process.env.NODE_ENV === 'development' ? getErrorMessage(error) : undefined,
+      error: env.NODE_ENV === 'development' ? getErrorMessage(error) : undefined,
     });
   }
 };

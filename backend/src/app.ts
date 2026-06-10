@@ -1,5 +1,4 @@
 import cors, { CorsOptions } from 'cors';
-import dotenv from 'dotenv';
 import express, { ErrorRequestHandler, NextFunction, Request, Response } from 'express';
 import mongoose from 'mongoose';
 
@@ -11,15 +10,14 @@ import eventRoutes from './routes/events';
 import newsletterRoutes from './routes/newsletter';
 import uploadRoutes from './routes/upload';
 import verifyRoutes from './routes/verify';
+import env from './config/env';
 import logger from './config/logger';
 
 const log = logger.child({ module: 'app' });
 
-dotenv.config();
-
 const app = express();
 
-if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+if (env.IS_LAMBDA) {
   app.set('trust proxy', true);
 }
 
@@ -51,7 +49,7 @@ const initDB = async (): Promise<void> => {
   return dbInitPromise;
 };
 
-if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+if (env.IS_LAMBDA) {
   initDB().catch((err: unknown) => {
     log.error('database: initialization failed.', err);
   });
@@ -77,9 +75,7 @@ const corsOptions: CorsOptions = {
       return;
     }
 
-    const allowedOrigins = process.env.CORS_ORIGIN
-      ? process.env.CORS_ORIGIN.split(',').map((allowedOrigin) => allowedOrigin.trim())
-      : defaultAllowedOrigins;
+    const allowedOrigins = env.CORS_ORIGINS ?? defaultAllowedOrigins;
 
     const isAmplifyDomain = origin.includes('.amplifyapp.com');
 
@@ -104,12 +100,12 @@ app.use(async (req: Request, res: Response, next: NextFunction): Promise<void> =
     return;
   }
 
-  if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  if (!env.IS_LAMBDA) {
     req.setTimeout(25000);
     res.setTimeout(25000);
   }
 
-  if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  if (env.IS_LAMBDA) {
     try {
       if (mongoose.connection.readyState === 1) {
         next();
@@ -161,7 +157,7 @@ app.get('/health', (_req: Request, res: Response): void => {
     status: 'OK',
     message: 'AWS Student Hub Backend is running on Lambda',
     timestamp: new Date().toISOString(),
-    environment: process.env.AWS_LAMBDA_FUNCTION_NAME ? 'lambda' : 'local',
+    environment: env.IS_LAMBDA ? 'lambda' : 'local',
   });
 });
 

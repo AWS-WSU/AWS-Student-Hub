@@ -1,6 +1,8 @@
 import type { Request } from 'express';
 import rateLimit from 'express-rate-limit';
 
+import env from '../config/env';
+
 const getHeaderValue = (value: string | string[] | undefined): string | undefined => {
   if (Array.isArray(value)) {
     return value[0];
@@ -9,7 +11,7 @@ const getHeaderValue = (value: string | string[] | undefined): string | undefine
 };
 
 const customKeyGenerator = (req: Request): string => {
-  if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  if (env.IS_LAMBDA) {
     const forwardedFor = getHeaderValue(req.headers['x-forwarded-for']);
     const realIp = getHeaderValue(req.headers['x-real-ip']);
 

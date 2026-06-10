@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 
+import env from '../config/env';
 import Event from '../models/Event';
 import User from '../models/User';
 import { sendBulkEventNotification } from '../services/emailService';
@@ -9,13 +10,13 @@ import logger from '../config/logger';
 
 const log = logger.child({ module: 'eventController' });
 
-const s3Region = process.env.S3_REGION || process.env.AWS_REGION || 'us-east-1';
+const s3Region = env.S3_REGION || env.AWS_REGION || 'us-east-1';
 
 const credentials =
-  process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY
+  env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY
     ? {
-        accessKeyId: process.env.S3_ACCESS_KEY_ID,
-        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+        accessKeyId: env.S3_ACCESS_KEY_ID,
+        secretAccessKey: env.S3_SECRET_ACCESS_KEY,
       }
     : undefined;
 
@@ -53,7 +54,7 @@ const uploadEventThumbnail = async (file: ThumbnailFile): Promise<string> => {
   const upload = new Upload({
     client: s3Client,
     params: {
-      Bucket: process.env.AWS_HUB_EVENT_THUMBNAILS || '',
+      Bucket: env.AWS_HUB_EVENT_THUMBNAILS || '',
       Key: `event-thumbnails/${Date.now()}-${file.originalname}`,
       Body: file.buffer,
       ContentType: file.mimetype,
@@ -259,7 +260,7 @@ export const deleteEvent = async (req: Request, res: Response): Promise<void> =>
         if (key) {
           await s3Client.send(
             new DeleteObjectCommand({
-              Bucket: process.env.AWS_HUB_EVENT_THUMBNAILS || '',
+              Bucket: env.AWS_HUB_EVENT_THUMBNAILS || '',
               Key: key,
             })
           );

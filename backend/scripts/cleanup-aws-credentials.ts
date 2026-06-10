@@ -14,14 +14,13 @@ import {
 } from '@aws-sdk/client-iam';
 import { DeleteObjectsCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3';
 import chalk from 'chalk';
-import dotenv from 'dotenv';
 import path from 'path';
 import readline from 'readline';
-import logger from '../config/logger';
+
+import env from '../src/config/env';
+import logger from '../src/config/logger';
 
 const log = logger.child({ module: 'cleanup-aws-credentials' });
-
-dotenv.config({ path: path.join(__dirname, '../.env') });
 
 interface ClubUser {
   UserName?: string;
@@ -31,18 +30,17 @@ interface S3SecretObject {
   Key?: string;
 }
 
-const accessKeyId = process.env.AWS_ADMIN_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
-const secretAccessKey =
-  process.env.AWS_ADMIN_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+const accessKeyId = env.AWS_ADMIN_ACCESS_KEY_ID || env.AWS_ACCESS_KEY_ID;
+const secretAccessKey = env.AWS_ADMIN_SECRET_ACCESS_KEY || env.AWS_SECRET_ACCESS_KEY;
 const credentials = accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined;
 
 const iamClient = new IAMClient({
-  region: 'us-east-1',
+  region: env.CUSTOM_AWS_REGION,
   credentials,
 });
 
 const s3Client = new S3Client({
-  region: 'us-east-1',
+  region: env.CUSTOM_AWS_REGION,
   credentials,
 });
 
@@ -362,10 +360,8 @@ const runCleanup = async (): Promise<void> => {
 
 const checkAWSCredentials = (): boolean => {
   log.info(chalk.cyan('checking environment variables.'));
-  log.info(`aws admin access key id ${process.env.AWS_ADMIN_ACCESS_KEY_ID ? 'set' : 'not set'}.`);
-  log.info(
-    `aws admin secret access key ${process.env.AWS_ADMIN_SECRET_ACCESS_KEY ? 'set' : 'not set'}.`
-  );
+  log.info(`aws admin access key id ${env.AWS_ADMIN_ACCESS_KEY_ID ? 'set' : 'not set'}.`);
+  log.info(`aws admin secret access key ${env.AWS_ADMIN_SECRET_ACCESS_KEY ? 'set' : 'not set'}.`);
 
   if (!accessKeyId || !secretAccessKey) {
     log.info(chalk.red('aws credentials not found.'));

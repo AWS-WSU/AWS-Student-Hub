@@ -1,5 +1,7 @@
 import pino, { Logger as PinoLogger } from 'pino';
 
+import env from './env';
+
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 type LogMethod = (messageOrData: unknown, ...args: unknown[]) => void;
 
@@ -11,12 +13,10 @@ export interface AppLogger {
   error: LogMethod;
 }
 
-const isProduction = process.env.NODE_ENV === 'production';
-const isLambda = Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
-const usePrettyLogs = process.env.LOG_PRETTY === 'true' || (!isProduction && !isLambda);
+const usePrettyLogs = env.LOG_PRETTY === true || (!env.IS_PRODUCTION && !env.IS_LAMBDA);
 
 const baseLogger = pino({
-  level: process.env.LOG_LEVEL || (isProduction ? 'info' : 'debug'),
+  level: env.LOG_LEVEL || (env.IS_PRODUCTION ? 'info' : 'debug'),
   transport: usePrettyLogs
     ? {
         target: 'pino-pretty',

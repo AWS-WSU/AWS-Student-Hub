@@ -8,6 +8,7 @@ import serverless from 'serverless-http';
 
 import app from './app';
 import connectDB from './config/database';
+import env from './config/env';
 import { processEmailQueue } from './services/emailService';
 import logger from './config/logger';
 
@@ -85,7 +86,7 @@ export const handler = async (
     return handleCors(event);
   }
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (!env.IS_PRODUCTION) {
     log.info('lambda event.', JSON.stringify(event, null, 2));
   }
 

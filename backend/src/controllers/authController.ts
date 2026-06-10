@@ -4,6 +4,7 @@ import Filter from 'bad-words';
 import jwt from 'jsonwebtoken';
 import { validationResult } from 'express-validator';
 
+import env from '../config/env';
 import User from '../models/User';
 import type { UserGrade } from '../models/User';
 import { createChallengeUser } from '../services/awsProvision';
@@ -34,10 +35,10 @@ interface AuthResponseBody {
 const filter = new Filter();
 
 const getJwtSecret = (): string => {
-  if (!process.env.JWT_SECRET) {
+  if (!env.JWT_SECRET) {
     throw new Error('JWT_SECRET is not configured');
   }
-  return process.env.JWT_SECRET;
+  return env.JWT_SECRET;
 };
 
 const getErrorMessage = (error: unknown): string => {
@@ -81,10 +82,10 @@ const generateDeviceId = (): string => {
 };
 
 const generateTokens = (user: TokenUser, deviceId: string, rememberMe = false) => {
-  if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  if (env.IS_LAMBDA) {
     log.info('lambda environment detected.');
-    log.info('jwt secret exists.', !!process.env.JWT_SECRET);
-    log.info('jwt secret length.', process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0);
+    log.info('jwt secret exists.', !!env.JWT_SECRET);
+    log.info('jwt secret length.', env.JWT_SECRET ? env.JWT_SECRET.length : 0);
   }
 
   const accessToken = jwt.sign(
@@ -203,9 +204,9 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
     let awsCredentials: AuthResponseBody['awsCredentials'];
     try {
       log.info(`creating aws challenge user for ${username}.`);
-      log.info('aws admin access key id exists.', !!process.env.AWS_ADMIN_ACCESS_KEY_ID);
-      log.info('aws admin secret access key exists.', !!process.env.AWS_ADMIN_SECRET_ACCESS_KEY);
-      log.info('aws s3 bucket.', process.env.AWS_S3_BUCKET);
+      log.info('aws admin access key id exists.', !!env.AWS_ADMIN_ACCESS_KEY_ID);
+      log.info('aws admin secret access key exists.', !!env.AWS_ADMIN_SECRET_ACCESS_KEY);
+      log.info('aws s3 bucket.', env.AWS_S3_BUCKET);
 
       const challengeUserResult = await createChallengeUser(username);
 
