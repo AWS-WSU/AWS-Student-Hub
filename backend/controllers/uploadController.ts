@@ -47,12 +47,12 @@ export const uploadProfilePicture = async (req: Request, res: Response): Promise
     let mimetype = 'image/jpeg';
 
     try {
-      console.log('Processing image with Sharp...');
+      console.log('processing image with sharp.');
       imageBuffer = await processImage(req.file.buffer);
-      console.log('Sharp processing successful');
+      console.log('sharp processing successful.');
     } catch (sharpError: unknown) {
-      console.error('Sharp processing failed:', sharpError);
-      console.log('Using original image buffer as fallback');
+      console.error('sharp processing failed.', sharpError);
+      console.log('using original image buffer as fallback.');
       imageBuffer = req.file.buffer;
       mimetype = req.file.mimetype;
     }
@@ -62,7 +62,7 @@ export const uploadProfilePicture = async (req: Request, res: Response): Promise
     const randomHash = crypto.randomBytes(8).toString('hex');
     const fileName = `profile-pictures/${userId}-${timestamp}-${randomHash}${fileExtension}`;
 
-    console.log('Uploading to S3:', fileName);
+    console.log('uploading to s3.', fileName);
     const uploadResult = await uploadToS3(
       {
         buffer: imageBuffer,
@@ -70,7 +70,7 @@ export const uploadProfilePicture = async (req: Request, res: Response): Promise
       },
       fileName
     );
-    console.log('S3 upload successful:', uploadResult.Location);
+    console.log('s3 upload successful.', uploadResult.Location);
 
     if (
       user.profilePicture &&
@@ -84,7 +84,7 @@ export const uploadProfilePicture = async (req: Request, res: Response): Promise
           await deleteFromS3(oldKey);
         }
       } catch (deleteError: unknown) {
-        console.error('Error deleting old profile picture:', deleteError);
+        console.error('error deleting old profile picture.', deleteError);
       }
     }
 
@@ -98,8 +98,8 @@ export const uploadProfilePicture = async (req: Request, res: Response): Promise
       user: user.toSafeObject(),
     });
   } catch (error: unknown) {
-    console.error('Upload profile picture error:', error);
-    console.error('Error stack:', getErrorStack(error));
+    console.error('upload profile picture error.', error);
+    console.error('error stack.', getErrorStack(error));
     res.status(500).json({
       success: false,
       message: 'Error uploading profile picture',

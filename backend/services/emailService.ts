@@ -487,9 +487,9 @@ const queueFailedEmail = async (
       },
       { upsert: true, new: true }
     );
-    console.log(`Queued failed email for retry: ${email}`);
+    console.log(`queued failed email for retry ${email}.`);
   } catch (queueError: unknown) {
-    console.error(`Failed to queue email for ${email}:`, queueError);
+    console.error(`failed to queue email for ${email}.`, queueError);
   }
 };
 
@@ -554,7 +554,7 @@ export const processEmailQueue = async (batchSize = 10): Promise<QueueProcessing
         queuedEmail.completedAt = new Date();
         await queuedEmail.save();
         results.succeeded++;
-        console.log(`Successfully sent queued email to ${queuedEmail.email}`);
+        console.log(`successfully sent queued email to ${queuedEmail.email}.`);
 
         await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (error: unknown) {
@@ -566,14 +566,14 @@ export const processEmailQueue = async (batchSize = 10): Promise<QueueProcessing
           queuedEmail.status = 'failed';
           results.permanentlyFailed++;
           console.error(
-            `Email to ${queuedEmail.email} permanently failed after ${queuedEmail.attempts} attempts`
+            `email to ${queuedEmail.email} permanently failed after ${queuedEmail.attempts} attempts.`
           );
         } else {
           queuedEmail.status = 'pending';
           queuedEmail.nextAttempt = getNextRetryTime(queuedEmail.attempts);
           results.failed++;
           console.log(
-            `Email to ${queuedEmail.email} failed, retry scheduled for ${queuedEmail.nextAttempt}`
+            `email to ${queuedEmail.email} failed, retry scheduled for ${queuedEmail.nextAttempt}.`
           );
         }
 
@@ -581,7 +581,7 @@ export const processEmailQueue = async (batchSize = 10): Promise<QueueProcessing
       }
     }
   } catch (error: unknown) {
-    console.error('Error processing email queue:', error);
+    console.error('error processing email queue.', error);
   }
 
   return results;

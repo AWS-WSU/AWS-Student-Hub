@@ -209,7 +209,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       const response = await adminAPI.getEmailQueueStats();
       setQueueStats(response.stats);
     } catch (err) {
-      console.error('Failed to load queue stats:', err);
+      console.error('failed to load queue stats.', err);
     }
   }, []);
 

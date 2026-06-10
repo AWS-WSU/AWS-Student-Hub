@@ -143,7 +143,7 @@ function QuickSetup({ theme }: ThemeProps) {
       };
       reader.readAsDataURL(compressedFile);
     } catch (error) {
-      console.error('Image compression error:', error);
+      console.error('image compression error.', error);
       setImageError('Failed to process image. Please try a different image.');
     }
   };
@@ -186,7 +186,7 @@ function QuickSetup({ theme }: ThemeProps) {
       showToast('Profile setup completed!', 'success');
       navigate('/', { replace: true });
     } catch (error) {
-      console.error('Setup completion error:', error);
+      console.error('setup completion error.', error);
       const message = error instanceof Error ? error.message : 'Failed to complete setup';
       showToast(message, 'error');
     } finally {

@@ -22,7 +22,7 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }: CyberChallenge
       setCopiedField(field);
       setTimeout(() => setCopiedField(null), 2000);
     } catch (err) {
-      console.error('Failed to copy: ', err);
+      console.error('failed to copy.', err);
     }
   };
 

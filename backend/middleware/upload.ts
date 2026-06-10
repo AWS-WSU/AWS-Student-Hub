@@ -17,7 +17,7 @@ const loadSharp = async (): Promise<SharpFactory | null> => {
       .then((module) => (module.default ?? module) as unknown as SharpFactory)
       .catch((error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
-        console.warn('Sharp module not available - image processing disabled:', message);
+        console.warn('sharp module not available; image processing disabled.', message);
         return null;
       });
   }
@@ -47,7 +47,7 @@ export const processImage = async (buffer: Buffer): Promise<Buffer> => {
   const sharp = await loadSharp();
 
   if (!sharp) {
-    console.warn('⚠️ Sharp not available - returning original image buffer');
+    console.warn('sharp not available; returning original image buffer.');
     return buffer;
   }
 
@@ -61,7 +61,7 @@ export const processImage = async (buffer: Buffer): Promise<Buffer> => {
       .toBuffer();
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.warn('⚠️ Image processing failed - returning original:', message);
+    console.warn('image processing failed; returning original image buffer.', message);
     return buffer;
   }
 };

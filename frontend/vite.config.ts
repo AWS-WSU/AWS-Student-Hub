@@ -14,15 +14,15 @@ export default defineConfig({
         timeout: 10000,
         configure: (proxy) => {
           proxy.on('error', (err: Error) => {
-            console.log('Proxy error:', err);
+            console.log('proxy error.', err);
           });
           proxy.on('proxyReq', (proxyReq: ClientRequest, req: IncomingMessage) => {
-            console.log('Sending Request to the Target:', req.method, req.url);
+            console.log('sending request to the target.', req.method, req.url);
           });
           proxy.on(
             'proxyRes',
             (proxyRes: IncomingMessage, req: IncomingMessage, _res: ServerResponse) => {
-              console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+              console.log('received response from the target.', proxyRes.statusCode, req.url);
             }
           );
         },

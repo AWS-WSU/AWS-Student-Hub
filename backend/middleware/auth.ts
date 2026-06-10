@@ -87,7 +87,7 @@ const checkJwt = async (req: Request, res: Response, next: NextFunction): Promis
       return;
     }
 
-    console.error('JWT verification error:', err);
+    console.error('jwt verification error.', err);
     res.status(401).json({
       error: 'Token is not valid',
     });

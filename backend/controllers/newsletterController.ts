@@ -42,7 +42,7 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
       message: 'Successfully subscribed to newsletter! Thank you for joining us.',
     });
   } catch (error: unknown) {
-    console.error('Newsletter subscription error:', error);
+    console.error('newsletter subscription error.', error);
 
     if (getMongoErrorCode(error) === 11000) {
       res.status(409).json({
@@ -79,7 +79,7 @@ export const getSubscriptions = async (_req: Request, res: Response): Promise<vo
       count: subscriptions.length,
     });
   } catch (error: unknown) {
-    console.error('Get subscriptions error:', error);
+    console.error('get subscriptions error.', error);
     res.status(500).json({
       success: false,
       message: 'Error retrieving subscriptions',

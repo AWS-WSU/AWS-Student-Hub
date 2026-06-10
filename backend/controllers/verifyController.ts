@@ -29,7 +29,7 @@ export const verifyUser = async (req: Request, res: Response): Promise<void> => 
       valid: isValid,
     });
   } catch (error: unknown) {
-    console.error('Verify user error:', error);
+    console.error('verify user error.', error);
     res.json({
       valid: false,
       message: 'Server error',

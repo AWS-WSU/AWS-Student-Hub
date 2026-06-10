@@ -117,7 +117,7 @@ export const createEvent = async (req: Request, res: Response): Promise<void> =>
 
     res.json({ success: true, event });
   } catch (error: unknown) {
-    console.error('Create event error:', error);
+    console.error('create event error.', error);
     res.status(500).json({ success: false, error: 'Error creating event' });
   }
 };
@@ -132,7 +132,7 @@ export const listPublicEvents = async (req: Request, res: Response): Promise<voi
       .select('-__v');
     res.json({ success: true, events });
   } catch (error: unknown) {
-    console.error('List events error:', error);
+    console.error('list events error.', error);
     if (isConnectionError(error)) {
       res
         .status(503)
@@ -152,7 +152,7 @@ export const getEvent = async (req: Request, res: Response): Promise<void> => {
     }
     res.json({ success: true, event });
   } catch (error: unknown) {
-    console.error('Get event error:', error);
+    console.error('get event error.', error);
     res.status(500).json({ success: false, error: 'Error fetching event' });
   }
 };
@@ -172,7 +172,7 @@ export const adminList = async (req: Request, res: Response): Promise<void> => {
       pagination: { page, total, totalPages: Math.ceil(total / limit) },
     });
   } catch (error: unknown) {
-    console.error('Admin list events error:', error);
+    console.error('admin list events error.', error);
     res.status(500).json({ success: false, error: 'Error fetching events' });
   }
 };
@@ -238,7 +238,7 @@ export const updateEvent = async (req: Request, res: Response): Promise<void> =>
     }
     res.json({ success: true, event });
   } catch (error: unknown) {
-    console.error('Update event error:', error);
+    console.error('update event error.', error);
     res.status(500).json({ success: false, error: 'Error updating event' });
   }
 };
@@ -263,11 +263,11 @@ export const deleteEvent = async (req: Request, res: Response): Promise<void> =>
         }
       }
     } catch (error: unknown) {
-      console.error('Event thumbnail cleanup error:', error);
+      console.error('event thumbnail cleanup error.', error);
     }
     res.json({ success: true, message: 'Event deleted' });
   } catch (error: unknown) {
-    console.error('Delete event error:', error);
+    console.error('delete event error.', error);
     res.status(500).json({ success: false, error: 'Error deleting event' });
   }
 };
@@ -307,7 +307,7 @@ export const sendEventNotification = async (req: Request, res: Response): Promis
       totalRecipients: users.length,
     });
   } catch (error: unknown) {
-    console.error('Send event notification error:', error);
+    console.error('send event notification error.', error);
     res.status(500).json({ success: false, error: 'Error sending event notifications' });
   }
 };

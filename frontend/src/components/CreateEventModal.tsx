@@ -181,7 +181,7 @@ function CreateEventModal({ onClose, onEventCreated }: CreateEventModalProps) {
           });
           setTimeout(() => onClose(), 2000);
         } catch (emailError) {
-          console.error('Error sending email notifications:', emailError);
+          console.error('error sending email notifications.', emailError);
           setEmailStatus({
             success: false,
             error:
@@ -193,7 +193,7 @@ function CreateEventModal({ onClose, onEventCreated }: CreateEventModalProps) {
         onClose();
       }
     } catch (error) {
-      console.error('Error creating event:', error);
+      console.error('error creating event.', error);
     } finally {
       setSubmitting(false);
     }

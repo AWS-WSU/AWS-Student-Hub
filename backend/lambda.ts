@@ -83,7 +83,7 @@ export const handler = async (
   }
 
   if (process.env.NODE_ENV !== 'production') {
-    console.log('Lambda Event:', JSON.stringify(event, null, 2));
+    console.log('lambda event.', JSON.stringify(event, null, 2));
   }
 
   const lambdaHandler = serverless(app, {
@@ -118,13 +118,13 @@ export const processEmailQueueHandler = async (
 ): Promise<APIGatewayProxyResult> => {
   context.callbackWaitsForEmptyEventLoop = false;
 
-  console.log('Starting scheduled email queue processing...');
+  console.log('starting scheduled email queue processing.');
 
   try {
     await connectDB();
     const result = await processEmailQueue(20);
 
-    console.log('Email queue processing completed:', result);
+    console.log('email queue processing completed.', result);
 
     return {
       statusCode: 200,
@@ -136,7 +136,7 @@ export const processEmailQueueHandler = async (
     };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('Email queue processing error:', error);
+    console.error('email queue processing error.', error);
 
     return {
       statusCode: 500,

@@ -50,7 +50,7 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
       },
     });
   } catch (error: unknown) {
-    console.error('Get dashboard stats error:', error);
+    console.error('get dashboard stats error.', error);
     res.status(500).json({
       success: false,
       error: 'Error fetching dashboard stats',
@@ -111,7 +111,7 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
       },
     });
   } catch (error: unknown) {
-    console.error('Get all users error:', error);
+    console.error('get all users error.', error);
     res.status(500).json({
       success: false,
       error: 'Error fetching users',
@@ -158,7 +158,7 @@ export const updateUserRole = async (req: Request, res: Response): Promise<void>
       user,
     });
   } catch (error: unknown) {
-    console.error('Update user role error:', error);
+    console.error('update user role error.', error);
     res.status(500).json({
       success: false,
       error: 'Error updating user role',
@@ -204,7 +204,7 @@ export const banUser = async (req: Request, res: Response): Promise<void> => {
       user,
     });
   } catch (error: unknown) {
-    console.error('Ban user error:', error);
+    console.error('ban user error.', error);
     res.status(500).json({
       success: false,
       error: 'Error banning user',
@@ -241,7 +241,7 @@ export const unbanUser = async (req: Request, res: Response): Promise<void> => {
       user,
     });
   } catch (error: unknown) {
-    console.error('Unban user error:', error);
+    console.error('unban user error.', error);
     res.status(500).json({
       success: false,
       error: 'Error unbanning user',
@@ -284,7 +284,7 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
       message: 'User deleted successfully',
     });
   } catch (error: unknown) {
-    console.error('Delete user error:', error);
+    console.error('delete user error.', error);
     res.status(500).json({
       success: false,
       error: 'Error deleting user',
@@ -315,7 +315,7 @@ export const getUserDetails = async (req: Request, res: Response): Promise<void>
       user,
     });
   } catch (error: unknown) {
-    console.error('Get user details error:', error);
+    console.error('get user details error.', error);
     res.status(500).json({
       success: false,
       error: 'Error fetching user details',
@@ -331,7 +331,7 @@ export const getEmailQueueStats = async (_req: Request, res: Response): Promise<
       stats,
     });
   } catch (error: unknown) {
-    console.error('Get email queue stats error:', error);
+    console.error('get email queue stats error.', error);
     res.status(500).json({
       success: false,
       error: 'Error fetching email queue stats',
@@ -350,7 +350,7 @@ export const getEmailQueueEntries = async (req: Request, res: Response): Promise
       ...((result as Record<string, unknown>) || {}),
     });
   } catch (error: unknown) {
-    console.error('Get email queue entries error:', error);
+    console.error('get email queue entries error.', error);
     res.status(500).json({
       success: false,
       error: 'Error fetching email queue entries',
@@ -368,7 +368,7 @@ export const retryQueuedEmail = async (req: Request, res: Response): Promise<voi
       result,
     });
   } catch (error: unknown) {
-    console.error('Retry queued email error:', error);
+    console.error('retry queued email error.', error);
     res.status(500).json({
       success: false,
       error: getErrorMessage(error) || 'Error retrying email',
@@ -386,7 +386,7 @@ export const processQueue = async (req: Request, res: Response): Promise<void> =
       result,
     });
   } catch (error: unknown) {
-    console.error('Process queue error:', error);
+    console.error('process queue error.', error);
     res.status(500).json({
       success: false,
       error: 'Error processing email queue',

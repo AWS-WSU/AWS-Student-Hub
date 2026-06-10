@@ -80,7 +80,7 @@ const getInitialUserState = (): User | null => {
       return JSON.parse(cachedUser) as User;
     }
   } catch {
-    console.warn('Failed to parse cached user data');
+    console.warn('failed to parse cached user data.');
   }
   return null;
 };
@@ -125,7 +125,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           });
         }
       } catch (error) {
-        console.error('Logout error:', error);
+        console.error('logout error.', error);
       } finally {
         // Clear all auth data from both storages
         setUser(null);
@@ -146,7 +146,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   // Force clear all corrupted data - for debugging browser issues
   const forceLogoutAndClearData = useCallback(() => {
-    console.log('Force clearing all browser data due to corrupted state');
+    console.log('force clearing all browser data due to corrupted state.');
     setUser(null);
     localStorage.clear();
     sessionStorage.clear();
@@ -198,7 +198,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setUser(data.user);
         return data;
       } catch (error) {
-        console.error('Token refresh failed:', error);
+        console.error('token refresh failed.', error);
         logout();
         throw error;
       } finally {
@@ -230,7 +230,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           refreshTokens();
         }
       } catch (error) {
-        console.error('Error setting up token refresh:', error);
+        console.error('error setting up token refresh.', error);
       }
     };
 
@@ -257,7 +257,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             setUser(userData);
             setStoredItem('cachedUser', JSON.stringify(userData));
           } catch (verifyError) {
-            console.error('Token verification failed:', verifyError);
+            console.error('token verification failed.', verifyError);
 
             // If access token is expired, try to refresh
             const authError = verifyError as Error & { status?: number };
@@ -265,7 +265,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               try {
                 await refreshTokens();
               } catch (refreshError) {
-                console.error('Token refresh failed during verification:', refreshError);
+                console.error('token refresh failed during verification.', refreshError);
                 logout();
               }
             } else if (
@@ -280,7 +280,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setLoading(false);
         }
       } catch (error) {
-        console.error('Session check error:', error);
+        console.error('session check error.', error);
         setLoading(false);
       }
     };
@@ -493,7 +493,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       return data.awsCredentials;
     } catch (error) {
-      console.error('Get AWS credentials error:', error);
+      console.error('get aws credentials error.', error);
       throw error;
     }
   };
@@ -522,7 +522,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       return data;
     } catch (error) {
-      console.error('Mark AWS credentials viewed error:', error);
+      console.error('mark aws credentials viewed error.', error);
       throw error;
     }
   };

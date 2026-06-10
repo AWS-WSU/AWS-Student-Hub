@@ -130,7 +130,7 @@ function EventModal({
       onEventUpdated?.(res.event);
       setIsEditing(false);
     } catch (error) {
-      console.error('Error updating event:', error);
+      console.error('error updating event.', error);
     } finally {
       setUpdating(false);
     }
@@ -142,7 +142,7 @@ function EventModal({
       await eventsAPI.delete(event._id);
       onEventDeleted?.(event._id);
     } catch (error) {
-      console.error('Error deleting event:', error);
+      console.error('error deleting event.', error);
     } finally {
       setDeleting(false);
     }

@@ -85,7 +85,7 @@ export const requireRole = (minRole: Role = 'member'): RequestHandler => {
 
       next();
     } catch (err: unknown) {
-      console.error('Admin auth middleware error:', err);
+      console.error('admin auth middleware error.', err);
       res.status(401).json({
         error: 'Invalid token.',
       });
@@ -134,7 +134,7 @@ export const canManageUser = async (
     req.targetUser = { role: targetUserRole };
     next();
   } catch (error: unknown) {
-    console.error('Can manage user check error:', error);
+    console.error('can manage user check error.', error);
     res.status(500).json({
       error: 'Error checking user permissions',
     });

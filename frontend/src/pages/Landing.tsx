@@ -63,7 +63,7 @@ function Landing({ theme }: ThemeProps) {
         const response = await authAPI.getRecentUsers(6);
         setRecentUsers(response.users || []);
       } catch (error) {
-        console.error('Error fetching recent users:', error);
+        console.error('error fetching recent users.', error);
         setRecentUsers([]);
       } finally {
         setLoadingUsers(false);
@@ -90,7 +90,7 @@ function Landing({ theme }: ThemeProps) {
         setTimeout(() => setShowReferralLink(true), 500);
       }
     } catch (error) {
-      console.error('Error searching users:', error);
+      console.error('error searching users.', error);
       setSearchResults([]);
       setTimeout(() => setShowReferralLink(true), 500);
     } finally {
@@ -128,7 +128,7 @@ function Landing({ theme }: ThemeProps) {
       setReferralCopied(true);
       setTimeout(() => setReferralCopied(false), 3000);
     } catch (error) {
-      console.error('Failed to copy referral link:', error);
+      console.error('failed to copy referral link.', error);
     }
   };
 
