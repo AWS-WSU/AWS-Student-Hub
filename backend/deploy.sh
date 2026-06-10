@@ -53,13 +53,14 @@ echo "smtp port: $SMTP_PORT."
 echo "all sensitive values: [hidden]."
 
 echo "installing dependencies."
-npm ci
+bun install --frozen-lockfile
 
 echo "compiling typescript."
-npm run build
+bun run build
 
 echo "pruning development dependencies."
-npm prune --omit=dev
+rm -rf node_modules
+bun install --frozen-lockfile --production --os=linux --cpu=x64
 
 echo "building deployment package."
 sam build

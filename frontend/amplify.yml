@@ -7,16 +7,19 @@ applications:
           commands:
             - nvm install 20
             - nvm use 20
-            - rm -rf node_modules package-lock.json
-            - npm install --production=false
+            - curl -fsSL https://bun.sh/install | bash
+            - export PATH="$HOME/.bun/bin:$PATH"
+            - rm -rf node_modules
+            - bun install --frozen-lockfile
             - ls -la node_modules/.bin/ | head -10
         build:
           commands:
-            - npx --yes vite@6.3.5 build
+            - export PATH="$HOME/.bun/bin:$PATH"
+            - bun run build
       artifacts:
         baseDirectory: dist
         files:
           - '**/*'
       cache:
         paths:
-          - node_modules/**/* 
+          - node_modules/**/*

@@ -63,10 +63,10 @@ if (!email) {
   console.log('email address is required.');
   console.log('');
   console.log('usage.');
-  console.log('   npm run create-superuser -- <email>');
+  console.log('   bun run create-superuser -- <email>');
   console.log('');
   console.log('example.');
-  console.log('   npm run create-superuser -- admin@example.com');
+  console.log('   bun run create-superuser -- admin@example.com');
   console.log('');
   console.log('note: user must register through the website first before being promoted.');
   process.exit(1);

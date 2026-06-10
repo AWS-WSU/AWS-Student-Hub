@@ -3,4 +3,4 @@ dist
 build
 .env
 *.env.*
-package-lock.json
+bun.lock
