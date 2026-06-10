@@ -858,110 +858,114 @@ function Account({ theme: _theme }: AccountProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
-            <h2>
-              <Lock size={28} aria-hidden="true" /> Cyber Challenge #5 Info
+            <h2 className="account-challenge-heading">
+              <Lock size={26} aria-hidden="true" /> AWS Access Challenge
             </h2>
 
-            <div className="challenge-card">
-              <div className="challenge-header">
-                <div className="challenge-icon">
-                  <Shield size={30} aria-hidden="true" />
+            <div className="account-challenge-card">
+              <div className="account-challenge-header">
+                <div className="account-challenge-icon">
+                  <Shield size={28} aria-hidden="true" />
                 </div>
-                <div className="challenge-title">
-                  <h3>AWS Cloud Security Challenge</h3>
-                  <p>Access your personalized AWS environment</p>
+                <div className="account-challenge-title">
+                  <span>Challenge #5</span>
+                  <h3>AWS Cloud Security Lab</h3>
+                  <p>Use your assigned AWS workspace to retrieve the next challenge secret.</p>
                 </div>
               </div>
 
-              <div className="challenge-info">
-                <div className="info-grid">
-                  <div className="info-item">
-                    <span className="info-label">S3 Bucket:</span>
-                    <code>wayne-aws-club-secrets</code>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Your Secret File:</span>
-                    <code>secrets/{currentUser?.username}.txt</code>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">AWS Region:</span>
-                    <code>us-east-1</code>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">IAM User:</span>
-                    <code>club_{currentUser?.username}</code>
-                  </div>
+              <div className="account-challenge-meta-grid">
+                <div className="account-challenge-meta-item">
+                  <span>S3 bucket</span>
+                  <code>wayne-aws-club-secrets</code>
+                </div>
+                <div className="account-challenge-meta-item">
+                  <span>Secret path</span>
+                  <code>secrets/{currentUser?.username}.txt</code>
+                </div>
+                <div className="account-challenge-meta-item">
+                  <span>Region</span>
+                  <code>us-east-1</code>
+                </div>
+                <div className="account-challenge-meta-item">
+                  <span>IAM user</span>
+                  <code>club_{currentUser?.username}</code>
                 </div>
               </div>
 
               {currentUser?.awsAccessKeyId ? (
-                <div className="credentials-section">
+                <div className="account-credentials-section">
                   {!awsCredentials ? (
-                    <>
+                    <div className="account-challenge-actions">
                       <motion.button
                         className="reveal-credentials-btn"
                         onClick={() => setShowCredentialsModal(true)}
-                        whileHover={{ scale: 1.02 }}
+                        whileHover={{ y: -2 }}
                         whileTap={{ scale: 0.98 }}
                       >
-                        <Lock size={16} aria-hidden="true" /> Reveal AWS Credentials
+                        <Lock size={16} aria-hidden="true" /> Reveal credentials
                       </motion.button>
 
                       <motion.button
                         className="show-modal-btn"
                         onClick={handleShowCyberModal}
-                        whileHover={{ scale: 1.02 }}
+                        whileHover={{ y: -2 }}
                         whileTap={{ scale: 0.98 }}
-                        style={{ marginLeft: '1rem' }}
                       >
-                        <Target size={16} /> Show Challenge Modal
+                        <Target size={16} aria-hidden="true" /> Open instructions
                       </motion.button>
-                    </>
+                    </div>
                   ) : (
                     <div className="credentials-display">
-                      <h4>Your AWS Credentials</h4>
-                      <div className="credential-row">
-                        <label>Access Key ID:</label>
-                        <div className="credential-value">
+                      <div className="credentials-display-header">
+                        <h4>AWS credentials</h4>
+                        <p>Copy what you need, then hide the values when you’re done.</p>
+                      </div>
+
+                      <div className="account-credential-row">
+                        <div className="account-credential-content">
+                          <label>Access key ID</label>
                           <code>{awsCredentials.accessKeyId}</code>
-                          <button
-                            onClick={() =>
-                              navigator.clipboard.writeText(awsCredentials.accessKeyId)
-                            }
-                            className="copy-btn"
-                          >
-                            <Copy size={14} />
-                          </button>
                         </div>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(awsCredentials.accessKeyId)}
+                          className="copy-btn"
+                          aria-label="Copy access key ID"
+                        >
+                          <Copy size={14} aria-hidden="true" />
+                        </button>
                       </div>
-                      <div className="credential-row">
-                        <label>Secret Access Key:</label>
-                        <div className="credential-value">
+
+                      <div className="account-credential-row">
+                        <div className="account-credential-content">
+                          <label>Secret access key</label>
                           <code>{awsCredentials.secretAccessKey}</code>
-                          <button
-                            onClick={() =>
-                              navigator.clipboard.writeText(awsCredentials.secretAccessKey)
-                            }
-                            className="copy-btn"
-                          >
-                            <Copy size={14} />
-                          </button>
                         </div>
+                        <button
+                          onClick={() =>
+                            navigator.clipboard.writeText(awsCredentials.secretAccessKey)
+                          }
+                          className="copy-btn"
+                          aria-label="Copy secret access key"
+                        >
+                          <Copy size={14} aria-hidden="true" />
+                        </button>
                       </div>
-                      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+
+                      <div className="account-challenge-actions compact">
                         <button
                           className="hide-credentials-btn"
                           onClick={() => setAwsCredentials(null)}
                         >
-                          Hide Credentials
+                          Hide credentials
                         </button>
                         <motion.button
                           className="show-modal-btn"
                           onClick={handleShowCyberModal}
-                          whileHover={{ scale: 1.02 }}
+                          whileHover={{ y: -2 }}
                           whileTap={{ scale: 0.98 }}
                         >
-                          <Target size={16} /> Show Challenge Modal
+                          <Target size={16} aria-hidden="true" /> Open instructions
                         </motion.button>
                       </div>
                     </div>
