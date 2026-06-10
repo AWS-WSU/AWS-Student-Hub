@@ -5,27 +5,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: '23'
+          bun-version: '1.3.14'
 
       - name: Install root deps
-        run: npm install
+        run: bun install --frozen-lockfile
 
       - name: Install frontend deps
-        run: cd frontend && npm install
+        run: cd frontend && bun install --frozen-lockfile
 
       - name: Install backend deps
-        run: cd backend && npm install --ignore-scripts
+        run: cd backend && bun install --frozen-lockfile --ignore-scripts
 
       - name: Check formatting
-        run: npm run format:check
+        run: bun run format:check
 
       - name: Lint frontend
-        run: cd frontend && npm run lint
+        run: cd frontend && bun run lint
 
       - name: Lint backend
-        run: cd backend && npm run lint
+        run: cd backend && bun run lint
 
       - name: Check frontend build
-        run: cd frontend && npm run build
+        run: cd frontend && bun run build

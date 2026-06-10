@@ -14,11 +14,13 @@ import {
 } from '@aws-sdk/client-iam';
 import { DeleteObjectsCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3';
 import chalk from 'chalk';
-import dotenv from 'dotenv';
 import path from 'path';
 import readline from 'readline';
 
-dotenv.config({ path: path.join(__dirname, '../.env') });
+import env from '../src/config/env';
+import logger from '../src/config/logger';
+
+const log = logger.child({ module: 'cleanup-aws-credentials' });
 
 interface ClubUser {
   UserName?: string;
@@ -28,18 +30,17 @@ interface S3SecretObject {
   Key?: string;
 }
 
-const accessKeyId = process.env.AWS_ADMIN_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
-const secretAccessKey =
-  process.env.AWS_ADMIN_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+const accessKeyId = env.AWS_ADMIN_ACCESS_KEY_ID || env.AWS_ACCESS_KEY_ID;
+const secretAccessKey = env.AWS_ADMIN_SECRET_ACCESS_KEY || env.AWS_SECRET_ACCESS_KEY;
 const credentials = accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined;
 
 const iamClient = new IAMClient({
-  region: 'us-east-1',
+  region: env.CUSTOM_AWS_REGION,
   credentials,
 });
 
 const s3Client = new S3Client({
-  region: 'us-east-1',
+  region: env.CUSTOM_AWS_REGION,
   credentials,
 });
 
@@ -61,22 +62,22 @@ const askQuestion = (question: string): Promise<string> => {
 };
 
 const displayWarning = (): void => {
-  console.log('\n' + '='.repeat(80));
-  console.log(chalk.red.bold('⚠️  DESTRUCTIVE OPERATION WARNING ⚠️'));
-  console.log('='.repeat(80));
-  console.log(chalk.yellow('This script will:'));
-  console.log(chalk.yellow('• Delete ALL IAM users starting with "club_"'));
-  console.log(chalk.yellow('• Delete ALL associated IAM policies'));
-  console.log(chalk.yellow('• Delete ALL access keys for these users'));
-  console.log(chalk.yellow('• Delete ALL secret files in S3 bucket "wayne-aws-club-secrets"'));
-  console.log(chalk.yellow('• This action is IRREVERSIBLE'));
-  console.log('\n' + chalk.red.bold('USE ONLY IN DEVELOPMENT ENVIRONMENT!'));
-  console.log('='.repeat(80) + '\n');
+  log.info('\\n' + '='.repeat(80));
+  log.info(chalk.red.bold('destructive operation warning.'));
+  log.info('='.repeat(80));
+  log.info(chalk.yellow('this script will perform the following actions.'));
+  log.info(chalk.yellow('delete all iam users starting with "club_".'));
+  log.info(chalk.yellow('delete all associated iam policies.'));
+  log.info(chalk.yellow('delete all access keys for these users.'));
+  log.info(chalk.yellow('delete all secret files in s3 bucket "wayne-aws-club-secrets".'));
+  log.info(chalk.yellow('this action is irreversible.'));
+  log.info('\\n' + chalk.red.bold('use only in development environment.'));
+  log.info('='.repeat(80) + '\\n');
 };
 
 const getClubUsers = async (): Promise<ClubUser[]> => {
   try {
-    console.log(chalk.blue('🔍 Finding all club users...'));
+    log.info(chalk.blue('finding all club users.'));
     const users: ClubUser[] = [];
     let marker: string | undefined;
 
@@ -93,17 +94,17 @@ const getClubUsers = async (): Promise<ClubUser[]> => {
       marker = result.Marker;
     } while (marker);
 
-    console.log(chalk.green(`✅ Found ${users.length} club users`));
+    log.info(chalk.green(`found ${users.length} club users.`));
     return users;
   } catch (error: unknown) {
-    console.error(chalk.red('❌ Error fetching users:'), getErrorMessage(error));
+    log.error(chalk.red('error fetching users.'), getErrorMessage(error));
     return [];
   }
 };
 
 const getS3SecretFiles = async (): Promise<S3SecretObject[]> => {
   try {
-    console.log(chalk.blue('🔍 Finding all secret files in S3...'));
+    log.info(chalk.blue('finding all secret files in s3.'));
     const objects: S3SecretObject[] = [];
     let continuationToken: string | undefined;
 
@@ -121,17 +122,17 @@ const getS3SecretFiles = async (): Promise<S3SecretObject[]> => {
       continuationToken = result.NextContinuationToken;
     } while (continuationToken);
 
-    console.log(chalk.green(`✅ Found ${objects.length} secret files`));
+    log.info(chalk.green(`found ${objects.length} secret files.`));
     return objects;
   } catch (error: unknown) {
-    console.error(chalk.red('❌ Error fetching S3 objects:'), getErrorMessage(error));
+    log.error(chalk.red('error fetching s3 objects.'), getErrorMessage(error));
     return [];
   }
 };
 
 const deleteUser = async (username: string): Promise<boolean> => {
   try {
-    console.log(chalk.yellow(`🗑️  Deleting user: ${username}`));
+    log.info(chalk.yellow(`deleting user ${username}.`));
 
     try {
       const accessKeys = await iamClient.send(new ListAccessKeysCommand({ UserName: username }));
@@ -143,10 +144,10 @@ const deleteUser = async (username: string): Promise<boolean> => {
             AccessKeyId: key.AccessKeyId,
           })
         );
-        console.log(chalk.gray(`   🔑 Deleted access key: ${key.AccessKeyId}`));
+        log.info(chalk.gray(`deleted access key ${key.AccessKeyId}.`));
       }
     } catch (error: unknown) {
-      console.log(chalk.red(`   ❌ Error deleting access keys: ${getErrorMessage(error)}`));
+      log.info(chalk.red('error deleting access keys.'), getErrorMessage(error));
     }
 
     try {
@@ -161,23 +162,22 @@ const deleteUser = async (username: string): Promise<boolean> => {
             PolicyArn: policy.PolicyArn,
           })
         );
-        console.log(chalk.gray(`   📋 Detached policy: ${policy.PolicyName || policy.PolicyArn}`));
+        log.info(chalk.gray(`detached policy ${policy.PolicyName || policy.PolicyArn}.`));
 
         if (policy.PolicyName?.startsWith('club_')) {
           try {
             await iamClient.send(new DeletePolicyCommand({ PolicyArn: policy.PolicyArn }));
-            console.log(chalk.gray(`   🗑️  Deleted policy: ${policy.PolicyName}`));
+            log.info(chalk.gray(`deleted policy ${policy.PolicyName}.`));
           } catch (deletePolicyError: unknown) {
-            console.log(
-              chalk.red(
-                `   ❌ Error deleting policy ${policy.PolicyName}: ${getErrorMessage(deletePolicyError)}`
-              )
+            log.info(
+              chalk.red(`error deleting policy ${policy.PolicyName}.`),
+              getErrorMessage(deletePolicyError)
             );
           }
         }
       }
     } catch (error: unknown) {
-      console.log(chalk.red(`   ❌ Error handling policies: ${getErrorMessage(error)}`));
+      log.info(chalk.red('error handling policies.'), getErrorMessage(error));
     }
 
     try {
@@ -191,10 +191,10 @@ const deleteUser = async (username: string): Promise<boolean> => {
             PolicyName: policyName,
           })
         );
-        console.log(chalk.gray(`   📄 Deleted inline policy: ${policyName}`));
+        log.info(chalk.gray(`deleted inline policy ${policyName}.`));
       }
     } catch (error: unknown) {
-      console.log(chalk.red(`   ❌ Error deleting inline policies: ${getErrorMessage(error)}`));
+      log.info(chalk.red('error deleting inline policies.'), getErrorMessage(error));
     }
 
     try {
@@ -207,30 +207,30 @@ const deleteUser = async (username: string): Promise<boolean> => {
             GroupName: group.GroupName,
           })
         );
-        console.log(chalk.gray(`   👥 Removed from group: ${group.GroupName}`));
+        log.info(chalk.gray(`removed from group ${group.GroupName}.`));
       }
     } catch (error: unknown) {
-      console.log(chalk.red(`   ❌ Error removing from groups: ${getErrorMessage(error)}`));
+      log.info(chalk.red('error removing from groups.'), getErrorMessage(error));
     }
 
     await iamClient.send(new DeleteUserCommand({ UserName: username }));
-    console.log(chalk.green('   ✅ User deleted successfully'));
+    log.info(chalk.green('user deleted successfully.'));
 
     return true;
   } catch (error: unknown) {
-    console.error(chalk.red(`   ❌ Error deleting user ${username}:`, getErrorMessage(error)));
+    log.error(chalk.red(`error deleting user ${username}.`), getErrorMessage(error));
     return false;
   }
 };
 
 const deleteS3Objects = async (objects: S3SecretObject[]): Promise<boolean> => {
   if (objects.length === 0) {
-    console.log(chalk.gray('📁 No S3 objects to delete'));
+    log.info(chalk.gray('no s3 objects to delete.'));
     return true;
   }
 
   try {
-    console.log(chalk.yellow(`🗑️  Deleting ${objects.length} S3 objects...`));
+    log.info(chalk.yellow(`deleting ${objects.length} s3 objects.`));
 
     const batchSize = 1000;
     for (let i = 0; i < objects.length; i += batchSize) {
@@ -251,35 +251,35 @@ const deleteS3Objects = async (objects: S3SecretObject[]): Promise<boolean> => {
 
       if (result.Deleted) {
         result.Deleted.forEach((deleted) => {
-          console.log(chalk.gray(`   📄 Deleted: ${deleted.Key}`));
+          log.info(chalk.gray(`deleted ${deleted.Key}.`));
         });
       }
 
       if (result.Errors && result.Errors.length > 0) {
         result.Errors.forEach((error) => {
-          console.log(chalk.red(`   ❌ Error deleting ${error.Key}: ${error.Message}`));
+          log.info(chalk.red(`error deleting ${error.Key}.`), error.Message);
         });
       }
     }
 
-    console.log(chalk.green('✅ S3 cleanup completed'));
+    log.info(chalk.green('s3 cleanup completed.'));
     return true;
   } catch (error: unknown) {
-    console.error(chalk.red('❌ Error deleting S3 objects:'), getErrorMessage(error));
+    log.error(chalk.red('error deleting s3 objects.'), getErrorMessage(error));
     return false;
   }
 };
 
 const testAWSCredentials = async (): Promise<boolean> => {
   try {
-    console.log(chalk.blue('🧪 Testing AWS credentials...'));
+    log.info(chalk.blue('testing aws credentials.'));
     await iamClient.send(new ListUsersCommand({ MaxItems: 1 }));
-    console.log(chalk.green('✅ AWS credentials are valid'));
+    log.info(chalk.green('aws credentials are valid.'));
     return true;
   } catch (error: unknown) {
-    console.error(chalk.red('❌ AWS credentials test failed:'), getErrorMessage(error));
-    console.log(
-      chalk.yellow('Please verify your AWS credentials have the necessary IAM permissions')
+    log.error(chalk.red('aws credentials test failed.'), getErrorMessage(error));
+    log.info(
+      chalk.yellow('please verify your aws credentials have the necessary iam permissions.')
     );
     return false;
   }
@@ -291,7 +291,7 @@ const runCleanup = async (): Promise<void> => {
 
     const confirm1 = await askQuestion(chalk.red('Type "DELETE" to continue: '));
     if (confirm1.toUpperCase() !== 'DELETE') {
-      console.log(chalk.yellow('❌ Operation cancelled'));
+      log.info(chalk.yellow('operation cancelled.'));
       rl.close();
       return;
     }
@@ -300,98 +300,94 @@ const runCleanup = async (): Promise<void> => {
       chalk.red('Are you absolutely sure? Type "YES" to proceed: ')
     );
     if (confirm2.toUpperCase() !== 'YES') {
-      console.log(chalk.yellow('❌ Operation cancelled'));
+      log.info(chalk.yellow('operation cancelled.'));
       rl.close();
       return;
     }
 
-    console.log('\n' + chalk.blue.bold('🚀 Starting cleanup process...\n'));
+    log.info('\\n' + chalk.blue.bold('starting cleanup process.'));
 
     const [users, s3Objects] = await Promise.all([getClubUsers(), getS3SecretFiles()]);
 
     if (users.length === 0 && s3Objects.length === 0) {
-      console.log(chalk.green('✅ No resources found to clean up!'));
+      log.info(chalk.green('no resources found to clean up.'));
       rl.close();
       return;
     }
 
-    console.log('\n' + chalk.yellow.bold('📋 Cleanup Summary:'));
-    console.log(chalk.yellow(`   • ${users.length} IAM users to delete`));
-    console.log(chalk.yellow(`   • ${s3Objects.length} S3 objects to delete`));
+    log.info('\\n' + chalk.yellow.bold('cleanup summary.'));
+    log.info(chalk.yellow(`${users.length} iam users to delete.`));
+    log.info(chalk.yellow(`${s3Objects.length} s3 objects to delete.`));
 
     const finalConfirm = await askQuestion(chalk.red('\nProceed with deletion? (y/N): '));
     if (finalConfirm.toLowerCase() !== 'y' && finalConfirm.toLowerCase() !== 'yes') {
-      console.log(chalk.yellow('❌ Operation cancelled'));
+      log.info(chalk.yellow('operation cancelled.'));
       rl.close();
       return;
     }
 
-    console.log('\n' + '='.repeat(50));
-    console.log(chalk.blue.bold('Starting IAM User Cleanup'));
-    console.log('='.repeat(50));
+    log.info('\\n' + '='.repeat(50));
+    log.info(chalk.blue.bold('starting iam user cleanup.'));
+    log.info('='.repeat(50));
 
     let successCount = 0;
     for (const user of users) {
       if (!user.UserName) continue;
       const success = await deleteUser(user.UserName);
       if (success) successCount++;
-      console.log('');
+      log.info('');
     }
 
-    console.log('='.repeat(50));
-    console.log(chalk.blue.bold('Starting S3 Cleanup'));
-    console.log('='.repeat(50));
+    log.info('='.repeat(50));
+    log.info(chalk.blue.bold('starting s3 cleanup.'));
+    log.info('='.repeat(50));
 
     await deleteS3Objects(s3Objects);
 
-    console.log('\n' + '='.repeat(50));
-    console.log(chalk.green.bold('🎉 Cleanup Complete!'));
-    console.log('='.repeat(50));
-    console.log(chalk.green(`✅ Successfully deleted ${successCount}/${users.length} IAM users`));
-    console.log(chalk.green('✅ Cleaned up S3 secret files'));
-    console.log(chalk.yellow('⚠️  Remember to also clean up your MongoDB users if needed'));
-    console.log('='.repeat(50));
+    log.info('\\n' + '='.repeat(50));
+    log.info(chalk.green.bold('cleanup complete.'));
+    log.info('='.repeat(50));
+    log.info(chalk.green(`successfully deleted ${successCount}/${users.length} iam users.`));
+    log.info(chalk.green('cleaned up s3 secret files.'));
+    log.info(chalk.yellow('remember to also clean up your mongodb users if needed.'));
+    log.info('='.repeat(50));
   } catch (error: unknown) {
-    console.error(chalk.red('\n❌ Fatal error during cleanup:'), getErrorMessage(error));
+    log.error(chalk.red('fatal error during cleanup.'), getErrorMessage(error));
   } finally {
     rl.close();
   }
 };
 
 const checkAWSCredentials = (): boolean => {
-  console.log(chalk.cyan('🔍 Checking environment variables...'));
-  console.log(
-    `AWS_ADMIN_ACCESS_KEY_ID: ${process.env.AWS_ADMIN_ACCESS_KEY_ID ? '✓ Set' : '✗ Not set'}`
-  );
-  console.log(
-    `AWS_ADMIN_SECRET_ACCESS_KEY: ${process.env.AWS_ADMIN_SECRET_ACCESS_KEY ? '✓ Set' : '✗ Not set'}`
-  );
+  log.info(chalk.cyan('checking environment variables.'));
+  log.info(`aws admin access key id ${env.AWS_ADMIN_ACCESS_KEY_ID ? 'set' : 'not set'}.`);
+  log.info(`aws admin secret access key ${env.AWS_ADMIN_SECRET_ACCESS_KEY ? 'set' : 'not set'}.`);
 
   if (!accessKeyId || !secretAccessKey) {
-    console.log(chalk.red('❌ AWS credentials not found!'));
-    console.log(chalk.yellow('Expected format in .env file:'));
-    console.log('AWS_ADMIN_ACCESS_KEY_ID=your_access_key_here');
-    console.log('AWS_ADMIN_SECRET_ACCESS_KEY=your_secret_key_here');
+    log.info(chalk.red('aws credentials not found.'));
+    log.info(chalk.yellow('expected format in .env file.'));
+    log.info('AWS_ADMIN_ACCESS_KEY_ID=your_access_key_here');
+    log.info('AWS_ADMIN_SECRET_ACCESS_KEY=your_secret_key_here');
     return false;
   }
 
-  console.log(chalk.green('✅ AWS credentials found and configured'));
+  log.info(chalk.green('aws credentials found and configured.'));
   return true;
 };
 
 if (require.main === module) {
   checkAWSCredentials();
-  console.log(chalk.cyan('Environment file path:'), path.join(__dirname, '../.env'));
-  console.log('');
+  log.info(chalk.cyan('environment file path.'), path.join(__dirname, '../.env'));
+  log.info('');
 
   testAWSCredentials().then((isValid) => {
     if (!isValid) {
-      console.log(chalk.red('❌ Aborting cleanup due to credential issues'));
+      log.info(chalk.red('aborting cleanup due to credential issues.'));
       process.exit(1);
     }
 
     runCleanup().catch((error: unknown) => {
-      console.error(chalk.red('❌ Script failed:'), getErrorMessage(error));
+      log.error(chalk.red('script failed.'), getErrorMessage(error));
       process.exit(1);
     });
   });

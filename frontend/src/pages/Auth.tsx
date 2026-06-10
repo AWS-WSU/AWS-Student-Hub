@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { authAPI } from '../utils/api';
-import { Check, Circle } from 'lucide-react';
+import { ArrowLeft, Check, Circle } from 'lucide-react';
 import CyberChallengeModal from '../components/CyberChallengeModal';
 import './styles/Auth.css';
 import type { AuthResponse, AwsCredentials } from '../types/auth';
@@ -232,7 +232,7 @@ function Auth({ theme }: AuthProps) {
         !currentUser.hasViewedAwsCredentials &&
         !showCyberModal
       ) {
-        console.log('Setting AWS credentials for modal:', {
+        console.log('setting aws credentials for modal.', {
           hasAccessKey: !!currentUser.awsAccessKeyId,
           hasSecretKey: !!currentUser.awsSecretAccessKey,
           hasViewed: currentUser.hasViewedAwsCredentials,
@@ -263,7 +263,7 @@ function Auth({ theme }: AuthProps) {
   ]);
 
   useEffect(() => {
-    console.log('Auth useEffect - State check:', {
+    console.log('auth state check.', {
       authUser: !!authUser,
       auth0User: !!auth0User,
       isLoading,
@@ -272,7 +272,10 @@ function Auth({ theme }: AuthProps) {
     });
   }, [authUser, auth0User, isLoading, showCyberModal, awsCredentials]);
 
-  console.log('Auth render - showCyberModal:', showCyberModal, 'awsCredentials:', !!awsCredentials);
+  console.log('auth render state.', {
+    showCyberModal,
+    hasAwsCredentials: !!awsCredentials,
+  });
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -327,7 +330,7 @@ function Auth({ theme }: AuthProps) {
           login(requestData),
           timeoutPromise,
         ])) as AuthResponse;
-        console.log('Login result:', loginResult);
+        console.log('login result.', loginResult);
 
         if (
           loginResult &&
@@ -336,7 +339,7 @@ function Auth({ theme }: AuthProps) {
           loginResult.user.awsSecretAccessKey &&
           !loginResult.user.hasViewedAwsCredentials
         ) {
-          console.log('Login: Setting AWS credentials for modal');
+          console.log('login: setting aws credentials for modal.');
           setAwsCredentials({
             accessKeyId: loginResult.user.awsAccessKeyId,
             secretAccessKey: loginResult.user.awsSecretAccessKey,
@@ -353,10 +356,10 @@ function Auth({ theme }: AuthProps) {
           signup(requestData),
           timeoutPromise,
         ])) as AuthResponse;
-        console.log('Signup result:', signupResult);
+        console.log('signup result.', signupResult);
 
         if (signupResult && signupResult.awsCredentials) {
-          console.log('Signup: Setting AWS credentials for modal');
+          console.log('signup: setting aws credentials for modal.');
           setAwsCredentials(signupResult.awsCredentials);
           setShowCyberModal(true);
           setIsLoading(false);
@@ -606,7 +609,7 @@ function Auth({ theme }: AuthProps) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                ← Back to Sign In
+                <ArrowLeft size={16} aria-hidden="true" /> Back to Sign In
               </motion.button>
             </motion.form>
           )}
@@ -650,7 +653,7 @@ function Auth({ theme }: AuthProps) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                ← Back to Sign In
+                <ArrowLeft size={16} aria-hidden="true" /> Back to Sign In
               </motion.button>
             </motion.form>
           )}
@@ -691,7 +694,7 @@ function Auth({ theme }: AuthProps) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                ← Back to Sign In
+                <ArrowLeft size={16} aria-hidden="true" /> Back to Sign In
               </motion.button>
             </motion.form>
           )}
@@ -742,7 +745,7 @@ function Auth({ theme }: AuthProps) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                ← Back to Sign In
+                <ArrowLeft size={16} aria-hidden="true" /> Back to Sign In
               </motion.button>
             </motion.form>
           )}
@@ -902,7 +905,7 @@ function Auth({ theme }: AuthProps) {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              ← Back to Home
+              <ArrowLeft size={16} aria-hidden="true" /> Back to Home
             </motion.button>
           </>
         )}

@@ -153,7 +153,7 @@ const apiRequest = async <T = any>(endpoint: string, options: RequestOptions = {
 
     return data as T;
   } catch (error) {
-    console.error('API request failed:', error);
+    console.error('api request failed.', error);
     if (error instanceof Error && error.message === 'Failed to fetch') {
       throw new Error('Unable to connect to the server. Please check your connection.');
     }

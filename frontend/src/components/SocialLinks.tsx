@@ -14,9 +14,9 @@ const SocialSection = () => {
 
   const handleDiscordClick = async () => {
     try {
-      console.log('Fetching fresh Discord invite...');
+      console.log('fetching fresh discord invite.');
       const data = await discordAPI.getInvite();
-      console.log('Discord API response:', data);
+      console.log('discord api response.', data);
 
       let inviteUrl: string | null = null;
       if (data && data.inviteUrl) {
@@ -24,7 +24,7 @@ const SocialSection = () => {
       } else if (data && data.invite_url) {
         inviteUrl = data.invite_url;
       } else {
-        console.warn('No invite URL returned from API, using fallback');
+        console.warn('no invite url returned from api, using fallback.');
         inviteUrl = 'https://discord.gg/BX8nCQHU';
       }
 
@@ -44,10 +44,10 @@ const SocialSection = () => {
         window.open(inviteUrl, '_blank', 'noopener,noreferrer');
       }
     } catch (err) {
-      console.error('Failed to fetch Discord invite:', err);
+      console.error('failed to fetch discord invite.', err);
       const error = err as Error & { response?: { data?: unknown } };
-      console.error('Error details:', error.message, error.response?.data);
-      console.warn('Using fallback Discord invite');
+      console.error('error details.', error.message, error.response?.data);
+      console.warn('using fallback discord invite.');
 
       const fallbackUrl = 'https://discord.gg/BX8nCQHU';
       if (isMobile()) {

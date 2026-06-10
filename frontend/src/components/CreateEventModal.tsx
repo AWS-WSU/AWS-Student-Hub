@@ -3,7 +3,7 @@ import type { ChangeEvent, MouseEvent } from 'react';
 import Cropper from 'react-easy-crop';
 import type { Area, Point } from 'react-easy-crop';
 import { eventsAPI } from '../utils/api';
-import { Mail } from 'lucide-react';
+import { FileImage, Mail } from 'lucide-react';
 import type { Event as HubEvent, EventFormPayload } from '../types/event';
 
 type EventFormErrors = Partial<Record<'title' | 'date' | 'time', string>>;
@@ -181,7 +181,7 @@ function CreateEventModal({ onClose, onEventCreated }: CreateEventModalProps) {
           });
           setTimeout(() => onClose(), 2000);
         } catch (emailError) {
-          console.error('Error sending email notifications:', emailError);
+          console.error('error sending email notifications.', emailError);
           setEmailStatus({
             success: false,
             error:
@@ -193,7 +193,7 @@ function CreateEventModal({ onClose, onEventCreated }: CreateEventModalProps) {
         onClose();
       }
     } catch (error) {
-      console.error('Error creating event:', error);
+      console.error('error creating event.', error);
     } finally {
       setSubmitting(false);
     }
@@ -509,7 +509,7 @@ function CreateEventModal({ onClose, onEventCreated }: CreateEventModalProps) {
                   onChange={onFileChange}
                   style={{ display: 'none' }}
                 />
-                <div className="hub-file-upload-icon">📁</div>
+                <FileImage className="hub-file-upload-icon" size={28} aria-hidden="true" />
                 <div className="hub-file-info">Click to select an image</div>
               </div>
             )}

@@ -371,8 +371,11 @@
   gap: 1rem;
 }
 
-.loading-spinner {
-  font-size: 3rem;
+.profile-loading .loading-spinner {
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .profile-loading p {
@@ -395,7 +398,9 @@
 }
 
 .error-icon {
-  font-size: 4rem;
+  color: var(--accent);
+  display: flex;
+  justify-content: center;
   margin-bottom: 1rem;
 }
 
@@ -560,9 +565,10 @@
   font-family: var(--font-family);
 }
 
-.academic-info h4::before {
-  content: '🎓';
-  font-size: 1.2rem;
+.academic-info h4 svg,
+.programming-skills h4 svg {
+  color: var(--accent);
+  flex-shrink: 0;
 }
 
 .academic-details {
@@ -605,11 +611,6 @@
   align-items: center;
   gap: 0.5rem;
   font-family: var(--font-family);
-}
-
-.programming-skills h4::before {
-  content: '💻';
-  font-size: 1.2rem;
 }
 
 .skills-grid {

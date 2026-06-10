@@ -1,35 +1,57 @@
-# Setting up the MongoDB instance for development
+# Database setup
 
-**Backend `.env`:**
+The backend uses MongoDB through Mongoose. The primary connection value is `MONGODB_URI` in `backend/.env`.
+
+## Required backend variables
+
 ```env
-MONGODB_URI=your_mongodb_connection_string
+MONGODB_URI=your-mongodb-connection-string
 PORT=5001
-CORS_ORIGIN=http://localhost:5173
+NODE_ENV=development
+CORS_ORIGIN=http://localhost:5173,http://localhost:3000
+JWT_SECRET=your-jwt-secret
 ```
 
-**Frontend (.env):**
+The frontend only needs to know where the backend API is running:
+
 ```env
 VITE_API_URL=http://localhost:5001/api
 ```
 
-## Newsletter API
+## Getting a database connection
 
-- `POST /api/newsletter/subscribe` - Subscribe with `{"email": "user@example.com"}`
-- `GET /api/newsletter/subscriptions` - View all subscriptions
+Use one of these approaches:
 
-## Testing
+1. Ask a project maintainer for the shared development MongoDB URI if you are an approved AWS Cloud Club maintainer or contributor.
+2. Create your own MongoDB Atlas cluster for isolated local development.
+3. Run a local MongoDB instance and point `MONGODB_URI` at it.
+
+Production database credentials are restricted and are not distributed to outside collaborators.
+
+## Running without MongoDB
+
+The server can start without `MONGODB_URI` in local development, but database-backed routes will fail or return service-unavailable responses. Configure MongoDB before working on auth, users, newsletters, events, or admin flows.
+
+## Smoke test
+
+Start the app:
+
 ```bash
-# Test subscribe
+bun run dev
+```
+
+Then test the newsletter endpoints:
+
+```bash
 curl -X POST http://localhost:5001/api/newsletter/subscribe \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com"}'
 
-# View subscriptions
-curl http://localhost:5001/api/newsletter/subscriptions | jq
+curl http://localhost:5001/api/newsletter/subscriptions
 ```
 
-## MongoDB Setup
+## Notes
 
-Contact Akrm Al-Hakimi for MongoDB configuration. You MUST be a certified board member of WSU's AWS Cloud Club. Outside collaborators will not receive production variables.
-
-Without MongoDB configured, the newsletter signup will return a service unavailable error.
+- Keep `.env` files local.
+- Do not paste database credentials into issues, commits, pull requests, screenshots, or chat logs.
+- If you rotate or replace a shared development URI, update the maintainers who rely on it.

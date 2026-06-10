@@ -1,5 +1,4 @@
 import cors, { CorsOptions } from 'cors';
-import dotenv from 'dotenv';
 import express, { ErrorRequestHandler, NextFunction, Request, Response } from 'express';
 import mongoose from 'mongoose';
 
@@ -11,12 +10,14 @@ import eventRoutes from './routes/events';
 import newsletterRoutes from './routes/newsletter';
 import uploadRoutes from './routes/upload';
 import verifyRoutes from './routes/verify';
+import env from './config/env';
+import logger from './config/logger';
 
-dotenv.config();
+const log = logger.child({ module: 'app' });
 
 const app = express();
 
-if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+if (env.IS_LAMBDA) {
   app.set('trust proxy', true);
 }
 
@@ -36,9 +37,9 @@ const initDB = async (): Promise<void> => {
     try {
       await connectDB();
       dbInitialized = true;
-      console.log('Database initialized successfully');
+      log.info('database: initialized successfully.');
     } catch (err: unknown) {
-      console.error('Database connection failed:', err);
+      log.error('database: connection failed.', err);
       dbInitialized = false;
       dbInitPromise = null;
       throw err;
@@ -48,13 +49,13 @@ const initDB = async (): Promise<void> => {
   return dbInitPromise;
 };
 
-if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+if (env.IS_LAMBDA) {
   initDB().catch((err: unknown) => {
-    console.error('Failed to initialize database:', err);
+    log.error('database: initialization failed.', err);
   });
 } else {
   connectDB().catch((err: unknown) => {
-    console.error('Database connection failed:', err);
+    log.error('database: connection failed.', err);
   });
 }
 
@@ -74,9 +75,7 @@ const corsOptions: CorsOptions = {
       return;
     }
 
-    const allowedOrigins = process.env.CORS_ORIGIN
-      ? process.env.CORS_ORIGIN.split(',').map((allowedOrigin) => allowedOrigin.trim())
-      : defaultAllowedOrigins;
+    const allowedOrigins = env.CORS_ORIGINS ?? defaultAllowedOrigins;
 
     const isAmplifyDomain = origin.includes('.amplifyapp.com');
 
@@ -101,12 +100,12 @@ app.use(async (req: Request, res: Response, next: NextFunction): Promise<void> =
     return;
   }
 
-  if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  if (!env.IS_LAMBDA) {
     req.setTimeout(25000);
     res.setTimeout(25000);
   }
 
-  if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  if (env.IS_LAMBDA) {
     try {
       if (mongoose.connection.readyState === 1) {
         next();
@@ -125,7 +124,7 @@ app.use(async (req: Request, res: Response, next: NextFunction): Promise<void> =
 
       const finalCheck = await checkConnection();
       if (!finalCheck) {
-        console.error('Database not available after initialization attempt');
+        log.error('database: not available after initialization attempt.');
         res.status(503).json({
           error: 'Service temporarily unavailable. Please try again.',
           message: 'Database connection unavailable',
@@ -133,7 +132,7 @@ app.use(async (req: Request, res: Response, next: NextFunction): Promise<void> =
         return;
       }
     } catch (error: unknown) {
-      console.error('Database initialization error:', error);
+      log.error('database: initialization error.', error);
       res.status(503).json({
         error: 'Service temporarily unavailable. Please try again.',
         message: 'Database connection failed',
@@ -158,7 +157,7 @@ app.get('/health', (_req: Request, res: Response): void => {
     status: 'OK',
     message: 'AWS Student Hub Backend is running on Lambda',
     timestamp: new Date().toISOString(),
-    environment: process.env.AWS_LAMBDA_FUNCTION_NAME ? 'lambda' : 'local',
+    environment: env.IS_LAMBDA ? 'lambda' : 'local',
   });
 });
 
@@ -167,7 +166,7 @@ app.use((_req: Request, res: Response): void => {
 });
 
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
-  console.error(err.stack || err);
+  log.error(err.stack || err);
   res.status(500).json({ message: 'Something went wrong!' });
 };
 

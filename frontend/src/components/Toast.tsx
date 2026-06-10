@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { AlertCircle, Check, Info, X } from 'lucide-react';
 import type { ToastType } from '../types/ui';
 import './styles/Toast.css';
 
@@ -12,6 +13,7 @@ interface ToastProps {
 
 const Toast = ({ message, type = 'success', duration = 4000, onClose }: ToastProps) => {
   const [isVisible, setIsVisible] = useState(true);
+  const ToastIcon = type === 'success' ? Check : type === 'info' ? Info : AlertCircle;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -38,9 +40,13 @@ const Toast = ({ message, type = 'success', duration = 4000, onClose }: ToastPro
           transition={{ duration: 0.3, ease: 'easeOut' }}
         >
           <div className="toast-content">
-            <div className="toast-icon"></div>
+            <div className="toast-icon">
+              <ToastIcon size={12} aria-hidden="true" />
+            </div>
             <span className="toast-message">{message}</span>
-            <button className="toast-close" onClick={handleClose}></button>
+            <button className="toast-close" onClick={handleClose} aria-label="Close toast">
+              <X size={14} aria-hidden="true" />
+            </button>
           </div>
         </motion.div>
       )}

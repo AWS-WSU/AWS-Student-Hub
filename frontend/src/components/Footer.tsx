@@ -32,7 +32,7 @@ function Footer({ theme }: ThemeProps) {
         setMessage({ text: response.message || 'Something went wrong', type: 'error' });
       }
     } catch (error) {
-      console.error('Newsletter subscription error:', error);
+      console.error('newsletter subscription error.', error);
       setMessage({
         text:
           error instanceof Error ? error.message : 'Unable to subscribe. Please try again later.',

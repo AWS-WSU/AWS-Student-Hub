@@ -2,17 +2,21 @@ import type { Request, Response } from 'express';
 import { DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 
+import env from '../config/env';
 import Event from '../models/Event';
 import User from '../models/User';
 import { sendBulkEventNotification } from '../services/emailService';
+import logger from '../config/logger';
 
-const s3Region = process.env.S3_REGION || process.env.AWS_REGION || 'us-east-1';
+const log = logger.child({ module: 'eventController' });
+
+const s3Region = env.S3_REGION || env.AWS_REGION || 'us-east-1';
 
 const credentials =
-  process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY
+  env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY
     ? {
-        accessKeyId: process.env.S3_ACCESS_KEY_ID,
-        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+        accessKeyId: env.S3_ACCESS_KEY_ID,
+        secretAccessKey: env.S3_SECRET_ACCESS_KEY,
       }
     : undefined;
 
@@ -50,7 +54,7 @@ const uploadEventThumbnail = async (file: ThumbnailFile): Promise<string> => {
   const upload = new Upload({
     client: s3Client,
     params: {
-      Bucket: process.env.AWS_HUB_EVENT_THUMBNAILS || '',
+      Bucket: env.AWS_HUB_EVENT_THUMBNAILS || '',
       Key: `event-thumbnails/${Date.now()}-${file.originalname}`,
       Body: file.buffer,
       ContentType: file.mimetype,
@@ -117,7 +121,7 @@ export const createEvent = async (req: Request, res: Response): Promise<void> =>
 
     res.json({ success: true, event });
   } catch (error: unknown) {
-    console.error('Create event error:', error);
+    log.error('create event error.', error);
     res.status(500).json({ success: false, error: 'Error creating event' });
   }
 };
@@ -132,7 +136,7 @@ export const listPublicEvents = async (req: Request, res: Response): Promise<voi
       .select('-__v');
     res.json({ success: true, events });
   } catch (error: unknown) {
-    console.error('List events error:', error);
+    log.error('list events error.', error);
     if (isConnectionError(error)) {
       res
         .status(503)
@@ -152,7 +156,7 @@ export const getEvent = async (req: Request, res: Response): Promise<void> => {
     }
     res.json({ success: true, event });
   } catch (error: unknown) {
-    console.error('Get event error:', error);
+    log.error('get event error.', error);
     res.status(500).json({ success: false, error: 'Error fetching event' });
   }
 };
@@ -172,7 +176,7 @@ export const adminList = async (req: Request, res: Response): Promise<void> => {
       pagination: { page, total, totalPages: Math.ceil(total / limit) },
     });
   } catch (error: unknown) {
-    console.error('Admin list events error:', error);
+    log.error('admin list events error.', error);
     res.status(500).json({ success: false, error: 'Error fetching events' });
   }
 };
@@ -238,7 +242,7 @@ export const updateEvent = async (req: Request, res: Response): Promise<void> =>
     }
     res.json({ success: true, event });
   } catch (error: unknown) {
-    console.error('Update event error:', error);
+    log.error('update event error.', error);
     res.status(500).json({ success: false, error: 'Error updating event' });
   }
 };
@@ -256,18 +260,18 @@ export const deleteEvent = async (req: Request, res: Response): Promise<void> =>
         if (key) {
           await s3Client.send(
             new DeleteObjectCommand({
-              Bucket: process.env.AWS_HUB_EVENT_THUMBNAILS || '',
+              Bucket: env.AWS_HUB_EVENT_THUMBNAILS || '',
               Key: key,
             })
           );
         }
       }
     } catch (error: unknown) {
-      console.error('Event thumbnail cleanup error:', error);
+      log.error('event thumbnail cleanup error.', error);
     }
     res.json({ success: true, message: 'Event deleted' });
   } catch (error: unknown) {
-    console.error('Delete event error:', error);
+    log.error('delete event error.', error);
     res.status(500).json({ success: false, error: 'Error deleting event' });
   }
 };
@@ -307,7 +311,7 @@ export const sendEventNotification = async (req: Request, res: Response): Promis
       totalRecipients: users.length,
     });
   } catch (error: unknown) {
-    console.error('Send event notification error:', error);
+    log.error('send event notification error.', error);
     res.status(500).json({ success: false, error: 'Error sending event notifications' });
   }
 };

@@ -164,6 +164,16 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.step-header h2 svg {
+  color: var(--accent);
+  -webkit-text-fill-color: var(--accent);
+  flex-shrink: 0;
 }
 
 .step-header p {
@@ -191,9 +201,10 @@
   gap: 0.5rem;
 }
 
-.current-info h3::before {
-  content: '👋';
-  font-size: 1.5rem;
+.current-info h3 svg,
+.profile-picture-section h3 svg {
+  color: var(--accent);
+  flex-shrink: 0;
 }
 
 .info-grid {
@@ -239,11 +250,6 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-}
-
-.profile-picture-section h3::before {
-  content: '📸';
-  font-size: 1.5rem;
 }
 
 .image-upload-container {

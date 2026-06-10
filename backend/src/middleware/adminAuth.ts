@@ -1,7 +1,11 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
+import env from '../config/env';
 import User from '../models/User';
+import logger from '../config/logger';
+
+const log = logger.child({ module: 'adminAuth' });
 
 type Role = Express.UserRole;
 
@@ -17,10 +21,10 @@ const roleHierarchy: Record<Role, number> = {
 };
 
 const getJwtSecret = (): string => {
-  if (!process.env.JWT_SECRET) {
+  if (!env.JWT_SECRET) {
     throw new Error('JWT_SECRET is not configured');
   }
-  return process.env.JWT_SECRET;
+  return env.JWT_SECRET;
 };
 
 const isAdminTokenPayload = (decoded: string | jwt.JwtPayload): decoded is AdminTokenPayload => {
@@ -85,7 +89,7 @@ export const requireRole = (minRole: Role = 'member'): RequestHandler => {
 
       next();
     } catch (err: unknown) {
-      console.error('Admin auth middleware error:', err);
+      log.error('admin auth middleware error.', err);
       res.status(401).json({
         error: 'Invalid token.',
       });
@@ -134,7 +138,7 @@ export const canManageUser = async (
     req.targetUser = { role: targetUserRole };
     next();
   } catch (error: unknown) {
-    console.error('Can manage user check error:', error);
+    log.error('can manage user check error.', error);
     res.status(500).json({
       error: 'Error checking user permissions',
     });

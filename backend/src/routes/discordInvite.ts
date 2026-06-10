@@ -1,22 +1,24 @@
 import axios from 'axios';
 import express from 'express';
-import dotenv from 'dotenv';
 
-dotenv.config();
+import env from '../config/env';
+import logger from '../config/logger';
+
+const log = logger.child({ module: 'discordInvite' });
 
 const router = express.Router();
 
 router.get('/discord-invite', async (_req, res): Promise<void> => {
   try {
-    const { DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID } = process.env;
+    const { DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID } = env;
 
     if (!DISCORD_BOT_TOKEN || !DISCORD_CHANNEL_ID) {
-      console.error('Missing Discord configuration');
+      log.error('missing discord configuration.');
       res.status(500).json({ error: 'Discord integration not configured' });
       return;
     }
 
-    console.log('Creating Discord invite for channel:', DISCORD_CHANNEL_ID);
+    log.info('creating discord invite for channel.', DISCORD_CHANNEL_ID);
 
     const response = await axios.post(
       `https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/invites`,
@@ -35,7 +37,7 @@ router.get('/discord-invite', async (_req, res): Promise<void> => {
     );
 
     const invite = response.data as { code: string };
-    console.log('Discord invite generated successfully:', invite.code);
+    log.info('discord invite generated successfully.', invite.code);
     res.json({
       inviteUrl: `https://discord.gg/${invite.code}`,
       success: true,
@@ -49,12 +51,12 @@ router.get('/discord-invite', async (_req, res): Promise<void> => {
         ? error.message
         : 'Discord API error';
 
-    console.error('Error generating Discord invite:', data || message);
+    log.error('error generating discord invite.', data || message);
 
     if (status === 403) {
-      console.error('Bot lacks permissions to create invites in the channel');
+      log.error('bot lacks permissions to create invites in the channel.');
     } else if (status === 404) {
-      console.error('Channel not found or bot not in server');
+      log.error('channel not found or bot not in server.');
     }
 
     res.status(500).json({

@@ -279,10 +279,14 @@ function Navbar({ theme, toggleTheme }: LayoutProps) {
                     whileTap={{ scale: 0.98 }}
                   >
                     <img
-                      src="/avatar.jpg"
+                      src={profileImage}
                       alt="Profile"
-                      className="login-icon"
-                      style={{ filter: theme === 'dark' ? 'invert(100%)' : 'invert(0%)' }}
+                      className="login-icon profile-menu-icon"
+                      onError={(e: SyntheticEvent<HTMLImageElement>) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/avatar.jpg';
+                      }}
+                      referrerPolicy="no-referrer"
                     />
                     Profile
                   </motion.button>

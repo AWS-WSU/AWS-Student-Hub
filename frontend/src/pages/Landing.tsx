@@ -3,7 +3,7 @@ import type { ChangeEvent, KeyboardEvent, MouseEvent, SyntheticEvent } from 'rea
 import './styles/Landing.css';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Sparkles } from 'lucide-react';
+import { Calendar, Search, Sparkles, UserPlus } from 'lucide-react';
 import SocialLinks from '../components/SocialLinks';
 import CreateEventModal from '../components/CreateEventModal';
 import EventModal from '../components/EventModal';
@@ -63,7 +63,7 @@ function Landing({ theme }: ThemeProps) {
         const response = await authAPI.getRecentUsers(6);
         setRecentUsers(response.users || []);
       } catch (error) {
-        console.error('Error fetching recent users:', error);
+        console.error('error fetching recent users.', error);
         setRecentUsers([]);
       } finally {
         setLoadingUsers(false);
@@ -90,7 +90,7 @@ function Landing({ theme }: ThemeProps) {
         setTimeout(() => setShowReferralLink(true), 500);
       }
     } catch (error) {
-      console.error('Error searching users:', error);
+      console.error('error searching users.', error);
       setSearchResults([]);
       setTimeout(() => setShowReferralLink(true), 500);
     } finally {
@@ -128,7 +128,7 @@ function Landing({ theme }: ThemeProps) {
       setReferralCopied(true);
       setTimeout(() => setReferralCopied(false), 3000);
     } catch (error) {
-      console.error('Failed to copy referral link:', error);
+      console.error('failed to copy referral link.', error);
     }
   };
 
@@ -228,7 +228,9 @@ function Landing({ theme }: ThemeProps) {
           <h2>Welcome Our Newest Members!</h2>
           <div className="section-divider">
             <span></span>
-            <div className="divider-icon">👋</div>
+            <div className="divider-icon">
+              <UserPlus size={20} aria-hidden="true" />
+            </div>
             <span></span>
           </div>
         </div>
@@ -302,7 +304,9 @@ function Landing({ theme }: ThemeProps) {
                     ) : (
                       <>
                         <div className="placeholder-avatar">
-                          <div className="placeholder-icon">👋</div>
+                          <div className="placeholder-icon">
+                            <UserPlus size={24} aria-hidden="true" />
+                          </div>
                         </div>
                         <div className="placeholder-info">
                           <h4 className="placeholder-title">Your Spot Awaits</h4>
@@ -349,7 +353,9 @@ function Landing({ theme }: ThemeProps) {
             <h2>Find a Friend</h2>
             <div className="section-divider">
               <span></span>
-              <div className="divider-icon">🔍</div>
+              <div className="divider-icon">
+                <Search size={20} aria-hidden="true" />
+              </div>
               <span></span>
             </div>
           </div>
@@ -382,7 +388,9 @@ function Landing({ theme }: ThemeProps) {
                 transition={{ duration: 0.6 }}
                 viewport={{ once: true, amount: 0.3 }}
               >
-                <div className="no-results-icon">🔍</div>
+                <div className="no-results-icon">
+                  <Search size={48} aria-hidden="true" />
+                </div>
                 <h3>No results found for "{searchQuery}"</h3>
                 <p>Try a different search term or invite a friend directly.</p>
                 {showReferralLink && (
@@ -494,8 +502,8 @@ function Landing({ theme }: ThemeProps) {
               fontStyle: 'italic',
             }}
           >
-            <div className="no-events-icon" style={{ fontSize: '3rem', marginBottom: '20px' }}>
-              🗓️
+            <div className="no-events-icon" style={{ marginBottom: '20px' }}>
+              <Calendar size={48} aria-hidden="true" />
             </div>
             <h3>Nothing to see here yet</h3>
             <p>Stay tuned for our upcoming events!</p>

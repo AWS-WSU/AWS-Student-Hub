@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy, Lock, Terminal, X } from 'lucide-react';
 import type { AwsCredentials } from '../types/auth';
 import './styles/CyberChallengeModal.css';
 
@@ -22,11 +22,45 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }: CyberChallenge
       setCopiedField(field);
       setTimeout(() => setCopiedField(null), 2000);
     } catch (err) {
-      console.error('Failed to copy: ', err);
+      console.error('failed to copy.', err);
     }
   };
 
   if (!isOpen || !awsCredentials) return null;
+
+  const credentialFields: Array<{
+    label: string;
+    value: string;
+    copyField: CopiedField;
+    copyLabel: string;
+    type?: 'text' | 'password';
+  }> = [
+    {
+      label: 'Access key ID',
+      value: awsCredentials.accessKeyId,
+      copyField: 'accessKey',
+      copyLabel: 'Copy access key ID',
+    },
+    {
+      label: 'Secret access key',
+      value: awsCredentials.secretAccessKey,
+      copyField: 'secretKey',
+      copyLabel: 'Copy secret access key',
+      type: 'password',
+    },
+    {
+      label: 'Region',
+      value: 'us-east-1',
+      copyField: 'region',
+      copyLabel: 'Copy AWS region',
+    },
+  ];
+
+  const cliCommands = [
+    `aws configure set aws_access_key_id ${awsCredentials.accessKeyId}`,
+    'aws configure set aws_secret_access_key [YOUR_SECRET_KEY]',
+    'aws configure set default.region us-east-1',
+  ].join('\n');
 
   return (
     <AnimatePresence>
@@ -39,121 +73,102 @@ function CyberChallengeModal({ isOpen, onClose, awsCredentials }: CyberChallenge
       >
         <motion.div
           className="cyber-modal-content"
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.8, opacity: 0 }}
+          initial={{ scale: 0.96, opacity: 0, y: 12 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.96, opacity: 0, y: 12 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
           onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
         >
           <div className="cyber-modal-header">
-            <div className="challenge-icon">🔐</div>
-            <h2>Cyber Challenge #5 - AWS Access</h2>
-            <button className="close-button" onClick={onClose}>
-              ×
+            <div className="cyber-header-icon">
+              <Lock size={26} aria-hidden="true" />
+            </div>
+            <div className="cyber-header-copy">
+              <span>Challenge #5</span>
+              <h2>AWS Access Challenge</h2>
+              <p>Credentials and next steps for your assigned AWS lab workspace.</p>
+            </div>
+            <button className="cyber-close-button" onClick={onClose} aria-label="Close modal">
+              <X size={18} aria-hidden="true" />
             </button>
           </div>
 
           <div className="cyber-modal-body">
-            <div className="challenge-intro">
-              <p>
-                Welcome to the AWS Cloud Security Challenge! You've been granted unique AWS
-                credentials to access your challenge resources.
-              </p>
-            </div>
-
-            <div className="credentials-section">
-              <h3>Your AWS Credentials</h3>
-
-              <div className="credential-field">
-                <label>Access Key ID</label>
-                <div className="credential-input-group">
-                  <input
-                    type="text"
-                    value={awsCredentials.accessKeyId}
-                    readOnly
-                    className="credential-input"
-                  />
-                  <button
-                    className={`copy-button ${copiedField === 'accessKey' ? 'copied' : ''}`}
-                    onClick={() => copyToClipboard(awsCredentials.accessKeyId, 'accessKey')}
-                  >
-                    {copiedField === 'accessKey' ? <Check size={16} /> : <Copy size={16} />}
-                  </button>
-                </div>
+            <section className="cyber-modal-card cyber-modal-credentials">
+              <div className="cyber-section-heading">
+                <h3>Credentials</h3>
+                <p>Use these values only for this challenge workspace. Keep them private.</p>
               </div>
 
-              <div className="credential-field">
-                <label>Secret Access Key</label>
-                <div className="credential-input-group">
-                  <input
-                    type="password"
-                    value={awsCredentials.secretAccessKey}
-                    readOnly
-                    className="credential-input"
-                  />
-                  <button
-                    className={`copy-button ${copiedField === 'secretKey' ? 'copied' : ''}`}
-                    onClick={() => copyToClipboard(awsCredentials.secretAccessKey, 'secretKey')}
-                  >
-                    {copiedField === 'secretKey' ? <Check size={16} /> : <Copy size={16} />}
-                  </button>
-                </div>
+              <div className="cyber-credential-list">
+                {credentialFields.map((field) => (
+                  <div className="cyber-credential-field" key={field.copyField}>
+                    <label>{field.label}</label>
+                    <div className="cyber-credential-control">
+                      <input
+                        type={field.type ?? 'text'}
+                        value={field.value}
+                        readOnly
+                        className="cyber-credential-input"
+                      />
+                      <button
+                        className={`cyber-copy-button ${copiedField === field.copyField ? 'copied' : ''}`}
+                        onClick={() => copyToClipboard(field.value, field.copyField)}
+                        aria-label={field.copyLabel}
+                      >
+                        {copiedField === field.copyField ? (
+                          <Check size={16} aria-hidden="true" />
+                        ) : (
+                          <Copy size={16} aria-hidden="true" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="cyber-modal-card cyber-challenge-details">
+              <div className="cyber-section-heading">
+                <h3>Instructions</h3>
+                <p>Configure AWS, locate your secret file, then use its value to continue.</p>
               </div>
 
-              <div className="credential-field">
-                <label>AWS Region</label>
-                <div className="credential-input-group">
-                  <input type="text" value="us-east-1" readOnly className="credential-input" />
-                  <button
-                    className={`copy-button ${copiedField === 'region' ? 'copied' : ''}`}
-                    onClick={() => copyToClipboard('us-east-1', 'region')}
-                  >
-                    {copiedField === 'region' ? <Check size={16} /> : <Copy size={16} />}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="challenge-details">
-              <h3>Challenge Instructions</h3>
-              <div className="instruction-steps">
-                <div className="step">
-                  <span className="step-number">1</span>
-                  <p>Configure your AWS CLI with the credentials above</p>
-                </div>
-                <div className="step">
-                  <span className="step-number">2</span>
+              <ol className="cyber-instruction-steps">
+                <li className="cyber-step">
+                  <span className="cyber-step-number">1</span>
+                  <p>Configure the AWS CLI with the credentials above.</p>
+                </li>
+                <li className="cyber-step">
+                  <span className="cyber-step-number">2</span>
                   <p>
-                    Find your secret file in the S3 bucket: <code>wayne-aws-club-secrets</code>
+                    Open the S3 bucket <code>wayne-aws-club-secrets</code>.
                   </p>
-                </div>
-                <div className="step">
-                  <span className="step-number">3</span>
-                  <p>Retrieve your next challenge password from the secret file</p>
-                </div>
-                <div className="step">
-                  <span className="step-number">4</span>
-                  <p>Use the password to unlock the next phase of the challenge</p>
-                </div>
-              </div>
-            </div>
+                </li>
+                <li className="cyber-step">
+                  <span className="cyber-step-number">3</span>
+                  <p>Find your assigned secret file and read its contents.</p>
+                </li>
+                <li className="cyber-step">
+                  <span className="cyber-step-number">4</span>
+                  <p>Use the recovered value to continue to the next challenge.</p>
+                </li>
+              </ol>
+            </section>
 
-            <div className="aws-cli-example">
-              <h4>AWS CLI Setup Example:</h4>
-              <div className="code-block">
-                <code>
-                  aws configure set aws_access_key_id {awsCredentials.accessKeyId}
-                  <br />
-                  aws configure set aws_secret_access_key [YOUR_SECRET_KEY]
-                  <br />
-                  aws configure set default.region us-east-1
-                </code>
-              </div>
-            </div>
+            <section className="cyber-cli-example">
+              <h4>
+                <Terminal size={18} aria-hidden="true" /> AWS CLI setup
+              </h4>
+              <pre className="code-block">
+                <code>{cliCommands}</code>
+              </pre>
+            </section>
           </div>
 
           <div className="cyber-modal-footer">
-            <button className="primary-button" onClick={onClose}>
-              Got it! Let's start the challenge
+            <button className="cyber-primary-button" onClick={onClose}>
+              Done
             </button>
           </div>
         </motion.div>

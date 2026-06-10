@@ -1,7 +1,11 @@
 import nodemailer from 'nodemailer';
 
+import env from '../config/env';
+import logger from '../config/logger';
 import EmailQueue from '../models/EmailQueue';
 import type { EmailEventSnapshot } from '../models/EmailQueue';
+
+const log = logger.child({ module: 'emailService' });
 
 interface EventNotificationData extends Omit<EmailEventSnapshot, 'startTime' | 'isRemote'> {
   _id?: unknown;
@@ -30,12 +34,12 @@ interface QueueProcessingResults {
 }
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: Number(process.env.SMTP_PORT || 587),
+  host: env.SMTP_HOST,
+  port: env.SMTP_PORT,
   secure: false,
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: env.SMTP_USER,
+    pass: env.SMTP_PASS,
   },
 });
 
@@ -49,7 +53,7 @@ export const sendResetCode = async (
   fullName: string
 ): Promise<void> => {
   const mailOptions = {
-    from: `"AWS Student Hub" <${process.env.SMTP_USER}>`,
+    from: `"AWS Student Hub" <${env.SMTP_USER}>`,
     to: email,
     subject: 'Password Reset Code - AWS Student Hub',
     html: `
@@ -142,7 +146,7 @@ export const sendEventNotification = async (
   }
 
   const mailOptions = {
-    from: `"AWS Cloud Club @ WSU" <${process.env.SMTP_USER}>`,
+    from: `"AWS Cloud Club @ WSU" <${env.SMTP_USER}>`,
     to: email,
     subject: `🚀 New Event: ${event.title} - AWS Cloud Club`,
     html: `
@@ -487,9 +491,9 @@ const queueFailedEmail = async (
       },
       { upsert: true, new: true }
     );
-    console.log(`Queued failed email for retry: ${email}`);
+    log.info(`queued failed email for retry ${email}.`);
   } catch (queueError: unknown) {
-    console.error(`Failed to queue email for ${email}:`, queueError);
+    log.error(`failed to queue email for ${email}.`, queueError);
   }
 };
 
@@ -554,7 +558,7 @@ export const processEmailQueue = async (batchSize = 10): Promise<QueueProcessing
         queuedEmail.completedAt = new Date();
         await queuedEmail.save();
         results.succeeded++;
-        console.log(`Successfully sent queued email to ${queuedEmail.email}`);
+        log.info(`successfully sent queued email to ${queuedEmail.email}.`);
 
         await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (error: unknown) {
@@ -565,15 +569,15 @@ export const processEmailQueue = async (batchSize = 10): Promise<QueueProcessing
         if (queuedEmail.attempts >= queuedEmail.maxAttempts) {
           queuedEmail.status = 'failed';
           results.permanentlyFailed++;
-          console.error(
-            `Email to ${queuedEmail.email} permanently failed after ${queuedEmail.attempts} attempts`
+          log.error(
+            `email to ${queuedEmail.email} permanently failed after ${queuedEmail.attempts} attempts.`
           );
         } else {
           queuedEmail.status = 'pending';
           queuedEmail.nextAttempt = getNextRetryTime(queuedEmail.attempts);
           results.failed++;
-          console.log(
-            `Email to ${queuedEmail.email} failed, retry scheduled for ${queuedEmail.nextAttempt}`
+          log.info(
+            `email to ${queuedEmail.email} failed, retry scheduled for ${queuedEmail.nextAttempt}.`
           );
         }
 
@@ -581,7 +585,7 @@ export const processEmailQueue = async (batchSize = 10): Promise<QueueProcessing
       }
     }
   } catch (error: unknown) {
-    console.error('Error processing email queue:', error);
+    log.error('error processing email queue.', error);
   }
 
   return results;

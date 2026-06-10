@@ -1,6 +1,9 @@
 import type { Request, Response } from 'express';
 
 import User from '../models/User';
+import logger from '../config/logger';
+
+const log = logger.child({ module: 'verifyController' });
 
 export const verifyUser = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -29,7 +32,7 @@ export const verifyUser = async (req: Request, res: Response): Promise<void> => 
       valid: isValid,
     });
   } catch (error: unknown) {
-    console.error('Verify user error:', error);
+    log.error('verify user error.', error);
     res.json({
       valid: false,
       message: 'Server error',
