@@ -102,6 +102,20 @@ function Challenges({ theme: _theme }: ThemeProps) {
           </motion.div>
         )}
 
+        <motion.div
+          className="challenges-coming-soon"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+        >
+          <span className="coming-soon-badge">Coming soon</span>
+          <h3>Challenge Hub is under active development</h3>
+          <p>
+            We are rebuilding the challenge experience with progress tracking, points, and rewards.
+            Check back here for updates as the new system rolls out.
+          </p>
+        </motion.div>
+
         <div className="challenges-tabs">
           <button
             className={activeTab === 'all' ? 'active' : ''}
@@ -133,7 +147,10 @@ function Challenges({ theme: _theme }: ThemeProps) {
           {loading ? (
             <div className="challenges-loading">Loading challenges...</div>
           ) : filteredChallenges.length === 0 ? (
-            <div className="challenges-empty">No challenges found</div>
+            <div className="challenges-empty">
+              New challenges are coming soon. Thanks for your patience while we finish building this
+              experience.
+            </div>
           ) : (
             filteredChallenges.map((challenge, index) => (
               <motion.div

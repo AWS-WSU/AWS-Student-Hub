@@ -45,6 +45,43 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+.challenges-coming-soon {
+  background: linear-gradient(135deg, rgba(255, 153, 0, 0.12), rgba(35, 47, 62, 0.12));
+  border: 1px solid rgba(255, 153, 0, 0.35);
+  border-radius: 16px;
+  padding: 1.75rem 2rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.coming-soon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-color);
+  color: white;
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.85rem;
+}
+
+.challenges-coming-soon h3 {
+  color: var(--text-primary);
+  font-size: 1.35rem;
+  margin: 0 0 0.65rem;
+}
+
+.challenges-coming-soon p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
 .challenges-tabs {
   display: flex;
   gap: 0.5rem;
@@ -233,6 +270,10 @@
     flex-direction: column;
     gap: 1rem;
     text-align: center;
+  }
+
+  .challenges-coming-soon {
+    padding: 1.5rem;
   }
 
   .challenges-tabs {
