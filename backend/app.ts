@@ -36,9 +36,9 @@ const initDB = async (): Promise<void> => {
     try {
       await connectDB();
       dbInitialized = true;
-      console.log('database initialized successfully.');
+      console.log('database: initialized successfully.');
     } catch (err: unknown) {
-      console.error('database connection failed.', err);
+      console.error('database: connection failed.', err);
       dbInitialized = false;
       dbInitPromise = null;
       throw err;
@@ -50,11 +50,11 @@ const initDB = async (): Promise<void> => {
 
 if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
   initDB().catch((err: unknown) => {
-    console.error('failed to initialize database.', err);
+    console.error('database: initialization failed.', err);
   });
 } else {
   connectDB().catch((err: unknown) => {
-    console.error('database connection failed.', err);
+    console.error('database: connection failed.', err);
   });
 }
 
@@ -125,7 +125,7 @@ app.use(async (req: Request, res: Response, next: NextFunction): Promise<void> =
 
       const finalCheck = await checkConnection();
       if (!finalCheck) {
-        console.error('database not available after initialization attempt.');
+        console.error('database: not available after initialization attempt.');
         res.status(503).json({
           error: 'Service temporarily unavailable. Please try again.',
           message: 'Database connection unavailable',
@@ -133,7 +133,7 @@ app.use(async (req: Request, res: Response, next: NextFunction): Promise<void> =
         return;
       }
     } catch (error: unknown) {
-      console.error('database initialization error.', error);
+      console.error('database: initialization error.', error);
       res.status(503).json({
         error: 'Service temporarily unavailable. Please try again.',
         message: 'Database connection failed',

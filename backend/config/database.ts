@@ -17,12 +17,12 @@ if (!cached) {
 
 const connectDB = async (): Promise<typeof mongoose | null> => {
   if (cached.conn && mongoose.connection.readyState === 1) {
-    console.log('using cached mongodb connection.');
+    console.log('database: using cached mongodb connection.');
     return cached.conn;
   }
 
   if (cached.conn && mongoose.connection.readyState !== 1) {
-    console.log('cached connection is not ready, reconnecting.');
+    console.log('database: cached connection is not ready; reconnecting.');
     cached.conn = null;
     cached.promise = null;
   }
@@ -37,9 +37,9 @@ const connectDB = async (): Promise<typeof mongoose | null> => {
       throw new Error('MONGODB_URI is required in Lambda environment');
     }
 
-    console.log('mongodb connection string is missing in development mode.');
-    console.log('contact akrm al-hakimi for mongodb configuration.');
-    console.log('server will continue running but database operations will fail.');
+    console.log('database: mongodb uri is missing in development mode.');
+    console.log('database: contact akrm al-hakimi for mongodb configuration.');
+    console.log('database: unavailable; server will continue without database operations.');
     return null;
   }
 
@@ -58,23 +58,23 @@ const connectDB = async (): Promise<typeof mongoose | null> => {
       heartbeatFrequencyMS: 10000,
     };
 
-    console.log('creating new mongodb connection.');
+    console.log('database: connecting to mongodb.');
 
     cached.promise = mongoose
       .connect(mongoUri, options)
       .then((conn) => {
-        console.log(`mongodb connected ${conn.connection.host}.`);
+        console.log(`database: connected to ${conn.connection.host}.`);
         return conn;
       })
       .catch((error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
-        console.error('database connection error.', message);
+        console.error('database: connection error.', message);
         cached.promise = null;
         cached.conn = null;
         if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
           throw error;
         }
-        console.log('running without database connection in development mode.');
+        console.log('database: unavailable; continuing in development mode.');
         return null;
       });
   }
@@ -86,13 +86,13 @@ const connectDB = async (): Promise<typeof mongoose | null> => {
 
     if (cached.conn && !hasErrorListener) {
       mongoose.connection.on('error', (err) => {
-        console.error('mongodb connection error.', err);
+        console.error('database: mongodb connection error.', err);
         cached.conn = null;
         cached.promise = null;
       });
 
       mongoose.connection.on('disconnected', () => {
-        console.log('mongodb disconnected.');
+        console.log('database: disconnected from mongodb.');
         cached.conn = null;
         cached.promise = null;
       });
@@ -101,14 +101,13 @@ const connectDB = async (): Promise<typeof mongoose | null> => {
     return cached.conn;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('database connection error.', message);
+    console.error('database: connection error.', message);
     cached.promise = null;
     cached.conn = null;
 
     if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
-      console.log('mongodb connection failed in development.');
-      console.log('contact akrm al-hakimi for mongodb configuration.');
-      console.log('server will continue running but database operations will fail.');
+      console.log('database: connection failed in development.');
+      console.log('database: unavailable; server will continue without database operations.');
       return null;
     }
 
@@ -129,7 +128,7 @@ const checkConnection = async (): Promise<boolean> => {
     return false;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('database health check failed.', message);
+    console.error('database: health check failed.', message);
     return false;
   }
 };

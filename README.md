@@ -154,10 +154,10 @@ DISCORD_CHANNEL_ID=<contact-@cachebag-for-this>
 bun run dev
 ```
 
-Concurrently runs the appropriate scripts for both the frontend and the backend to get the site running. Under the hood, this is what `bun run dev` is doing:
+Concurrently runs the frontend and backend with named, timestamped log prefixes. Under the hood, this is what `bun run dev` is doing:
 
 ```bash
-concurrently "bun run --cwd frontend dev" "bun run --cwd backend dev"
+concurrently --names frontend,backend --prefix-colors cyan,green --prefix "[{time}] [{name}]" --timestamp-format HH:mm:ss "bun run --silent --cwd frontend dev" "bun run --silent --cwd backend dev"
 ```
 
 This should give you an output in your terminal that looks something like this:
