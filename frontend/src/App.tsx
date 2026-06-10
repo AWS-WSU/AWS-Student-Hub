@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { useState, useEffect } from 'react';
+import type { Theme } from './types/ui';
 import Layout from './components/Layout';
 import Landing from './pages/Landing';
 import About from './pages/About';
@@ -17,7 +18,7 @@ import QuickSetup from './pages/QuickSetup';
 import './App.css';
 
 function AppContent() {
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const [theme, setTheme] = useState<Theme>((localStorage.getItem('theme') as Theme) || 'dark');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -25,7 +26,7 @@ function AppContent() {
   }, [theme]);
 
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
+    const newTheme: Theme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
   };
 

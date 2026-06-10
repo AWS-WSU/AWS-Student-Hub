@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
+import type { SyntheticEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { authAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import type { PublicProfile as PublicProfileType, ThemeProps } from '../types';
 import './styles/PublicProfile.css';
 
-const languageIcons = {
+const languageIcons: Record<string, string | undefined> = {
   JavaScript: '/js.svg',
   Python: '/py.svg',
   Java: '/java.svg',
@@ -23,7 +25,13 @@ const languageIcons = {
   SQL: '/sql.svg',
 };
 
-const getStatusDisplay = (role) => {
+interface StatusDisplay {
+  title: string;
+  icon: string | null;
+  isPresident: boolean;
+}
+
+const getStatusDisplay = (role?: string | null): StatusDisplay => {
   switch (role?.toLowerCase()) {
     case 'superuser':
       return {
@@ -53,11 +61,11 @@ const getStatusDisplay = (role) => {
   }
 };
 
-function PublicProfile({ theme }) {
-  const { username } = useParams();
+function PublicProfile({ theme }: ThemeProps) {
+  const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState<PublicProfileType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -73,7 +81,8 @@ function PublicProfile({ theme }) {
         const response = await authAPI.getPublicProfile(username);
         setProfile(response.profile);
       } catch (err) {
-        setError(err.message || 'Failed to load profile');
+        const message = err instanceof Error ? err.message : 'Failed to load profile';
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -82,7 +91,7 @@ function PublicProfile({ theme }) {
     fetchProfile();
   }, [username]);
 
-  const formatLastSeen = (lastLogin, daysSinceLastSeen) => {
+  const formatLastSeen = (lastLogin: string | undefined, daysSinceLastSeen: number): string => {
     if (daysSinceLastSeen === 0) {
       return 'Active today';
     } else if (daysSinceLastSeen === 1) {
@@ -93,7 +102,7 @@ function PublicProfile({ theme }) {
       const weeks = Math.floor(daysSinceLastSeen / 7);
       return `Active ${weeks} week${weeks > 1 ? 's' : ''} ago`;
     } else {
-      return new Date(lastLogin).toLocaleDateString('en-US', {
+      return new Date(lastLogin ?? '').toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -118,7 +127,7 @@ function PublicProfile({ theme }) {
     );
   }
 
-  if (error) {
+  if (error || !profile) {
     return (
       <div className="public-profile-container">
         <div className="profile-error">
@@ -130,7 +139,7 @@ function PublicProfile({ theme }) {
           >
             <div className="error-icon">😞</div>
             <h2>Profile Not Found</h2>
-            <p>{error}</p>
+            <p>{error || 'Failed to load profile'}</p>
             <motion.button
               className="back-home-btn"
               onClick={() => navigate('/')}
@@ -171,8 +180,8 @@ function PublicProfile({ theme }) {
               <img
                 src={profile.profilePicture || '/avatar.jpg'}
                 alt={`${profile.fullName}'s profile`}
-                onError={(e) => {
-                  e.target.src = '/avatar.jpg';
+                onError={(e: SyntheticEvent<HTMLImageElement>) => {
+                  e.currentTarget.src = '/avatar.jpg';
                 }}
               />
               <div className="avatar-border"></div>
@@ -305,24 +314,22 @@ function PublicProfile({ theme }) {
             >
               <h4>Programming Skills</h4>
               <div className="skills-grid">
-                {profile.programmingLanguages.map((language, index) => (
-                  <motion.span
-                    key={language}
-                    className="skill-chip"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3, delay: 0.7 + index * 0.1 }}
-                  >
-                    {languageIcons[language] && (
-                      <img
-                        src={languageIcons[language]}
-                        alt={language}
-                        className="skill-chip-icon"
-                      />
-                    )}
-                    <span className="skill-chip-name">{language}</span>
-                  </motion.span>
-                ))}
+                {profile.programmingLanguages.map((language, index) => {
+                  const icon = languageIcons[language];
+
+                  return (
+                    <motion.span
+                      key={language}
+                      className="skill-chip"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3, delay: 0.7 + index * 0.1 }}
+                    >
+                      {icon && <img src={icon} alt={language} className="skill-chip-icon" />}
+                      <span className="skill-chip-name">{language}</span>
+                    </motion.span>
+                  );
+                })}
               </div>
             </motion.div>
           )}

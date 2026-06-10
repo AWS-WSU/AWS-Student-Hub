@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { ChangeEvent, KeyboardEvent, MouseEvent, SyntheticEvent } from 'react';
 import './styles/Landing.css';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
@@ -8,16 +9,17 @@ import CreateEventModal from '../components/CreateEventModal';
 import EventModal from '../components/EventModal';
 import { authAPI, eventsAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import type { Event as HubEvent, ThemeProps, User } from '../types';
 
-function Landing({ theme }) {
-  const [events, setEvents] = useState([]);
+function Landing({ theme }: ThemeProps) {
+  const [events, setEvents] = useState<HubEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState<HubEvent | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [recentUsers, setRecentUsers] = useState([]);
+  const [recentUsers, setRecentUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
+  const [searchResults, setSearchResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [showReferralLink, setShowReferralLink] = useState(false);
@@ -96,7 +98,7 @@ function Landing({ theme }) {
     }
   };
 
-  const handleSearchInputChange = (e) => {
+  const handleSearchInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
 
@@ -108,7 +110,7 @@ function Landing({ theme }) {
     }
   };
 
-  const handleSearchKeyPress = (e) => {
+  const handleSearchKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSearch();
     }
@@ -138,9 +140,9 @@ function Landing({ theme }) {
     }
   };
 
-  const isAdmin = user && (user.role === 'admin' || user.role === 'superuser');
+  const isAdmin = !!user && (user.role === 'admin' || user.role === 'superuser');
 
-  const handleUserClick = (username) => {
+  const handleUserClick = (username: string) => {
     navigate(`/profile/${username}`);
   };
 
@@ -278,8 +280,8 @@ function Landing({ theme }) {
                           <img
                             src={user.profilePicture || '/avatar.jpg'}
                             alt={`${user.fullName}'s profile`}
-                            onError={(e) => {
-                              e.target.src = '/avatar.jpg';
+                            onError={(e: SyntheticEvent<HTMLImageElement>) => {
+                              e.currentTarget.src = '/avatar.jpg';
                             }}
                           />
                         </div>
@@ -288,7 +290,7 @@ function Landing({ theme }) {
                           <p className="user-username">@{user.username}</p>
                           <span className="join-date">
                             Joined{' '}
-                            {new Date(user.createdAt).toLocaleDateString('en-US', {
+                            {new Date(user.createdAt ?? '').toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric',
                               year: 'numeric',
@@ -413,13 +415,13 @@ function Landing({ theme }) {
               >
                 <h3>Search Results</h3>
                 <div className="search-results-grid">
-                  {searchResults.map((result) => (
+                  {searchResults.map((result, index) => (
                     <motion.div
                       key={result._id}
                       className="search-result-card"
                       initial={{ opacity: 0, y: 30 }}
                       whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: searchResults.indexOf(result) * 0.1 }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
                       viewport={{ once: true, amount: 0.3 }}
                       onClick={() => handleUserClick(result.username)}
                       whileHover={{ scale: 1.05 }}
@@ -429,8 +431,8 @@ function Landing({ theme }) {
                         <img
                           src={result.profilePicture || '/avatar.jpg'}
                           alt={`${result.fullName}'s profile`}
-                          onError={(e) => {
-                            e.target.src = '/avatar.jpg';
+                          onError={(e: SyntheticEvent<HTMLImageElement>) => {
+                            e.currentTarget.src = '/avatar.jpg';
                           }}
                         />
                       </div>
@@ -540,7 +542,7 @@ function Landing({ theme }) {
                           href={ev.meetupUrl}
                           target="_blank"
                           rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e: MouseEvent<HTMLAnchorElement>) => e.stopPropagation()}
                           className="event-meetup-btn"
                           title="Reserve your spot on Meetup"
                         >
@@ -571,7 +573,7 @@ function Landing({ theme }) {
       {showCreateModal && isAdmin && (
         <CreateEventModal
           onClose={() => setShowCreateModal(false)}
-          onEventCreated={(event) => {
+          onEventCreated={(event: HubEvent) => {
             setEvents((prev) => [event, ...prev].slice(0, 6));
           }}
         />
@@ -581,11 +583,11 @@ function Landing({ theme }) {
           event={selectedEvent}
           isAdmin={isAdmin}
           onClose={() => setSelectedEvent(null)}
-          onEventUpdated={(updated) => {
+          onEventUpdated={(updated: HubEvent) => {
             setEvents((prev) => prev.map((ev) => (ev._id === updated._id ? updated : ev)));
             setSelectedEvent(updated);
           }}
-          onEventDeleted={(id) => {
+          onEventDeleted={(id: string) => {
             setEvents((prev) => prev.filter((ev) => ev._id !== id));
             setSelectedEvent(null);
           }}

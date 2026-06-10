@@ -1,10 +1,30 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import type { ReactNode } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { authAPI } from '../utils/api';
+import type {
+  AuthContextValue,
+  AuthResponse,
+  LoginCredentials,
+  ProfileUpdatePayload,
+  SignupPayload,
+} from '../types/auth';
+import type { User } from '../types/user';
 
-const AuthContext = createContext();
+interface JwtPayload {
+  exp: number;
+  id?: string;
+  email?: string;
+  tokenVersion?: number;
+}
 
-export const useAuth = () => {
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export const useAuth = (): AuthContextValue => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
@@ -15,11 +35,11 @@ export const useAuth = () => {
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || 'https://bx7226tmz2.execute-api.us-east-1.amazonaws.com/prod';
 
-const getStoredItem = (key) => {
+const getStoredItem = (key: string): string | null => {
   return localStorage.getItem(key) || sessionStorage.getItem(key);
 };
 
-const setStoredItem = (key, value, rememberMe = null) => {
+const setStoredItem = (key: string, value: string, rememberMe: boolean | null = null): void => {
   const shouldRemember =
     rememberMe !== null ? rememberMe : localStorage.getItem('rememberMe') === 'true';
   const storage = shouldRemember ? localStorage : sessionStorage;
@@ -33,13 +53,13 @@ const setStoredItem = (key, value, rememberMe = null) => {
   storage.setItem(key, value);
 };
 
-const clearStoredItem = (key) => {
+const clearStoredItem = (key: string): void => {
   localStorage.removeItem(key);
   sessionStorage.removeItem(key);
 };
 
 // Generate device ID for this browser
-const generateDeviceId = () => {
+const generateDeviceId = (): string => {
   let deviceId = getStoredItem('deviceId');
   if (!deviceId) {
     deviceId = crypto.randomUUID();
@@ -50,14 +70,14 @@ const generateDeviceId = () => {
 };
 
 // Helper to get initial user state from cache
-const getInitialUserState = () => {
+const getInitialUserState = (): User | null => {
   try {
     const accessToken = getStoredItem('accessToken');
     const refreshToken = getStoredItem('refreshToken');
     const cachedUser = getStoredItem('cachedUser');
 
     if (accessToken && refreshToken && cachedUser) {
-      return JSON.parse(cachedUser);
+      return JSON.parse(cachedUser) as User;
     }
   } catch {
     console.warn('Failed to parse cached user data');
@@ -66,7 +86,7 @@ const getInitialUserState = () => {
 };
 
 // Helper to get initial loading state
-const getInitialLoadingState = () => {
+const getInitialLoadingState = (): boolean => {
   const accessToken = getStoredItem('accessToken');
   const refreshToken = getStoredItem('refreshToken');
   const cachedUser = getStoredItem('cachedUser');
@@ -75,15 +95,15 @@ const getInitialLoadingState = () => {
   return !(accessToken && refreshToken && cachedUser);
 };
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(getInitialUserState);
-  const [loading, setLoading] = useState(getInitialLoadingState);
-  const refreshPromiseRef = useRef(null);
+export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const [user, setUser] = useState<User | null>(getInitialUserState);
+  const [loading, setLoading] = useState<boolean>(getInitialLoadingState);
+  const refreshPromiseRef = useRef<Promise<AuthResponse | void> | null>(null);
   const deviceId = generateDeviceId();
   const { isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
 
   const logout = useCallback(
-    async (allDevices = false) => {
+    async (allDevices = false): Promise<void> => {
       try {
         const refreshToken = getStoredItem('refreshToken');
 
@@ -196,7 +216,7 @@ export const AuthProvider = ({ children }) => {
       if (!accessToken) return;
 
       try {
-        const payload = JSON.parse(atob(accessToken.split('.')[1]));
+        const payload = JSON.parse(atob(accessToken.split('.')[1] || '')) as JwtPayload;
         const expiresAt = payload.exp * 1000;
         const now = Date.now();
         const refreshTime = expiresAt - now - 60000; // Refresh 1 minute before expiry
@@ -240,7 +260,8 @@ export const AuthProvider = ({ children }) => {
             console.error('Token verification failed:', verifyError);
 
             // If access token is expired, try to refresh
-            if (verifyError.message?.includes('expired') || verifyError.status === 401) {
+            const authError = verifyError as Error & { status?: number };
+            if (authError.message?.includes('expired') || authError.status === 401) {
               try {
                 await refreshTokens();
               } catch (refreshError) {
@@ -248,9 +269,9 @@ export const AuthProvider = ({ children }) => {
                 logout();
               }
             } else if (
-              !verifyError.message?.includes('ECONNREFUSED') &&
-              !verifyError.message?.includes('Failed to fetch') &&
-              !verifyError.message?.includes('timeout')
+              !authError.message?.includes('ECONNREFUSED') &&
+              !authError.message?.includes('Failed to fetch') &&
+              !authError.message?.includes('timeout')
             ) {
               logout();
             }
@@ -274,15 +295,17 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (isAuth0Authenticated && auth0User) {
       setUser({
-        ...auth0User,
-        fullName: auth0User.name,
+        ...(auth0User as Record<string, unknown>),
+        fullName: auth0User.name || auth0User.email || '',
+        email: auth0User.email || '',
+        username: auth0User.nickname || auth0User.email || '',
         profilePicture: auth0User.picture,
-      });
+      } as User);
       setLoading(false);
     }
   }, [isAuth0Authenticated, auth0User]);
 
-  const login = async (credentials) => {
+  const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
       setLoading(true);
 
@@ -304,14 +327,14 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json().catch(() => ({ error: 'Network error' }));
 
         if (data.errors && Array.isArray(data.errors)) {
-          const errorMessages = data.errors.map((err) => err.msg).join('. ');
+          const errorMessages = data.errors.map((err: { msg?: string }) => err.msg).join('. ');
           throw new Error(errorMessages);
         }
 
         throw new Error(data.error || `HTTP ${response.status}: Login failed`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as AuthResponse;
 
       // Store rememberMe preference in localStorage (always)
       localStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
@@ -329,7 +352,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signup = async (userData) => {
+  const signup = async (userData: SignupPayload): Promise<AuthResponse> => {
     try {
       setLoading(true);
 
@@ -351,14 +374,14 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json().catch(() => ({ error: 'Network error' }));
 
         if (data.errors && Array.isArray(data.errors)) {
-          const errorMessages = data.errors.map((err) => err.msg).join('. ');
+          const errorMessages = data.errors.map((err: { msg?: string }) => err.msg).join('. ');
           throw new Error(errorMessages);
         }
 
         throw new Error(data.error || `HTTP ${response.status}: Signup failed`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as AuthResponse;
 
       // Store rememberMe preference in localStorage (always)
       localStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
@@ -377,7 +400,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateUser = async (updateData) => {
+  const updateUser = async (updateData: ProfileUpdatePayload) => {
     const response = await authAPI.updateProfile(updateData);
 
     setUser(response.user);
@@ -388,7 +411,7 @@ export const AuthProvider = ({ children }) => {
     return response;
   };
 
-  const uploadProfilePicture = async (file) => {
+  const uploadProfilePicture = async (file: File | Blob): Promise<Record<string, unknown>> => {
     const formData = new FormData();
     formData.append('profilePicture', file);
 
@@ -451,7 +474,7 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const getAwsCredentials = async (password) => {
+  const getAwsCredentials = async (password: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/aws-credentials`, {
         method: 'POST',
@@ -504,7 +527,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const value = {
+  const value: AuthContextValue = {
     user,
     loading,
     login,
@@ -516,6 +539,7 @@ export const AuthProvider = ({ children }) => {
     forceLogoutAndClearData,
     getAwsCredentials,
     markAwsCredentialsViewed,
+    isAuthenticated: isAuth0Authenticated || !!user,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

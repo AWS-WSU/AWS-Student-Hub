@@ -1,8 +1,33 @@
 import { useState } from 'react';
+import type { MouseEvent } from 'react';
 import { eventsAPI } from '../utils/api';
 import { Calendar, MapPin, Link2 } from 'lucide-react';
+import type { Event as HubEvent, EventFormPayload } from '../types/event';
 
-const getEasternDateTime = (utcDate) => {
+type EventFormErrors = Partial<Record<'title' | 'date' | 'time', string>>;
+
+type EventEditForm = {
+  title: string;
+  date: string;
+  time: string;
+  isRemote: boolean;
+  zoomLink: string;
+  address: string;
+  directions: string;
+  locationName: string;
+  meetupUrl: string;
+  description: string;
+};
+
+interface EventModalProps {
+  event: HubEvent;
+  isAdmin?: boolean;
+  onClose?: () => void;
+  onEventUpdated?: (event: HubEvent) => void;
+  onEventDeleted?: (eventId: string) => void;
+}
+
+const getEasternDateTime = (utcDate: string): { date: string; time: string } => {
   const date = new Date(utcDate);
   const eastern = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Detroit',
@@ -14,7 +39,7 @@ const getEasternDateTime = (utcDate) => {
     hour12: false,
   }).formatToParts(date);
 
-  const parts = {};
+  const parts: Record<string, string> = {};
   eastern.forEach((p) => {
     parts[p.type] = p.value;
   });
@@ -25,7 +50,7 @@ const getEasternDateTime = (utcDate) => {
   };
 };
 
-const easternToISO = (dateStr, timeStr) => {
+const easternToISO = (dateStr: string, timeStr: string): string => {
   const testDate = new Date(`${dateStr}T12:00:00`);
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Detroit',
@@ -34,7 +59,7 @@ const easternToISO = (dateStr, timeStr) => {
   const parts = formatter.formatToParts(testDate);
   const offsetPart = parts.find((p) => p.type === 'timeZoneName');
   const offsetMatch = offsetPart?.value?.match(/GMT([+-]?\d+)/);
-  const offsetHours = offsetMatch ? parseInt(offsetMatch[1]) : -5;
+  const offsetHours = offsetMatch ? parseInt(offsetMatch[1], 10) : -5;
   const sign = offsetHours >= 0 ? '+' : '-';
   const absHours = Math.abs(offsetHours).toString().padStart(2, '0');
   const offsetStr = `${sign}${absHours}:00`;
@@ -42,11 +67,17 @@ const easternToISO = (dateStr, timeStr) => {
   return new Date(`${dateStr}T${timeStr}:00${offsetStr}`).toISOString();
 };
 
-function EventModal({ event, isAdmin, onClose, onEventUpdated, onEventDeleted }) {
+function EventModal({
+  event,
+  isAdmin = false,
+  onClose,
+  onEventUpdated,
+  onEventDeleted,
+}: EventModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const easternDT = getEasternDateTime(event.startTime);
-  const [editForm, setEditForm] = useState({
+  const [editForm, setEditForm] = useState<EventEditForm>({
     title: event.title,
     date: easternDT.date,
     time: easternDT.time,
@@ -60,12 +91,12 @@ function EventModal({ event, isAdmin, onClose, onEventUpdated, onEventDeleted })
   });
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<EventFormErrors>({});
 
-  if (!event) return null;
+  const handleClose = onClose ?? (() => undefined);
 
-  const validateEditForm = () => {
-    const newErrors = {};
+  const validateEditForm = (): boolean => {
+    const newErrors: EventFormErrors = {};
     if (!editForm.title.trim()) newErrors.title = 'Title is required';
     if (!editForm.date) newErrors.date = 'Date is required';
     if (!editForm.time) newErrors.time = 'Time is required';
@@ -73,13 +104,13 @@ function EventModal({ event, isAdmin, onClose, onEventUpdated, onEventDeleted })
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleUpdate = async () => {
+  const handleUpdate = async (): Promise<void> => {
     if (!validateEditForm()) return;
 
     setUpdating(true);
     try {
       const startTime = easternToISO(editForm.date, editForm.time);
-      const payload = {
+      const payload: EventFormPayload = {
         title: editForm.title,
         startTime,
         isRemote: String(editForm.isRemote),
@@ -96,7 +127,7 @@ function EventModal({ event, isAdmin, onClose, onEventUpdated, onEventDeleted })
       }
 
       const res = await eventsAPI.update(event._id, payload);
-      if (onEventUpdated) onEventUpdated(res.event);
+      onEventUpdated?.(res.event);
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating event:', error);
@@ -105,11 +136,11 @@ function EventModal({ event, isAdmin, onClose, onEventUpdated, onEventDeleted })
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (): Promise<void> => {
     setDeleting(true);
     try {
       await eventsAPI.delete(event._id);
-      if (onEventDeleted) onEventDeleted(event._id);
+      onEventDeleted?.(event._id);
     } catch (error) {
       console.error('Error deleting event:', error);
     } finally {
@@ -133,7 +164,7 @@ function EventModal({ event, isAdmin, onClose, onEventUpdated, onEventDeleted })
       <div className="hub-modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
         <div
           className="hub-modal"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
           style={{ maxWidth: '500px' }}
         >
           <div className="hub-modal-header">Delete Event?</div>
@@ -168,7 +199,7 @@ function EventModal({ event, isAdmin, onClose, onEventUpdated, onEventDeleted })
   if (isEditing) {
     return (
       <div className="hub-modal-overlay" onClick={() => setIsEditing(false)}>
-        <div className="hub-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="hub-modal" onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
           <div className="hub-modal-header">Edit Event</div>
           <div className="hub-modal-content">
             <div className="hub-form-row">
@@ -308,15 +339,15 @@ function EventModal({ event, isAdmin, onClose, onEventUpdated, onEventDeleted })
   }
 
   return (
-    <div className="hub-modal-overlay" onClick={onClose}>
-      <div className="hub-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="hub-modal-overlay" onClick={handleClose}>
+      <div className="hub-modal" onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
         <div className="hub-modal-header">
           {event.title}
           {isAdmin && (
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
               <button
                 className="hub-btn ghost"
-                onClick={(e) => {
+                onClick={(e: MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation();
                   setIsEditing(true);
                 }}
@@ -326,7 +357,7 @@ function EventModal({ event, isAdmin, onClose, onEventUpdated, onEventDeleted })
               </button>
               <button
                 className="hub-btn ghost"
-                onClick={(e) => {
+                onClick={(e: MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation();
                   setShowDeleteConfirm(true);
                 }}

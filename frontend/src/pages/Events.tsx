@@ -1,12 +1,22 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import type { ChangeEvent, MouseEvent } from 'react';
 import { eventsAPI } from '../utils/api';
 import { Calendar, MapPin, Link2 } from 'lucide-react';
 import Cropper from 'react-easy-crop';
+import type { Event as HubEvent, ThemeProps } from '../types';
 
-function Events({ theme: _theme }) {
-  const [events, setEvents] = useState([]);
+type CropPoint = { x: number; y: number };
+type PixelCrop = CropPoint & { width: number; height: number };
+
+type CropSource = {
+  url: string;
+  file: File;
+};
+
+function Events({ theme: _theme }: ThemeProps) {
+  const [events, setEvents] = useState<HubEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState<HubEvent | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -20,11 +30,11 @@ function Events({ theme: _theme }) {
     load();
   }, []);
 
-  const fileInputRef = useRef(null);
-  const [cropSrc, setCropSrc] = useState(null);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [cropSrc, setCropSrc] = useState<CropSource | null>(null);
+  const [crop, setCrop] = useState<CropPoint>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<PixelCrop | null>(null);
 
   useEffect(() => {
     if (selected) {
@@ -38,8 +48,8 @@ function Events({ theme: _theme }) {
     }
   }, [selected]);
 
-  const onFileChange = async (e) => {
-    const f = e.target.files && e.target.files[0];
+  const onFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
     if (!f) return;
     const url = URL.createObjectURL(f);
     setCropSrc({ url, file: f });
@@ -47,12 +57,15 @@ function Events({ theme: _theme }) {
     setZoom(1);
   };
 
-  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+  const onCropComplete = useCallback((_croppedArea: PixelCrop, croppedAreaPixels: PixelCrop) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
-  const createCroppedImage = async (imageSrc, pixelCrop) => {
-    const image = await new Promise((resolve, reject) => {
+  const createCroppedImage = async (
+    imageSrc: string,
+    pixelCrop: PixelCrop
+  ): Promise<{ blob: Blob; blobUrl: string } | null> => {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
       img.addEventListener('load', () => resolve(img));
       img.addEventListener('error', reject);
@@ -63,6 +76,7 @@ function Events({ theme: _theme }) {
     canvas.width = pixelCrop.width;
     canvas.height = pixelCrop.height;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
 
     ctx.drawImage(
       image,
@@ -76,7 +90,7 @@ function Events({ theme: _theme }) {
       pixelCrop.height
     );
 
-    return new Promise((resolve) => {
+    return new Promise<{ blob: Blob; blobUrl: string } | null>((resolve) => {
       canvas.toBlob(
         (blob) => {
           if (!blob) return resolve(null);
@@ -90,7 +104,7 @@ function Events({ theme: _theme }) {
   };
 
   const saveCropped = async () => {
-    if (!croppedAreaPixels || !cropSrc) return;
+    if (!croppedAreaPixels || !cropSrc || !selected) return;
     const result = await createCroppedImage(cropSrc.url, croppedAreaPixels);
     if (!result) return;
     const { blobUrl } = result;
@@ -101,7 +115,7 @@ function Events({ theme: _theme }) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const EventModal = ({ event }) => {
+  const EventModal = ({ event }: { event: HubEvent | null }) => {
     if (!event) return null;
     const dt = new Date(event.startTime);
     const formatted = dt.toLocaleString('en-US', {
@@ -121,7 +135,7 @@ function Events({ theme: _theme }) {
           setCropSrc(null);
         }}
       >
-        <div className="hub-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="hub-modal" onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
           <div className="hub-modal-header">{event.title}</div>
           <div className="hub-modal-content">
             {(event.thumbnailUrl || cropSrc) && (
@@ -175,7 +189,7 @@ function Events({ theme: _theme }) {
                     max={3}
                     step={0.1}
                     value={zoom}
-                    onChange={(e) => setZoom(Number(e.target.value))}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setZoom(Number(e.target.value))}
                     style={{ width: '100%' }}
                   />
                 </div>
@@ -268,7 +282,7 @@ function Events({ theme: _theme }) {
                       </span>
                       <span className="hub-meta-item">
                         <strong>Created:</strong>{' '}
-                        {new Date(event.createdAt).toLocaleDateString('en-US', {
+                        {new Date(event.createdAt ?? '').toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
                           year: 'numeric',

@@ -1,11 +1,22 @@
 import { useState, useEffect } from 'react';
+import type { SyntheticEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import './styles/Navbar.css';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAuth } from '../context/AuthContext';
+import type { LayoutProps } from '../types/ui';
+import type { User as HubUser } from '../types/user';
 
-function Navbar({ theme, toggleTheme }) {
+type NavbarUser = Partial<
+  Pick<HubUser, 'username' | 'fullName' | 'email' | 'profilePicture' | 'role'>
+> & {
+  sub?: string;
+  name?: string;
+  picture?: string;
+};
+
+function Navbar({ theme, toggleTheme }: LayoutProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -63,8 +74,8 @@ function Navbar({ theme, toggleTheme }) {
   }, [isMenuOpen]);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (!event.target.closest('.account-dropdown-container')) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (event.target instanceof Element && !event.target.closest('.account-dropdown-container')) {
         setIsAccountDropdownOpen(false);
       }
     };
@@ -89,9 +100,9 @@ function Navbar({ theme, toggleTheme }) {
   };
 
   const isAuthenticated = isAuth0Authenticated || !!authUser;
-  const currentUser = auth0User || authUser;
+  const currentUser = (auth0User || authUser) as NavbarUser | undefined;
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path: string): boolean => location.pathname === path;
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -101,7 +112,7 @@ function Navbar({ theme, toggleTheme }) {
     setIsAccountDropdownOpen(!isAccountDropdownOpen);
   };
 
-  const getDisplayName = (user) => {
+  const getDisplayName = (user?: NavbarUser | null): string => {
     if (!user) return 'User';
 
     if (user.sub) {
@@ -229,9 +240,9 @@ function Navbar({ theme, toggleTheme }) {
                 src={profileImage}
                 alt="Account"
                 className="account-icon"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = '/avatar.jpg';
+                onError={(e: SyntheticEvent<HTMLImageElement>) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/avatar.jpg';
                   setProfileImage('/avatar.jpg');
                 }}
                 referrerPolicy="no-referrer"

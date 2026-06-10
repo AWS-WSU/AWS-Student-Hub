@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import type { ChangeEvent, SyntheticEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { validateImageFile, compressImage } from '../utils/imageUtils';
 import { BookOpen, Code } from 'lucide-react';
+import type { ProfileUpdatePayload, ThemeProps, UserGrade } from '../types';
 import './styles/QuickSetup.css';
 
 const programmingLanguages = [
@@ -26,14 +28,28 @@ const programmingLanguages = [
   'SQL',
 ];
 
-const grades = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Other'];
+const grades: Exclude<UserGrade, ''>[] = [
+  'Freshman',
+  'Sophomore',
+  'Junior',
+  'Senior',
+  'Graduate',
+  'Other',
+];
 
-function QuickSetup({ theme }) {
+interface ProfileSetupFormData {
+  bio: string;
+  major: string;
+  grade: UserGrade;
+  programmingLanguages: string[];
+}
+
+function QuickSetup({ theme }: ThemeProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [profileImage, setProfileImage] = useState(null);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState('/avatar.jpg');
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ProfileSetupFormData>({
     bio: '',
     major: '',
     grade: '',
@@ -66,15 +82,22 @@ function QuickSetup({ theme }) {
     setProfileImagePreview(user.profilePicture || '/avatar.jpg');
   }, [user, navigate]);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+
+    if (name === 'grade') {
+      setFormData((prev) => ({ ...prev, grade: value as UserGrade }));
+      return;
+    }
+
+    if (name === 'bio' || name === 'major') {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
-  const handleLanguageToggle = (language) => {
+  const handleLanguageToggle = (language: string) => {
     setFormData((prev) => ({
       ...prev,
       programmingLanguages: prev.programmingLanguages.includes(language)
@@ -83,8 +106,8 @@ function QuickSetup({ theme }) {
     }));
   };
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     setImageError('');
@@ -92,13 +115,18 @@ function QuickSetup({ theme }) {
     // Validate file using utility
     const validation = validateImageFile(file, 5);
     if (!validation.valid) {
-      setImageError(validation.error);
+      setImageError(validation.error ?? 'Please select a valid image file.');
       return;
     }
 
     try {
       // Compress image for better performance
       const compressedBlob = await compressImage(file, 400, 0.9);
+      if (!compressedBlob) {
+        setImageError('Failed to process image. Please try a different image.');
+        return;
+      }
+
       const compressedFile = new File([compressedBlob], file.name, {
         type: 'image/jpeg',
         lastModified: Date.now(),
@@ -107,8 +135,11 @@ function QuickSetup({ theme }) {
       setProfileImage(compressedFile);
 
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setProfileImagePreview(e.target.result);
+      reader.onload = (event: ProgressEvent<FileReader>) => {
+        const result = event.target?.result;
+        if (typeof result === 'string') {
+          setProfileImagePreview(result);
+        }
       };
       reader.readAsDataURL(compressedFile);
     } catch (error) {
@@ -139,21 +170,25 @@ function QuickSetup({ theme }) {
     try {
       if (profileImage) {
         const response = await uploadProfilePicture(profileImage);
-        if (response.profilePicture) {
-          setProfileImagePreview(response.profilePicture);
+        const profilePicture = response.profilePicture;
+        if (typeof profilePicture === 'string') {
+          setProfileImagePreview(profilePicture);
         }
       }
 
-      await updateUser({
+      const updateData: ProfileUpdatePayload = {
         ...formData,
         profileSetupCompleted: true,
-      });
+      };
+
+      await updateUser(updateData);
 
       showToast('Profile setup completed!', 'success');
       navigate('/', { replace: true });
     } catch (error) {
       console.error('Setup completion error:', error);
-      showToast(error.message || 'Failed to complete setup', 'error');
+      const message = error instanceof Error ? error.message : 'Failed to complete setup';
+      showToast(message, 'error');
     } finally {
       setLoading(false);
     }
@@ -204,8 +239,8 @@ function QuickSetup({ theme }) {
             <img
               src={profileImagePreview}
               alt="Profile preview"
-              onError={(e) => {
-                e.target.src = '/avatar.jpg';
+              onError={(e: SyntheticEvent<HTMLImageElement>) => {
+                e.currentTarget.src = '/avatar.jpg';
               }}
             />
           </div>

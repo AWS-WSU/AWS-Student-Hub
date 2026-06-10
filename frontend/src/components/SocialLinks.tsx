@@ -2,7 +2,7 @@ import './styles/SocialLinks.css';
 import { discordAPI } from '../utils/api';
 
 const SocialSection = () => {
-  const handleSocialClick = (url) => {
+  const handleSocialClick = (url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -18,7 +18,7 @@ const SocialSection = () => {
       const data = await discordAPI.getInvite();
       console.log('Discord API response:', data);
 
-      let inviteUrl = null;
+      let inviteUrl: string | null = null;
       if (data && data.inviteUrl) {
         inviteUrl = data.inviteUrl;
       } else if (data && data.invite_url) {
@@ -45,7 +45,8 @@ const SocialSection = () => {
       }
     } catch (err) {
       console.error('Failed to fetch Discord invite:', err);
-      console.error('Error details:', err.message, err.response?.data);
+      const error = err as Error & { response?: { data?: unknown } };
+      console.error('Error details:', error.message, error.response?.data);
       console.warn('Using fallback Discord invite');
 
       const fallbackUrl = 'https://discord.gg/BX8nCQHU';

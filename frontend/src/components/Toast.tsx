@@ -1,8 +1,16 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import type { ToastType } from '../types/ui';
 import './styles/Toast.css';
 
-const Toast = ({ message, type = 'success', duration = 4000, onClose }) => {
+interface ToastProps {
+  message: string;
+  type?: ToastType;
+  duration?: number;
+  onClose: () => void;
+}
+
+const Toast = ({ message, type = 'success', duration = 4000, onClose }: ToastProps) => {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {

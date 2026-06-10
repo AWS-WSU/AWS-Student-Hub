@@ -4,9 +4,9 @@ import { BrowserRouter } from 'react-router-dom';
 import { Auth0Provider } from '@auth0/auth0-react';
 import { auth0Config } from './config/auth0';
 import './index.css';
-import App from './App.jsx';
+import App from './App';
 
-createRoot(document.getElementById('root')).render(
+createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
     <Auth0Provider
       domain={auth0Config.domain}
@@ -20,7 +20,6 @@ createRoot(document.getElementById('root')).render(
       }}
       cacheLocation="localstorage"
       useRefreshTokens={true}
-      logoutUri={window.location.origin}
     >
       <BrowserRouter>
         <App />
