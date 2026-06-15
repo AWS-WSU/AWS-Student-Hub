@@ -2,6 +2,12 @@ import type { AdminStats, EmailQueueEntry } from '../types/admin';
 import type { ApiResponse } from '../types/api';
 import type { AuthResponse, LoginCredentials, SignupPayload } from '../types/auth';
 import type { Event as FrontendEvent, EventFormPayload } from '../types/event';
+import type {
+  RewardIntegrationInstance,
+  RewardIntegrationInstancePayload,
+  RewardIntegrationLinkResponse,
+  RewardIntegrationStatusResponse,
+} from '../types/rewardIntegration';
 import type { PublicProfile, User, UserRole } from '../types/user';
 
 const API_BASE_URL =
@@ -443,6 +449,43 @@ export const discordAPI = {
   },
 };
 
+export const rewardIntegrationAPI = {
+  status: async (): Promise<RewardIntegrationStatusResponse> => {
+    return apiRequest('/integrations/prizeversity/status');
+  },
+
+  link: async (
+    identifier?: string,
+    instanceId?: string
+  ): Promise<RewardIntegrationLinkResponse> => {
+    return apiRequest('/integrations/prizeversity/link', {
+      method: 'POST',
+      body: JSON.stringify({ identifier, instanceId }),
+    });
+  },
+
+  unlink: async (): Promise<RewardIntegrationLinkResponse> => {
+    return apiRequest('/integrations/prizeversity/link', {
+      method: 'DELETE',
+    });
+  },
+};
+
+interface RewardIntegrationInstancesResponse {
+  instances: RewardIntegrationInstance[];
+}
+
+interface RewardIntegrationInstanceResponse {
+  message?: string;
+  instance: RewardIntegrationInstance;
+  test?: {
+    classroomId: string;
+    classroomName?: string;
+    userCount: number;
+    verifiedAt: string;
+  };
+}
+
 export const adminAPI = {
   getDashboardStats: async (): Promise<{ stats: AdminStats; [key: string]: any }> => {
     const response = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
@@ -621,6 +664,43 @@ export const adminAPI = {
     }
 
     return response.json() as Promise<ProcessEmailQueueResponse>;
+  },
+
+  listRewardIntegrations: async (): Promise<RewardIntegrationInstancesResponse> => {
+    return apiRequest('/admin/reward-integrations');
+  },
+
+  createRewardIntegration: async (
+    payload: RewardIntegrationInstancePayload
+  ): Promise<RewardIntegrationInstanceResponse> => {
+    return apiRequest('/admin/reward-integrations', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateRewardIntegration: async (
+    instanceId: string,
+    payload: Partial<RewardIntegrationInstancePayload>
+  ): Promise<RewardIntegrationInstanceResponse> => {
+    return apiRequest(`/admin/reward-integrations/${instanceId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  testRewardIntegration: async (instanceId: string): Promise<RewardIntegrationInstanceResponse> => {
+    return apiRequest(`/admin/reward-integrations/${instanceId}/test`, {
+      method: 'POST',
+    });
+  },
+
+  deactivateRewardIntegration: async (
+    instanceId: string
+  ): Promise<RewardIntegrationInstanceResponse> => {
+    return apiRequest(`/admin/reward-integrations/${instanceId}`, {
+      method: 'DELETE',
+    });
   },
 };
 

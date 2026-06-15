@@ -42,6 +42,14 @@ export interface IUser {
   awsAccessKeyId?: string;
   awsSecretAccessKey?: string;
   hasViewedAwsCredentials: boolean;
+  rewardIntegrationInstanceId?: Types.ObjectId | null;
+  prizeversityUserId?: string;
+  prizeversityClassroomId?: string;
+  prizeversityEmail?: string;
+  prizeversityMatchedName?: string;
+  prizeversityShortId?: string;
+  prizeversityLinkedAt?: Date | null;
+  prizeversityLastSyncedAt?: Date | null;
 }
 
 export interface IUserMethods {
@@ -210,6 +218,43 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
     hasViewedAwsCredentials: {
       type: Boolean,
       default: false,
+    },
+    rewardIntegrationInstanceId: {
+      type: Schema.Types.ObjectId,
+      ref: 'RewardIntegrationInstance',
+      default: null,
+      index: true,
+    },
+    prizeversityUserId: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    prizeversityClassroomId: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    prizeversityEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
+    prizeversityMatchedName: {
+      type: String,
+      trim: true,
+    },
+    prizeversityShortId: {
+      type: String,
+      trim: true,
+    },
+    prizeversityLinkedAt: {
+      type: Date,
+      default: null,
+    },
+    prizeversityLastSyncedAt: {
+      type: Date,
+      default: null,
     },
   },
   {

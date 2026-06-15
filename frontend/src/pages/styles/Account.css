@@ -880,7 +880,8 @@
   }
 }
 
-/* Cyber Challenge Section */
+/* Reward integration and challenge sections */
+.prizeversity-section,
 .cyber-challenge-section {
   --challenge-panel: rgba(var(--text-primary-rgb), 0.025);
   --challenge-panel-strong: rgba(var(--text-primary-rgb), 0.045);
@@ -896,6 +897,143 @@
   color: var(--text-primary);
   text-align: left;
   font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+}
+
+.prizeversity-card {
+  background: var(--challenge-panel);
+  border: 1px solid var(--challenge-border);
+  border-radius: 22px;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+}
+
+.prizeversity-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.prizeversity-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: rgba(var(--accent-secondary-rgb), 0.12);
+  color: var(--accent-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(var(--accent-secondary-rgb), 0.18);
+  flex-shrink: 0;
+}
+
+.prizeversity-title span {
+  display: block;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+
+.prizeversity-title h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.prizeversity-title p {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.prizeversity-notice {
+  color: var(--text-secondary);
+  background: rgba(var(--text-primary-rgb), 0.035);
+  border: 1px solid rgba(var(--text-primary-rgb), 0.08);
+  border-radius: 14px;
+  padding: 1rem;
+  line-height: 1.55;
+}
+
+.prizeversity-linked-panel {
+  background: rgba(var(--accent-rgb), 0.07);
+  border: 1px solid rgba(var(--accent-rgb), 0.16);
+  border-radius: 18px;
+  padding: 1rem;
+}
+
+.prizeversity-linked-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.prizeversity-linked-grid div {
+  min-width: 0;
+}
+
+.prizeversity-linked-grid span,
+.prizeversity-link-form label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+
+.prizeversity-linked-grid strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  word-break: break-word;
+}
+
+.prizeversity-link-form {
+  margin-top: 1rem;
+}
+
+.prizeversity-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.prizeversity-input-row input,
+.prizeversity-instance-select {
+  width: 100%;
+  border: 1px solid rgba(var(--text-primary-rgb), 0.1);
+  border-radius: 999px;
+  background: rgba(var(--text-primary-rgb), 0.045);
+  color: var(--text-primary);
+  font: inherit;
+  padding: 0.78rem 1rem;
+}
+
+.prizeversity-instance-select {
+  margin-bottom: 0.9rem;
+}
+
+.prizeversity-input-row input:focus,
+.prizeversity-instance-select:focus {
+  border-color: rgba(var(--accent-rgb), 0.45);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+}
+
+.prizeversity-input-row input:disabled,
+.prizeversity-instance-select:disabled,
+.prizeversity-input-row button:disabled,
+.account-challenge-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .account-challenge-heading {
@@ -1221,8 +1359,22 @@
 }
 
 @media (max-width: 768px) {
+  .prizeversity-section,
   .cyber-challenge-section {
     padding: 1.25rem;
+  }
+
+  .prizeversity-header {
+    align-items: flex-start;
+  }
+
+  .prizeversity-linked-grid,
+  .prizeversity-input-row {
+    grid-template-columns: 1fr;
+  }
+
+  .prizeversity-input-row button {
+    width: 100%;
   }
 
   .account-challenge-header {

@@ -8,6 +8,7 @@ import logger from '../config/logger';
 const log = logger.child({ module: 'adminAuth' });
 
 type Role = Express.UserRole;
+type UserStatus = Express.UserStatus;
 
 interface AdminTokenPayload extends jwt.JwtPayload {
   id: string;
@@ -53,7 +54,7 @@ export const requireRole = (minRole: Role = 'member'): RequestHandler => {
         return;
       }
 
-      const user = await User.findById(decoded.id).select('+role +status email');
+      const user = await User.findById(decoded.id).select('role status email');
 
       if (!user) {
         res.status(401).json({
@@ -62,9 +63,11 @@ export const requireRole = (minRole: Role = 'member'): RequestHandler => {
         return;
       }
 
-      if (user.status !== 'active') {
+      const userStatus = (user.status || 'active') as UserStatus;
+
+      if (userStatus !== 'active') {
         res.status(403).json({
-          error: `Account is ${user.status}. Access denied.`,
+          error: `Account is ${userStatus}. Access denied.`,
         });
         return;
       }
@@ -84,7 +87,7 @@ export const requireRole = (minRole: Role = 'member'): RequestHandler => {
         id: String(user._id),
         email: user.email,
         role: userRole,
-        status: user.status,
+        status: userStatus,
       };
 
       next();

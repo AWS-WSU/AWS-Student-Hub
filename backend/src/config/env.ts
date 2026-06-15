@@ -85,6 +85,10 @@ const env = {
   DISCORD_GUILD_ID: optionalString('DISCORD_GUILD_ID'),
   DISCORD_CHANNEL_ID: optionalString('DISCORD_CHANNEL_ID'),
   AWS_CRED_ENCRYPTION_KEY: optionalString('AWS_CRED_ENCRYPTION_KEY'),
+
+  PRIZEVERSITY_API_URL: stringValue('PRIZEVERSITY_API_URL', 'https://www.prizeversity.com'),
+  PRIZEVERSITY_API_KEY: optionalString('PRIZEVERSITY_API_KEY'),
+  PRIZEVERSITY_CLASSROOM_ID: optionalString('PRIZEVERSITY_CLASSROOM_ID'),
 } as const;
 
 export default env;
