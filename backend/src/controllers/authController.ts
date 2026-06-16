@@ -32,6 +32,13 @@ interface AuthResponseBody {
   };
 }
 
+interface AwsCredentialUser {
+  awsAccessKeyId?: string;
+  awsSecretAccessKey?: string;
+  prizeversityUserId?: string;
+  prizeversityClassroomId?: string;
+}
+
 const filter = new Filter();
 
 const getJwtSecret = (): string => {
@@ -101,6 +108,47 @@ const generateTokens = (user: TokenUser, deviceId: string, rememberMe = false) =
   const refreshToken = user.generateRefreshToken(deviceId, rememberMe);
 
   return { accessToken, refreshToken };
+};
+
+const hasPrizeversityChallengeLink = (user: AwsCredentialUser): boolean => {
+  return Boolean(user.prizeversityUserId && user.prizeversityClassroomId);
+};
+
+const attachAwsCredentialsIfLinked = (
+  userObj: Record<string, unknown>,
+  user: AwsCredentialUser
+): void => {
+  delete userObj.awsAccessKeyId;
+  delete userObj.awsSecretAccessKey;
+
+  if (hasPrizeversityChallengeLink(user) && user.awsAccessKeyId && user.awsSecretAccessKey) {
+    userObj.awsAccessKeyId = user.awsAccessKeyId;
+    userObj.awsSecretAccessKey = user.awsSecretAccessKey;
+  }
+};
+
+const getRefreshTokenRememberMe = (
+  user: {
+    refreshTokens?: Array<{
+      token: string;
+      deviceId: string;
+      expiresAt: Date;
+      rememberMe?: boolean;
+    }>;
+  },
+  refreshToken: string,
+  deviceId: string
+): boolean => {
+  const tokenEntry = user.refreshTokens?.find(
+    (entry) => entry.token === refreshToken && entry.deviceId === deviceId
+  );
+  if (!tokenEntry) return false;
+  if (typeof tokenEntry.rememberMe === 'boolean') return tokenEntry.rememberMe;
+
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+  const expiresAt =
+    tokenEntry.expiresAt instanceof Date ? tokenEntry.expiresAt : new Date(tokenEntry.expiresAt);
+  return expiresAt.getTime() - Date.now() > sevenDaysMs;
 };
 
 const generateUsername = async (email: string): Promise<string> => {
@@ -233,10 +281,7 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
     await user.save();
 
     const userObj = user.toSafeObject();
-    if (user.awsAccessKeyId && user.awsSecretAccessKey) {
-      userObj.awsAccessKeyId = user.awsAccessKeyId;
-      userObj.awsSecretAccessKey = user.awsSecretAccessKey;
-    }
+    attachAwsCredentialsIfLinked(userObj, user);
 
     const response: AuthResponseBody = {
       accessToken,
@@ -246,7 +291,7 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
       user: userObj,
     };
 
-    if (awsCredentials) {
+    if (awsCredentials && hasPrizeversityChallengeLink(user)) {
       response.awsCredentials = awsCredentials;
     }
 
@@ -312,16 +357,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     const { accessToken, refreshToken } = generateTokens(user, currentDeviceId, !!rememberMe);
 
-    setImmediate(() => {
-      user.lastLogin = new Date();
-      user.save().catch((err: unknown) => log.error('failed to update user data.', err));
-    });
+    user.lastLogin = new Date();
+    await user.save();
 
     const userObj = user.toSafeObject();
-    if (user.awsAccessKeyId && user.awsSecretAccessKey) {
-      userObj.awsAccessKeyId = user.awsAccessKeyId;
-      userObj.awsSecretAccessKey = user.awsSecretAccessKey;
-    }
+    attachAwsCredentialsIfLinked(userObj, user);
 
     res.json({
       accessToken,
@@ -362,10 +402,7 @@ export const getCurrentUser = async (req: Request, res: Response): Promise<void>
     }
 
     const userObj = user.toSafeObject();
-    if (user.awsAccessKeyId && user.awsSecretAccessKey) {
-      userObj.awsAccessKeyId = user.awsAccessKeyId;
-      userObj.awsSecretAccessKey = user.awsSecretAccessKey;
-    }
+    attachAwsCredentialsIfLinked(userObj, user);
 
     res.json(userObj);
   } catch (error: unknown) {
@@ -853,9 +890,15 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
+    const rememberMe = getRefreshTokenRememberMe(user, refreshToken, deviceId);
+
     user.cleanExpiredRefreshTokens();
 
-    const { accessToken, refreshToken: newRefreshToken } = generateTokens(user, deviceId);
+    const { accessToken, refreshToken: newRefreshToken } = generateTokens(
+      user,
+      deviceId,
+      rememberMe
+    );
 
     user.revokeRefreshToken(refreshToken);
 
@@ -864,6 +907,8 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     res.json({
       accessToken,
       refreshToken: newRefreshToken,
+      deviceId,
+      rememberMe,
       user: user.toSafeObject(),
     });
   } catch (error: unknown) {
@@ -901,7 +946,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     } else if (refreshToken) {
       user.revokeRefreshToken(refreshToken);
     } else if (deviceId) {
-      user.refreshTokens = user.refreshTokens.filter(
+      user.refreshTokens = (Array.isArray(user.refreshTokens) ? user.refreshTokens : []).filter(
         (token: { deviceId: string }) => token.deviceId !== deviceId
       );
     }
@@ -938,11 +983,18 @@ export const getAwsCredentials = async (req: Request, res: Response): Promise<vo
     }
 
     const user = await User.findById(userId).select(
-      '+password +awsAccessKeyId +awsSecretAccessKey'
+      '+password +awsAccessKeyId +awsSecretAccessKey prizeversityUserId prizeversityClassroomId'
     );
     if (!user) {
       res.status(404).json({
         error: 'User not found',
+      });
+      return;
+    }
+
+    if (!hasPrizeversityChallengeLink(user)) {
+      res.status(403).json({
+        error: 'Link your Prizeversity account before accessing AWS challenge credentials',
       });
       return;
     }

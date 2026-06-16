@@ -129,25 +129,25 @@ const apiRequest = async <T = any>(endpoint: string, options: RequestOptions = {
       if (refreshToken) {
         try {
           await refreshTokens();
-          // Retry the original request with the new token
-          finalOptions.headers.Authorization = `Bearer ${getStoredItem('accessToken')}`;
-          const retryResponse = await fetch(url, finalOptions);
-          const data = await readJson<JsonRecord>(retryResponse);
-
-          if (!retryResponse.ok) {
-            throw new Error(
-              data.error || data.message || `HTTP error! status: ${retryResponse.status}`
-            );
-          }
-
-          return data as T;
         } catch {
-          // Refresh failed, logout user
           clearStoredItem('accessToken');
           clearStoredItem('refreshToken');
           clearStoredItem('cachedUser');
           throw new Error('Session expired. Please log in again.');
         }
+
+        // Retry the original request with the new token.
+        finalOptions.headers.Authorization = `Bearer ${getStoredItem('accessToken')}`;
+        const retryResponse = await fetch(url, finalOptions);
+        const data = await readJson<JsonRecord>(retryResponse);
+
+        if (!retryResponse.ok) {
+          throw new Error(
+            data.error || data.message || `HTTP error! status: ${retryResponse.status}`
+          );
+        }
+
+        return data as T;
       }
     }
 
@@ -182,7 +182,13 @@ const setStoredItem = (key: string, value: string): void => {
   storage.setItem(key, value);
 };
 
+let refreshPromise: Promise<AuthResponse> | null = null;
+
 const refreshTokens = async (): Promise<AuthResponse> => {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
   const refreshToken = getStoredItem('refreshToken');
   const deviceId = getStoredItem('deviceId') || localStorage.getItem('deviceId');
 
@@ -190,27 +196,36 @@ const refreshTokens = async (): Promise<AuthResponse> => {
     throw new Error('No refresh token available');
   }
 
-  const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      refreshToken,
-      deviceId,
-    }),
-  });
+  refreshPromise = (async () => {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        refreshToken,
+        deviceId,
+      }),
+    });
 
-  if (!response.ok) {
-    throw new Error('Token refresh failed');
+    if (!response.ok) {
+      throw new Error('Token refresh failed');
+    }
+
+    const data = (await response.json()) as AuthResponse;
+    localStorage.setItem('rememberMe', data.rememberMe ? 'true' : 'false');
+    setStoredItem('accessToken', data.accessToken);
+    setStoredItem('refreshToken', data.refreshToken);
+    setStoredItem('cachedUser', JSON.stringify(data.user));
+
+    return data;
+  })();
+
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
   }
-
-  const data = (await response.json()) as AuthResponse;
-  setStoredItem('accessToken', data.accessToken);
-  setStoredItem('refreshToken', data.refreshToken);
-  setStoredItem('cachedUser', JSON.stringify(data.user));
-
-  return data;
 };
 
 const appendPayloadToForm = (form: FormData, payload: EventFormPayload | JsonRecord): void => {
@@ -461,6 +476,13 @@ export const rewardIntegrationAPI = {
     return apiRequest('/integrations/prizeversity/link', {
       method: 'POST',
       body: JSON.stringify({ identifier, instanceId }),
+    });
+  },
+
+  verifyLink: async (code: string): Promise<RewardIntegrationLinkResponse> => {
+    return apiRequest('/integrations/prizeversity/link/verify', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
     });
   },
 

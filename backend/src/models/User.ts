@@ -11,6 +11,7 @@ export interface RefreshTokenEntry {
   createdAt: Date;
   expiresAt: Date;
   deviceId: string;
+  rememberMe?: boolean;
 }
 
 export interface IUser {
@@ -84,6 +85,10 @@ const refreshTokenSchema = new Schema<RefreshTokenEntry>(
     deviceId: {
       type: String,
       required: true,
+    },
+    rememberMe: {
+      type: Boolean,
+      default: false,
     },
   },
   { _id: false }
@@ -198,7 +203,10 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
       type: Date,
       select: false,
     },
-    refreshTokens: [refreshTokenSchema],
+    refreshTokens: {
+      type: [refreshTokenSchema],
+      default: [],
+    },
     tokenVersion: {
       type: Number,
       default: 0,
@@ -315,6 +323,12 @@ userSchema.methods.comparePassword = async function (candidatePassword: string):
 userSchema.methods.toSafeObject = function (): Record<string, unknown> {
   const obj = this.toObject() as Record<string, unknown>;
   delete obj.password;
+  delete obj.refreshTokens;
+  delete obj.resetPasswordToken;
+  delete obj.resetPasswordExpires;
+  delete obj.awsAccessKeyId;
+  delete obj.awsSecretAccessKey;
+  delete obj.nextChallengePassword;
   return obj;
 };
 
@@ -330,12 +344,21 @@ userSchema.methods.clearResetToken = function (): void {
   this.resetPasswordExpires = undefined;
 };
 
+const ensureRefreshTokens = (user: {
+  refreshTokens?: RefreshTokenEntry[];
+}): RefreshTokenEntry[] => {
+  if (!Array.isArray(user.refreshTokens)) {
+    user.refreshTokens = [];
+  }
+  return user.refreshTokens;
+};
+
 userSchema.methods.generateRefreshToken = function (deviceId: string, rememberMe = false): string {
   const refreshToken = crypto.randomBytes(64).toString('hex');
   const expirationDays = rememberMe ? 30 : 7;
   const expiresAt = new Date(Date.now() + expirationDays * 24 * 60 * 60 * 1000);
 
-  this.refreshTokens = this.refreshTokens.filter(
+  this.refreshTokens = ensureRefreshTokens(this).filter(
     (token: RefreshTokenEntry) => token.deviceId !== deviceId && token.expiresAt > new Date()
   );
 
@@ -344,6 +367,7 @@ userSchema.methods.generateRefreshToken = function (deviceId: string, rememberMe
     createdAt: new Date(),
     expiresAt,
     deviceId,
+    rememberMe,
   });
 
   if (this.refreshTokens.length > 5) {
@@ -359,7 +383,7 @@ userSchema.methods.generateRefreshToken = function (deviceId: string, rememberMe
 };
 
 userSchema.methods.validateRefreshToken = function (token: string, deviceId: string): boolean {
-  const tokenEntry = this.refreshTokens.find(
+  const tokenEntry = ensureRefreshTokens(this).find(
     (entry: RefreshTokenEntry) =>
       entry.token === token && entry.deviceId === deviceId && entry.expiresAt > new Date()
   );
@@ -367,7 +391,7 @@ userSchema.methods.validateRefreshToken = function (token: string, deviceId: str
 };
 
 userSchema.methods.revokeRefreshToken = function (token: string): void {
-  this.refreshTokens = this.refreshTokens.filter(
+  this.refreshTokens = ensureRefreshTokens(this).filter(
     (entry: RefreshTokenEntry) => entry.token !== token
   );
 };
@@ -378,7 +402,7 @@ userSchema.methods.revokeAllRefreshTokens = function (): void {
 };
 
 userSchema.methods.cleanExpiredRefreshTokens = function (): void {
-  this.refreshTokens = this.refreshTokens.filter(
+  this.refreshTokens = ensureRefreshTokens(this).filter(
     (token: RefreshTokenEntry) => token.expiresAt > new Date()
   );
 };
