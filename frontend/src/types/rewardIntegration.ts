@@ -43,6 +43,9 @@ export interface RewardIntegrationLinkResponse {
   message: string;
   status: RewardIntegrationStatusResponse;
   user: User;
+  verificationRequired?: boolean;
+  maskedEmail?: string;
+  expiresAt?: string;
 }
 
 export interface RewardIntegrationInstancePayload {

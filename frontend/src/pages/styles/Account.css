@@ -1007,6 +1007,7 @@
 }
 
 .prizeversity-input-row input,
+.prizeversity-code-row input,
 .prizeversity-instance-select {
   width: 100%;
   border: 1px solid rgba(var(--text-primary-rgb), 0.1);
@@ -1022,6 +1023,7 @@
 }
 
 .prizeversity-input-row input:focus,
+.prizeversity-code-row input:focus,
 .prizeversity-instance-select:focus {
   border-color: rgba(var(--accent-rgb), 0.45);
   outline: none;
@@ -1029,11 +1031,72 @@
 }
 
 .prizeversity-input-row input:disabled,
+.prizeversity-code-row input:disabled,
 .prizeversity-instance-select:disabled,
 .prizeversity-input-row button:disabled,
+.prizeversity-code-row button:disabled,
 .account-challenge-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.65;
+}
+
+.prizeversity-verification-panel {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+  color: var(--text-primary);
+  background: rgba(var(--accent-rgb), 0.08);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  border-radius: 18px;
+  padding: 1rem 1.15rem;
+  line-height: 1.5;
+}
+
+.prizeversity-verification-panel strong {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.prizeversity-verification-panel span {
+  color: var(--text-secondary);
+}
+
+.prizeversity-code-row {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.prizeversity-code-row input {
+  letter-spacing: 0.18em;
+  text-align: center;
+}
+
+.prizeversity-link-error {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  color: #991b1b;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  border-radius: 18px;
+  padding: 1.15rem 1.25rem;
+  line-height: 1.5;
+}
+
+.prizeversity-link-error strong {
+  color: #7f1d1d;
+  font-size: 0.92rem;
+}
+
+.prizeversity-link-error span,
+.prizeversity-link-error small {
+  color: inherit;
+}
+
+.prizeversity-link-error small {
+  opacity: 0.86;
 }
 
 .account-challenge-heading {
@@ -1142,6 +1205,42 @@
 
 .account-credentials-section {
   margin-top: 1rem;
+}
+
+.account-challenge-gate {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(var(--accent-rgb), 0.13), transparent 55%),
+    rgba(var(--text-primary-rgb), 0.025);
+}
+
+.account-challenge-gate span {
+  display: inline-flex;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+
+.account-challenge-gate h4 {
+  color: var(--text-primary);
+  font-size: 1rem;
+  margin: 0 0 0.35rem;
+}
+
+.account-challenge-gate p {
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
 }
 
 .account-challenge-actions {
@@ -1369,11 +1468,13 @@
   }
 
   .prizeversity-linked-grid,
-  .prizeversity-input-row {
+  .prizeversity-input-row,
+  .prizeversity-code-row {
     grid-template-columns: 1fr;
   }
 
-  .prizeversity-input-row button {
+  .prizeversity-input-row button,
+  .prizeversity-code-row button {
     width: 100%;
   }
 
@@ -1383,6 +1484,11 @@
 
   .account-challenge-meta-grid {
     grid-template-columns: 1fr;
+  }
+
+  .account-challenge-gate {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .account-credential-row {

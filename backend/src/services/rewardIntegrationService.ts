@@ -1,16 +1,21 @@
+import crypto from 'crypto';
 import { Types } from 'mongoose';
 
 import env from '../config/env';
 import logger from '../config/logger';
 import RewardIntegrationEmission from '../models/RewardIntegrationEmission';
+import RewardIntegrationLinkVerification from '../models/RewardIntegrationLinkVerification';
 import RewardIntegrationInstance, {
   IRewardIntegrationInstanceDocument,
 } from '../models/RewardIntegrationInstance';
 import type { IUserDocument } from '../models/User';
+import { sendPrizeversityLinkCode } from './emailService';
 
 const log = logger.child({ module: 'reward-integration-service' });
 
 const REQUEST_TIMEOUT_MS = 12000;
+const LINK_CODE_TTL_MS = 10 * 60 * 1000;
+const MAX_LINK_CODE_ATTEMPTS = 5;
 const DEFAULT_PROVIDER = 'prizeversity';
 const DEFAULT_API_BASE_URL = 'https://www.prizeversity.com';
 const DEFAULT_SCOPES = ['users:read', 'users:match', 'reward:grant'];
@@ -74,6 +79,12 @@ export interface PrizeversityStatus {
   missingConfig: string[];
   account: PrizeversityLinkedAccount | null;
   instances: PublicRewardIntegrationInstance[];
+}
+
+export interface PrizeversityLinkVerificationStart {
+  verificationRequired: true;
+  maskedEmail: string;
+  expiresAt: Date;
 }
 
 interface PrizeversityUserListResponse {
@@ -177,6 +188,21 @@ const normalizeBaseUrl = (value?: string): string => {
 const normalizeScopes = (scopes?: string[]): string[] => {
   const normalized = (scopes || []).map(cleanPastedValue).filter(Boolean);
   return normalized.length ? normalized : DEFAULT_SCOPES;
+};
+
+const generateLinkCode = (): string => {
+  return crypto.randomInt(100000, 1000000).toString();
+};
+
+const hashLinkCode = (code: string, salt: string): string => {
+  return crypto.createHash('sha256').update(`${salt}:${code}`).digest('hex');
+};
+
+const maskEmail = (email: string): string => {
+  const [localPart, domain] = email.split('@');
+  if (!localPart || !domain) return email;
+  const visible = localPart.slice(0, Math.min(2, localPart.length));
+  return `${visible}${'*'.repeat(Math.max(localPart.length - visible.length, 3))}@${domain}`;
 };
 
 export const getPrizeversityMissingConfig = (): string[] => {
@@ -641,10 +667,10 @@ export const deactivateRewardIntegrationInstance = async (
   return updateRewardIntegrationInstance(instanceId, { active: false }, adminUserId);
 };
 
-export const linkPrizeversityAccount = async (
+const resolvePrizeversityAccount = async (
   user: IUserDocument,
   options: { identifier?: string; instanceId?: string } = {}
-): Promise<PrizeversityLinkedAccount> => {
+): Promise<{ config: RewardIntegrationConfig; matchedAccount: PrizeversityLinkedAccount }> => {
   const config = await getInstanceConfigById(options.instanceId);
   if (!config) {
     throw new PrizeversityError('No active Prizeversity reward integration is configured.');
@@ -680,9 +706,16 @@ export const linkPrizeversityAccount = async (
     );
   }
 
+  return { config, matchedAccount };
+};
+
+const applyPrizeversityLink = async (
+  user: IUserDocument,
+  matchedAccount: PrizeversityLinkedAccount,
+  rewardIntegrationInstanceId?: Types.ObjectId | null
+): Promise<PrizeversityLinkedAccount> => {
   const now = new Date();
-  user.rewardIntegrationInstanceId =
-    config.source === 'database' ? new Types.ObjectId(config.id) : null;
+  user.rewardIntegrationInstanceId = rewardIntegrationInstanceId || null;
   user.prizeversityUserId = matchedAccount.userId;
   user.prizeversityClassroomId = matchedAccount.classroomId;
   user.prizeversityEmail = matchedAccount.email;
@@ -699,7 +732,114 @@ export const linkPrizeversityAccount = async (
   };
 };
 
+export const startPrizeversityAccountLink = async (
+  user: IUserDocument,
+  options: { identifier?: string; instanceId?: string } = {}
+): Promise<PrizeversityLinkVerificationStart> => {
+  const { config, matchedAccount } = await resolvePrizeversityAccount(user, options);
+  const email = cleanPastedValue(matchedAccount.email).toLowerCase();
+
+  if (!email) {
+    throw new PrizeversityError(
+      'Matched Prizeversity account does not have an email address. Ask an admin to link your account.'
+    );
+  }
+
+  const code = generateLinkCode();
+  const codeSalt = crypto.randomBytes(16).toString('hex');
+  const expiresAt = new Date(Date.now() + LINK_CODE_TTL_MS);
+  const rewardIntegrationInstanceId =
+    config.source === 'database' ? new Types.ObjectId(config.id) : null;
+
+  await RewardIntegrationLinkVerification.findOneAndUpdate(
+    { awsUserId: user._id },
+    {
+      awsUserId: user._id,
+      rewardIntegrationInstanceId,
+      prizeversityUserId: matchedAccount.userId,
+      classroomId: matchedAccount.classroomId,
+      email,
+      matchedName: matchedAccount.matchedName,
+      shortId: matchedAccount.shortId,
+      codeHash: hashLinkCode(code, codeSalt),
+      codeSalt,
+      attempts: 0,
+      expiresAt,
+    },
+    { new: true, setDefaultsOnInsert: true, upsert: true }
+  );
+
+  await sendPrizeversityLinkCode(
+    email,
+    code,
+    matchedAccount.matchedName || user.fullName || 'there',
+    config.classroomName || config.name
+  );
+
+  return {
+    verificationRequired: true,
+    maskedEmail: maskEmail(email),
+    expiresAt,
+  };
+};
+
+export const verifyPrizeversityAccountLink = async (
+  user: IUserDocument,
+  code: string
+): Promise<PrizeversityLinkedAccount> => {
+  const cleanedCode = cleanPastedValue(code);
+  if (!cleanedCode) throw new PrizeversityError('Verification code is required.');
+
+  const pending = await RewardIntegrationLinkVerification.findOne({ awsUserId: user._id });
+  if (!pending) {
+    throw new PrizeversityError('No Prizeversity link code is pending. Request a new code.');
+  }
+
+  if (pending.expiresAt.getTime() <= Date.now()) {
+    await pending.deleteOne();
+    throw new PrizeversityError('Prizeversity link code expired. Request a new code.');
+  }
+
+  if (pending.attempts >= MAX_LINK_CODE_ATTEMPTS) {
+    await pending.deleteOne();
+    throw new PrizeversityError('Too many incorrect codes. Request a new code.');
+  }
+
+  const expectedHash = hashLinkCode(cleanedCode, pending.codeSalt);
+  if (expectedHash !== pending.codeHash) {
+    pending.attempts += 1;
+    await pending.save();
+    throw new PrizeversityError('Invalid Prizeversity link code.');
+  }
+
+  const account = await applyPrizeversityLink(
+    user,
+    {
+      userId: pending.prizeversityUserId,
+      classroomId: pending.classroomId,
+      email: pending.email,
+      matchedName: pending.matchedName,
+      shortId: pending.shortId,
+    },
+    pending.rewardIntegrationInstanceId || null
+  );
+
+  await pending.deleteOne();
+  return account;
+};
+
+export const linkPrizeversityAccount = async (
+  user: IUserDocument,
+  options: { identifier?: string; instanceId?: string } = {}
+): Promise<PrizeversityLinkedAccount> => {
+  const { config, matchedAccount } = await resolvePrizeversityAccount(user, options);
+  const rewardIntegrationInstanceId =
+    config.source === 'database' ? new Types.ObjectId(config.id) : null;
+  return applyPrizeversityLink(user, matchedAccount, rewardIntegrationInstanceId);
+};
+
 export const unlinkPrizeversityAccount = async (user: IUserDocument): Promise<void> => {
+  await RewardIntegrationLinkVerification.deleteOne({ awsUserId: user._id });
   user.rewardIntegrationInstanceId = null;
   user.prizeversityUserId = undefined;
   user.prizeversityClassroomId = undefined;
