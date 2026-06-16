@@ -1,3 +1,5 @@
+#!/usr/bin/env bun
+
 import mongoose from 'mongoose';
 
 import env from '../src/config/env';
@@ -64,6 +66,7 @@ if (!email) {
   log.info('email address is required.');
   log.info('');
   log.info('usage.');
+  log.info('   ./scripts/createSuperuser.ts <email>');
   log.info('   bun run create-superuser -- <email>');
   log.info('');
   log.info('example.');

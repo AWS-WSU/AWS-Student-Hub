@@ -23,6 +23,13 @@ export interface User {
   awsAccessKeyId?: string;
   awsSecretAccessKey?: string;
   hasViewedAwsCredentials?: boolean;
+  prizeversityUserId?: string;
+  prizeversityClassroomId?: string;
+  prizeversityEmail?: string;
+  prizeversityMatchedName?: string;
+  prizeversityShortId?: string;
+  prizeversityLinkedAt?: string | null;
+  prizeversityLastSyncedAt?: string | null;
 }
 
 export interface PublicProfile {

@@ -96,6 +96,7 @@
 
 .dashboard-content,
 .users-content,
+.rewards-content,
 .queue-content {
   animation: fadeInUp 0.5s ease forwards;
 }
@@ -223,6 +224,194 @@
   overflow: hidden;
   margin-bottom: 30px;
   box-shadow: 0 4px 12px var(--card-shadow);
+}
+
+.reward-admin-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.reward-admin-panel {
+  background-color: var(--bg-secondary);
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.1);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 4px 12px var(--card-shadow);
+  text-align: left;
+}
+
+.reward-admin-heading {
+  margin-bottom: 20px;
+}
+
+.reward-admin-heading span,
+.reward-instance-topline span {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reward-admin-heading h2 {
+  color: var(--text-primary);
+  font-size: 1.45rem;
+  margin: 6px 0 8px;
+}
+
+.reward-admin-heading p,
+.reward-instance-card p {
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.reward-form {
+  display: grid;
+  gap: 14px;
+}
+
+.reward-form label {
+  color: var(--text-primary);
+  display: grid;
+  gap: 7px;
+  font-weight: 700;
+}
+
+.reward-form input,
+.reward-form textarea {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 2px solid rgba(var(--text-secondary-rgb), 0.18);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font: inherit;
+  padding: 12px 14px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.reward-form textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.reward-form input:focus,
+.reward-form textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+  outline: none;
+}
+
+.create-reward-instance-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+  border: none;
+  border-radius: 999px;
+  color: #111827;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 13px 18px;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.create-reward-instance-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.create-reward-instance-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.empty-reward-instances {
+  background: rgba(var(--text-secondary-rgb), 0.06);
+  border: 1px dashed rgba(var(--text-secondary-rgb), 0.22);
+  border-radius: 14px;
+  color: var(--text-secondary);
+  padding: 24px;
+  text-align: center;
+}
+
+.reward-instance-list {
+  display: grid;
+  gap: 16px;
+}
+
+.reward-instance-card {
+  background: var(--bg-primary);
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.12);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.reward-instance-topline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.reward-instance-topline span[data-active='false'] {
+  color: var(--text-secondary);
+}
+
+.reward-instance-card h3 {
+  color: var(--text-primary);
+  font-size: 1.18rem;
+  margin: 0 0 8px;
+}
+
+.reward-instance-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.reward-instance-meta div {
+  min-width: 0;
+  background: rgba(var(--text-secondary-rgb), 0.06);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.reward-instance-meta span {
+  color: var(--text-secondary);
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.reward-instance-meta strong {
+  color: var(--text-primary);
+  display: block;
+  font-size: 0.9rem;
+  word-break: break-word;
+}
+
+.reward-instance-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 12px;
+  color: #ef4444;
+  font-weight: 700;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+}
+
+.reward-instance-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .table-header {
@@ -972,6 +1161,10 @@
 
 /* Queue responsive */
 @media (max-width: 992px) {
+  .reward-admin-grid {
+    grid-template-columns: 1fr;
+  }
+
   .queue-stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1004,6 +1197,18 @@
 }
 
 @media (max-width: 576px) {
+  .reward-instance-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .reward-instance-actions {
+    flex-direction: column;
+  }
+
+  .reward-instance-actions .action-btn {
+    width: 100%;
+  }
+
   .queue-stats-grid {
     grid-template-columns: 1fr 1fr;
     gap: 12px;

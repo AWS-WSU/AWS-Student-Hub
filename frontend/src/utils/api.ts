@@ -2,6 +2,12 @@ import type { AdminStats, EmailQueueEntry } from '../types/admin';
 import type { ApiResponse } from '../types/api';
 import type { AuthResponse, LoginCredentials, SignupPayload } from '../types/auth';
 import type { Event as FrontendEvent, EventFormPayload } from '../types/event';
+import type {
+  RewardIntegrationInstance,
+  RewardIntegrationInstancePayload,
+  RewardIntegrationLinkResponse,
+  RewardIntegrationStatusResponse,
+} from '../types/rewardIntegration';
 import type { PublicProfile, User, UserRole } from '../types/user';
 
 const API_BASE_URL =
@@ -123,25 +129,25 @@ const apiRequest = async <T = any>(endpoint: string, options: RequestOptions = {
       if (refreshToken) {
         try {
           await refreshTokens();
-          // Retry the original request with the new token
-          finalOptions.headers.Authorization = `Bearer ${getStoredItem('accessToken')}`;
-          const retryResponse = await fetch(url, finalOptions);
-          const data = await readJson<JsonRecord>(retryResponse);
-
-          if (!retryResponse.ok) {
-            throw new Error(
-              data.error || data.message || `HTTP error! status: ${retryResponse.status}`
-            );
-          }
-
-          return data as T;
         } catch {
-          // Refresh failed, logout user
           clearStoredItem('accessToken');
           clearStoredItem('refreshToken');
           clearStoredItem('cachedUser');
           throw new Error('Session expired. Please log in again.');
         }
+
+        // Retry the original request with the new token.
+        finalOptions.headers.Authorization = `Bearer ${getStoredItem('accessToken')}`;
+        const retryResponse = await fetch(url, finalOptions);
+        const data = await readJson<JsonRecord>(retryResponse);
+
+        if (!retryResponse.ok) {
+          throw new Error(
+            data.error || data.message || `HTTP error! status: ${retryResponse.status}`
+          );
+        }
+
+        return data as T;
       }
     }
 
@@ -176,7 +182,13 @@ const setStoredItem = (key: string, value: string): void => {
   storage.setItem(key, value);
 };
 
+let refreshPromise: Promise<AuthResponse> | null = null;
+
 const refreshTokens = async (): Promise<AuthResponse> => {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
   const refreshToken = getStoredItem('refreshToken');
   const deviceId = getStoredItem('deviceId') || localStorage.getItem('deviceId');
 
@@ -184,27 +196,36 @@ const refreshTokens = async (): Promise<AuthResponse> => {
     throw new Error('No refresh token available');
   }
 
-  const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      refreshToken,
-      deviceId,
-    }),
-  });
+  refreshPromise = (async () => {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        refreshToken,
+        deviceId,
+      }),
+    });
 
-  if (!response.ok) {
-    throw new Error('Token refresh failed');
+    if (!response.ok) {
+      throw new Error('Token refresh failed');
+    }
+
+    const data = (await response.json()) as AuthResponse;
+    localStorage.setItem('rememberMe', data.rememberMe ? 'true' : 'false');
+    setStoredItem('accessToken', data.accessToken);
+    setStoredItem('refreshToken', data.refreshToken);
+    setStoredItem('cachedUser', JSON.stringify(data.user));
+
+    return data;
+  })();
+
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
   }
-
-  const data = (await response.json()) as AuthResponse;
-  setStoredItem('accessToken', data.accessToken);
-  setStoredItem('refreshToken', data.refreshToken);
-  setStoredItem('cachedUser', JSON.stringify(data.user));
-
-  return data;
 };
 
 const appendPayloadToForm = (form: FormData, payload: EventFormPayload | JsonRecord): void => {
@@ -443,6 +464,50 @@ export const discordAPI = {
   },
 };
 
+export const rewardIntegrationAPI = {
+  status: async (): Promise<RewardIntegrationStatusResponse> => {
+    return apiRequest('/integrations/prizeversity/status');
+  },
+
+  link: async (
+    identifier?: string,
+    instanceId?: string
+  ): Promise<RewardIntegrationLinkResponse> => {
+    return apiRequest('/integrations/prizeversity/link', {
+      method: 'POST',
+      body: JSON.stringify({ identifier, instanceId }),
+    });
+  },
+
+  verifyLink: async (code: string): Promise<RewardIntegrationLinkResponse> => {
+    return apiRequest('/integrations/prizeversity/link/verify', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+  },
+
+  unlink: async (): Promise<RewardIntegrationLinkResponse> => {
+    return apiRequest('/integrations/prizeversity/link', {
+      method: 'DELETE',
+    });
+  },
+};
+
+interface RewardIntegrationInstancesResponse {
+  instances: RewardIntegrationInstance[];
+}
+
+interface RewardIntegrationInstanceResponse {
+  message?: string;
+  instance: RewardIntegrationInstance;
+  test?: {
+    classroomId: string;
+    classroomName?: string;
+    userCount: number;
+    verifiedAt: string;
+  };
+}
+
 export const adminAPI = {
   getDashboardStats: async (): Promise<{ stats: AdminStats; [key: string]: any }> => {
     const response = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
@@ -621,6 +686,43 @@ export const adminAPI = {
     }
 
     return response.json() as Promise<ProcessEmailQueueResponse>;
+  },
+
+  listRewardIntegrations: async (): Promise<RewardIntegrationInstancesResponse> => {
+    return apiRequest('/admin/reward-integrations');
+  },
+
+  createRewardIntegration: async (
+    payload: RewardIntegrationInstancePayload
+  ): Promise<RewardIntegrationInstanceResponse> => {
+    return apiRequest('/admin/reward-integrations', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateRewardIntegration: async (
+    instanceId: string,
+    payload: Partial<RewardIntegrationInstancePayload>
+  ): Promise<RewardIntegrationInstanceResponse> => {
+    return apiRequest(`/admin/reward-integrations/${instanceId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  testRewardIntegration: async (instanceId: string): Promise<RewardIntegrationInstanceResponse> => {
+    return apiRequest(`/admin/reward-integrations/${instanceId}/test`, {
+      method: 'POST',
+    });
+  },
+
+  deactivateRewardIntegration: async (
+    instanceId: string
+  ): Promise<RewardIntegrationInstanceResponse> => {
+    return apiRequest(`/admin/reward-integrations/${instanceId}`, {
+      method: 'DELETE',
+    });
   },
 };
 

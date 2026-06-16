@@ -8,6 +8,7 @@ import authRoutes from './routes/auth';
 import discordInviteRoutes from './routes/discordInvite';
 import eventRoutes from './routes/events';
 import newsletterRoutes from './routes/newsletter';
+import rewardIntegrationRoutes from './routes/rewardIntegration';
 import uploadRoutes from './routes/upload';
 import verifyRoutes from './routes/verify';
 import env from './config/env';
@@ -150,6 +151,7 @@ app.use('/upload', uploadRoutes);
 app.use('/', discordInviteRoutes);
 app.use('/admin', adminRoutes);
 app.use('/events', eventRoutes);
+app.use('/integrations/prizeversity', rewardIntegrationRoutes);
 app.use('/verify', verifyRoutes);
 
 app.get('/health', (_req: Request, res: Response): void => {

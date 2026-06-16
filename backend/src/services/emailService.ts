@@ -93,6 +93,54 @@ export const sendResetCode = async (
   await transporter.sendMail(mailOptions);
 };
 
+export const sendPrizeversityLinkCode = async (
+  email: string,
+  code: string,
+  fullName: string,
+  classroomName = 'your Prizeversity classroom'
+): Promise<void> => {
+  const mailOptions = {
+    from: `"AWS Student Hub" <${env.SMTP_USER}>`,
+    to: email,
+    subject: 'Prizeversity Link Code - AWS Student Hub',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .code-box { background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; }
+          .code { font-size: 32px; font-weight: bold; color: #FF9900; letter-spacing: 5px; }
+          .footer { margin-top: 30px; font-size: 14px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h2>Prizeversity Account Link</h2>
+          </div>
+          <p>Hello ${fullName || 'there'},</p>
+          <p>AWS Student Hub received a request to link this Prizeversity account from ${classroomName} for challenge rewards.</p>
+          <p>Use the code below to finish linking your account:</p>
+          <div class="code-box">
+            <div class="code">${code}</div>
+          </div>
+          <p>This code will expire in 10 minutes.</p>
+          <p>If you did not request this link, you can safely ignore this email.</p>
+          <div class="footer">
+            <p>Best regards,<br>AWS Student Hub Team</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
 export const sendEventNotification = async (
   email: string,
   fullName: string,

@@ -191,6 +191,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const data = await response.json();
 
         // Update stored tokens using appropriate storage
+        localStorage.setItem('rememberMe', data.rememberMe ? 'true' : 'false');
         setStoredItem('accessToken', data.accessToken);
         setStoredItem('refreshToken', data.refreshToken);
         setStoredItem('cachedUser', JSON.stringify(data.user));

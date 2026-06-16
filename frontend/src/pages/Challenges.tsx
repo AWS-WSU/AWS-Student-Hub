@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Target, Star, Trophy } from 'lucide-react';
+import { Link2, ShieldCheck, Target, Star, Trophy, X } from 'lucide-react';
+import { rewardIntegrationAPI } from '../utils/api';
 import type { ThemeProps } from '../types';
+import type { RewardIntegrationStatusResponse } from '../types/rewardIntegration';
 import './styles/Challenges.css';
 import '../pages/styles/Landing.css';
 
@@ -29,6 +31,13 @@ function Challenges({ theme: _theme }: ThemeProps) {
   const [activeTab, setActiveTab] = useState<ChallengeTab>('all');
   const [challenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rewardStatus, setRewardStatus] = useState<RewardIntegrationStatusResponse | null>(null);
+  const [rewardStatusLoading, setRewardStatusLoading] = useState<boolean>(false);
+  const [rewardStatusError, setRewardStatusError] = useState<string>('');
+  const [rewardGateDismissed, setRewardGateDismissed] = useState<boolean>(false);
+  const rewardGateDismissKey = user
+    ? `awsStudentHub:challengeRewardGateDismissed:${user.id || user._id || user.email}`
+    : '';
 
   useEffect(() => {
     const loadChallenges = async () => {
@@ -37,8 +46,64 @@ function Challenges({ theme: _theme }: ThemeProps) {
     loadChallenges();
   }, []);
 
+  useEffect(() => {
+    if (!user) {
+      setRewardStatus(null);
+      setRewardStatusError('');
+      return;
+    }
+
+    let shouldUpdate = true;
+    setRewardStatusLoading(true);
+    setRewardStatusError('');
+
+    rewardIntegrationAPI
+      .status()
+      .then((status) => {
+        if (shouldUpdate) {
+          setRewardStatus(status);
+        }
+      })
+      .catch((err) => {
+        if (shouldUpdate) {
+          setRewardStatusError(
+            err instanceof Error ? err.message : 'Failed to load Prizeversity link status'
+          );
+        }
+      })
+      .finally(() => {
+        if (shouldUpdate) {
+          setRewardStatusLoading(false);
+        }
+      });
+
+    return () => {
+      shouldUpdate = false;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!rewardGateDismissKey) {
+      setRewardGateDismissed(false);
+      return;
+    }
+
+    setRewardGateDismissed(localStorage.getItem(rewardGateDismissKey) === 'true');
+  }, [rewardGateDismissKey]);
+
   const handleSignIn = () => {
     navigate('/auth?redirect=/challenges');
+  };
+
+  const handleLinkPrizeversity = () => {
+    navigate('/account#prizeversity-rewards');
+  };
+
+  const handleDismissRewardGate = () => {
+    if (rewardGateDismissKey) {
+      localStorage.setItem(rewardGateDismissKey, 'true');
+    }
+    setRewardGateDismissed(true);
   };
 
   const filteredChallenges = challenges.filter((c) => {
@@ -99,6 +164,58 @@ function Challenges({ theme: _theme }: ThemeProps) {
           >
             <p>Sign in to track your progress and earn points</p>
             <button onClick={handleSignIn}>Sign In</button>
+          </motion.div>
+        )}
+
+        {user && (!rewardStatus?.linked || !rewardGateDismissed) && (
+          <motion.div
+            className={`challenges-reward-gate ${rewardStatus?.linked ? 'linked' : ''}`}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.28 }}
+          >
+            <div className="reward-gate-icon" aria-hidden="true">
+              {rewardStatus?.linked ? <ShieldCheck size={26} /> : <Link2 size={26} />}
+            </div>
+            <div className="reward-gate-copy">
+              <span>{rewardStatus?.linked ? 'Rewards connected' : 'Required before play'}</span>
+              <h3>
+                {rewardStatus?.linked
+                  ? 'Prizeversity is linked for challenge rewards.'
+                  : 'Link Prizeversity to unlock rewardable challenges.'}
+              </h3>
+              <p>
+                {rewardStatusLoading
+                  ? 'Checking your classroom reward link...'
+                  : rewardStatusError
+                    ? rewardStatusError
+                    : rewardStatus?.linked
+                      ? `Completions will sync to ${rewardStatus.account?.matchedName || rewardStatus.account?.email || 'your Prizeversity classroom account'}.`
+                      : rewardStatus && !rewardStatus.configured
+                        ? 'An admin needs to configure a Prizeversity classroom instance before challenges can award progress.'
+                        : 'Use your AWS Student Hub profile to connect the Prizeversity classroom account that will receive challenge progress and rewards.'}
+              </p>
+            </div>
+            {!rewardStatus?.linked && (
+              <button
+                type="button"
+                className="reward-gate-button"
+                onClick={handleLinkPrizeversity}
+                disabled={rewardStatusLoading || Boolean(rewardStatus && !rewardStatus.configured)}
+              >
+                Link in Account
+              </button>
+            )}
+            {rewardStatus?.linked && (
+              <button
+                type="button"
+                className="reward-gate-dismiss"
+                onClick={handleDismissRewardGate}
+                aria-label="Dismiss rewards connected message"
+              >
+                <X size={18} strokeWidth={2.5} aria-hidden="true" />
+              </button>
+            )}
           </motion.div>
         )}
 
