@@ -674,6 +674,10 @@ function Account({ theme: _theme }: AccountProps) {
     return null;
   }
 
+  const isPrizeversityEmailDeliveryError = prizeversityLinkError
+    .toLowerCase()
+    .includes('verification email');
+
   return (
     <div className="account-container">
       <div className="account-content">
@@ -1190,13 +1194,17 @@ function Account({ theme: _theme }: AccountProps) {
                         <strong>
                           {prizeversityVerification
                             ? 'Verification failed.'
-                            : 'No Prizeversity match found.'}
+                            : isPrizeversityEmailDeliveryError
+                              ? 'Verification email could not be sent.'
+                              : 'No Prizeversity match found.'}
                         </strong>
                         <span>{prizeversityLinkError}</span>
                         <small>
                           {prizeversityVerification
                             ? 'Check the code from your email, or resend a new code if it expired.'
-                            : 'Confirm you selected the right reward classroom and try your Prizeversity email, full name, or short ID.'}
+                            : isPrizeversityEmailDeliveryError
+                              ? 'Your account was matched, but the site email provider rejected the send. Ask an admin to check SMTP credentials.'
+                              : 'Confirm you selected the right reward classroom and try your Prizeversity email, full name, or short ID.'}
                         </small>
                       </div>
                     )}

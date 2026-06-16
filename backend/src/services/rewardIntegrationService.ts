@@ -769,12 +769,25 @@ export const startPrizeversityAccountLink = async (
     { new: true, setDefaultsOnInsert: true, upsert: true }
   );
 
-  await sendPrizeversityLinkCode(
-    email,
-    code,
-    matchedAccount.matchedName || user.fullName || 'there',
-    config.classroomName || config.name
-  );
+  try {
+    await sendPrizeversityLinkCode(
+      email,
+      code,
+      matchedAccount.matchedName || user.fullName || 'there',
+      config.classroomName || config.name
+    );
+  } catch (error: unknown) {
+    await RewardIntegrationLinkVerification.deleteOne({ awsUserId: user._id });
+    log.error('failed to send prizeversity link verification code.', {
+      error: error instanceof Error ? error.message : error,
+      userId: String(user._id),
+      instanceId: config.id,
+    });
+    throw new PrizeversityError(
+      'Prizeversity match found, but AWS Student Hub could not send the verification email. Ask an admin to check SMTP credentials.',
+      503
+    );
+  }
 
   return {
     verificationRequired: true,
