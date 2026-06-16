@@ -6,9 +6,11 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useAuth } from '../context/AuthContext';
 import './styles/Account.css';
 import { validateImageFile, compressImage } from '../utils/imageUtils';
-import { Copy, Lock, Shield, Target, X } from 'lucide-react';
+import { Copy, Link2, Lock, RefreshCw, Shield, Target, Unlink, X } from 'lucide-react';
 import CyberChallengeModal from '../components/CyberChallengeModal';
+import { rewardIntegrationAPI } from '../utils/api';
 import type { AwsCredentials } from '../types/auth';
+import type { RewardIntegrationStatusResponse } from '../types/rewardIntegration';
 import type { User } from '../types/user';
 import type { Theme } from '../types/ui';
 
@@ -127,16 +129,35 @@ function Account({ theme: _theme }: AccountProps) {
   const [credentialsPassword, setCredentialsPassword] = useState<string>('');
   const [isLoadingCredentials, setIsLoadingCredentials] = useState<boolean>(false);
   const [showCyberModal, setShowCyberModal] = useState<boolean>(false);
+  const [prizeversityStatus, setPrizeversityStatus] =
+    useState<RewardIntegrationStatusResponse | null>(null);
+  const [prizeversityIdentifier, setPrizeversityIdentifier] = useState<string>('');
+  const [selectedRewardInstanceId, setSelectedRewardInstanceId] = useState<string>('');
+  const [isPrizeversityLoading, setIsPrizeversityLoading] = useState<boolean>(false);
+  const [prizeversityLinkError, setPrizeversityLinkError] = useState<string>('');
+  const [prizeversityVerification, setPrizeversityVerification] = useState<{
+    maskedEmail: string;
+    expiresAt?: string;
+  } | null>(null);
+  const [prizeversityVerificationCode, setPrizeversityVerificationCode] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const inputRefs = useRef<Partial<Record<AccountField, AccountInputElement | null>>>({});
 
   const navigate = useNavigate();
   const { isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
-  const { user: authUser, updateUser, uploadProfilePicture, getAwsCredentials } = useAuth();
+  const {
+    user: authUser,
+    updateUser,
+    uploadProfilePicture,
+    getAwsCredentials,
+    refreshTokens,
+  } = useAuth();
 
   const isAuthenticated = isAuth0Authenticated || !!authUser;
   const currentUser = (auth0User || authUser) as AccountUser | undefined;
   const isSocialLogin = !!auth0User;
+  const isPrizeversityLinked = Boolean(prizeversityStatus?.linked && prizeversityStatus.account);
+  const isPrizeversityGateLoading = isPrizeversityLoading && !prizeversityStatus;
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -161,8 +182,53 @@ function Account({ theme: _theme }: AccountProps) {
     }
   }, [isAuthenticated, currentUser, navigate]);
 
+  useEffect(() => {
+    if (!isAuthenticated || !getStoredItem('accessToken')) {
+      return;
+    }
+
+    let shouldUpdate = true;
+    setIsPrizeversityLoading(true);
+
+    rewardIntegrationAPI
+      .status()
+      .then((status) => {
+        if (shouldUpdate) {
+          setPrizeversityStatus(status);
+          setPrizeversityIdentifier(status.account?.email || currentUser?.email || '');
+          setSelectedRewardInstanceId(
+            status.account?.instanceId || status.instances?.[0]?.id || ''
+          );
+        }
+      })
+      .catch((err) => {
+        if (shouldUpdate) {
+          setError(getErrorMessage(err, 'Failed to load Prizeversity status'));
+        }
+      })
+      .finally(() => {
+        if (shouldUpdate) {
+          setIsPrizeversityLoading(false);
+        }
+      });
+
+    return () => {
+      shouldUpdate = false;
+    };
+  }, [isAuthenticated, currentUser?.email]);
+
   // Scroll to top when component mounts
   useEffect(() => {
+    if (window.location.hash === '#prizeversity-rewards') {
+      setTimeout(() => {
+        document.getElementById('prizeversity-rewards')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }, 100);
+      return;
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
@@ -183,6 +249,14 @@ function Account({ theme: _theme }: AccountProps) {
         }) as AccountFormData
     );
     setError('');
+  };
+
+  const focusPrizeversityLinking = () => {
+    document.getElementById('prizeversity-rewards')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+    setError('Link your Prizeversity account before starting AWS challenges.');
   };
 
   const handleLanguageToggle = (language: string) => {
@@ -410,6 +484,12 @@ function Account({ theme: _theme }: AccountProps) {
 
   const handleRevealCredentials = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!isPrizeversityLinked) {
+      setShowCredentialsModal(false);
+      focusPrizeversityLinking();
+      return;
+    }
+
     if (!credentialsPassword) {
       setError('Password is required');
       return;
@@ -434,10 +514,94 @@ function Account({ theme: _theme }: AccountProps) {
   };
 
   const handleShowCyberModal = () => {
-    if (currentUser?.awsAccessKeyId && currentUser?.awsSecretAccessKey) {
+    if (!isPrizeversityLinked) {
+      focusPrizeversityLinking();
+      return;
+    }
+
+    if (awsCredentials || (currentUser?.awsAccessKeyId && currentUser?.awsSecretAccessKey)) {
       setShowCyberModal(true);
     } else {
-      setError('No AWS credentials found for your account');
+      setError('Reveal your AWS credentials before opening the challenge instructions.');
+    }
+  };
+
+  const handlePrizeversityLink = async () => {
+    setIsPrizeversityLoading(true);
+    setPrizeversityLinkError('');
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await rewardIntegrationAPI.link(
+        prizeversityIdentifier,
+        selectedRewardInstanceId
+      );
+      if (response.verificationRequired && response.maskedEmail) {
+        setPrizeversityVerification({
+          maskedEmail: response.maskedEmail,
+          expiresAt: response.expiresAt,
+        });
+        setPrizeversityVerificationCode('');
+      }
+      setSuccess(response.message);
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      const message = getErrorMessage(err, 'Failed to link Prizeversity account');
+      setPrizeversityLinkError(message);
+      setError(message);
+    } finally {
+      setIsPrizeversityLoading(false);
+    }
+  };
+
+  const handlePrizeversityVerify = async () => {
+    setIsPrizeversityLoading(true);
+    setPrizeversityLinkError('');
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await rewardIntegrationAPI.verifyLink(prizeversityVerificationCode);
+      setPrizeversityStatus(response.status);
+      setPrizeversityIdentifier(response.status.account?.email || prizeversityIdentifier);
+      setSelectedRewardInstanceId(
+        response.status.account?.instanceId || response.status.instances?.[0]?.id || ''
+      );
+      setPrizeversityVerification(null);
+      setPrizeversityVerificationCode('');
+      await refreshTokens();
+      setSuccess(response.message);
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      const message = getErrorMessage(err, 'Failed to verify Prizeversity link code');
+      setPrizeversityLinkError(message);
+      setError(message);
+    } finally {
+      setIsPrizeversityLoading(false);
+    }
+  };
+
+  const handlePrizeversityUnlink = async () => {
+    setIsPrizeversityLoading(true);
+    setPrizeversityLinkError('');
+    setPrizeversityVerification(null);
+    setPrizeversityVerificationCode('');
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await rewardIntegrationAPI.unlink();
+      setPrizeversityStatus(response.status);
+      setPrizeversityIdentifier(currentUser?.email || '');
+      setSelectedRewardInstanceId(response.status.instances?.[0]?.id || '');
+      await refreshTokens();
+      setSuccess(response.message);
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to unlink Prizeversity account'));
+    } finally {
+      setIsPrizeversityLoading(false);
     }
   };
 
@@ -853,6 +1017,209 @@ function Account({ theme: _theme }: AccountProps) {
           </motion.section>
 
           <motion.section
+            id="prizeversity-rewards"
+            className="prizeversity-section"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+          >
+            <h2 className="account-challenge-heading">
+              <Link2 size={26} aria-hidden="true" /> Prizeversity Rewards
+            </h2>
+
+            <div className="prizeversity-card">
+              <div className="prizeversity-header">
+                <div className="prizeversity-icon">
+                  <Shield size={28} aria-hidden="true" />
+                </div>
+                <div className="prizeversity-title">
+                  <span>{prizeversityStatus?.linked ? 'Connected' : 'Account sync'}</span>
+                  <h3>Link your Prizeversity account</h3>
+                  <p>
+                    Challenge completions in AWS Student Hub will use this linked Prizeversity
+                    classroom account for rewards and progression.
+                  </p>
+                </div>
+              </div>
+
+              {!getStoredItem('accessToken') ? (
+                <div className="prizeversity-notice">
+                  Prizeversity linking requires an AWS Student Hub account session.
+                </div>
+              ) : prizeversityStatus && !prizeversityStatus.configured ? (
+                <div className="prizeversity-notice">
+                  Prizeversity integration is not configured yet. An admin needs to set the backend
+                  Prizeversity API URL, API key, and classroom ID.
+                </div>
+              ) : (
+                <>
+                  {prizeversityStatus?.linked && prizeversityStatus.account ? (
+                    <div className="prizeversity-linked-panel">
+                      <div className="prizeversity-linked-grid">
+                        <div>
+                          <span>Matched account</span>
+                          <strong>
+                            {prizeversityStatus.account.matchedName ||
+                              prizeversityStatus.account.email ||
+                              'Prizeversity user'}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>Email</span>
+                          <strong>{prizeversityStatus.account.email || 'Not provided'}</strong>
+                        </div>
+                        <div>
+                          <span>Short ID</span>
+                          <strong>{prizeversityStatus.account.shortId || 'Not provided'}</strong>
+                        </div>
+                        <div>
+                          <span>Last synced</span>
+                          <strong>
+                            {prizeversityStatus.account.lastSyncedAt
+                              ? new Date(
+                                  prizeversityStatus.account.lastSyncedAt
+                                ).toLocaleDateString()
+                              : 'Just now'}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="prizeversity-notice">
+                      Use the email, full name, or short ID from your Prizeversity classroom. If
+                      left blank, we will try your AWS Student Hub email first.
+                    </div>
+                  )}
+
+                  <div className="prizeversity-link-form">
+                    {prizeversityStatus?.instances && prizeversityStatus.instances.length > 1 && (
+                      <>
+                        <label htmlFor="prizeversity-instance">Reward classroom</label>
+                        <select
+                          id="prizeversity-instance"
+                          value={selectedRewardInstanceId}
+                          onChange={(event) => setSelectedRewardInstanceId(event.target.value)}
+                          disabled={isPrizeversityLoading}
+                          className="prizeversity-instance-select"
+                        >
+                          {prizeversityStatus.instances.map((instance) => (
+                            <option key={instance.id} value={instance.id}>
+                              {instance.name}
+                              {instance.classroomName ? ` - ${instance.classroomName}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    )}
+
+                    <label htmlFor="prizeversity-identifier">Prizeversity identifier</label>
+                    <div className="prizeversity-input-row">
+                      <input
+                        id="prizeversity-identifier"
+                        type="text"
+                        value={prizeversityIdentifier}
+                        onChange={(event) => {
+                          setPrizeversityIdentifier(event.target.value);
+                          setPrizeversityLinkError('');
+                          setPrizeversityVerification(null);
+                          setPrizeversityVerificationCode('');
+                        }}
+                        placeholder={currentUser?.email || 'email@example.com'}
+                        disabled={isPrizeversityLoading}
+                      />
+                      <button
+                        type="button"
+                        className="show-modal-btn"
+                        onClick={handlePrizeversityLink}
+                        disabled={isPrizeversityLoading}
+                      >
+                        {isPrizeversityLoading ? (
+                          <>
+                            <RefreshCw size={16} aria-hidden="true" /> Syncing
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw size={16} aria-hidden="true" />
+                            {prizeversityVerification
+                              ? 'Resend code'
+                              : prizeversityStatus?.linked
+                                ? 'Re-sync'
+                                : 'Send code'}
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    {prizeversityVerification && (
+                      <div className="prizeversity-verification-panel">
+                        <div>
+                          <strong>Check your Prizeversity email.</strong>
+                          <span>
+                            We sent a one-time code to {prizeversityVerification.maskedEmail}. Enter
+                            it below to finish linking this account.
+                          </span>
+                        </div>
+                        <div className="prizeversity-code-row">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            value={prizeversityVerificationCode}
+                            onChange={(event) => {
+                              setPrizeversityVerificationCode(event.target.value);
+                              setPrizeversityLinkError('');
+                            }}
+                            placeholder="123456"
+                            disabled={isPrizeversityLoading}
+                          />
+                          <button
+                            type="button"
+                            className="show-modal-btn"
+                            onClick={handlePrizeversityVerify}
+                            disabled={
+                              isPrizeversityLoading ||
+                              prizeversityVerificationCode.trim().length < 6
+                            }
+                          >
+                            Verify code
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {prizeversityLinkError && (
+                      <div className="prizeversity-link-error" role="alert">
+                        <strong>
+                          {prizeversityVerification
+                            ? 'Verification failed.'
+                            : 'No Prizeversity match found.'}
+                        </strong>
+                        <span>{prizeversityLinkError}</span>
+                        <small>
+                          {prizeversityVerification
+                            ? 'Check the code from your email, or resend a new code if it expired.'
+                            : 'Confirm you selected the right reward classroom and try your Prizeversity email, full name, or short ID.'}
+                        </small>
+                      </div>
+                    )}
+                  </div>
+
+                  {prizeversityStatus?.linked && (
+                    <div className="account-challenge-actions compact">
+                      <button
+                        type="button"
+                        className="hide-credentials-btn"
+                        onClick={handlePrizeversityUnlink}
+                        disabled={isPrizeversityLoading}
+                      >
+                        <Unlink size={16} aria-hidden="true" /> Unlink Prizeversity
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </motion.section>
+
+          <motion.section
             className="cyber-challenge-section"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -893,7 +1260,29 @@ function Account({ theme: _theme }: AccountProps) {
                 </div>
               </div>
 
-              {currentUser?.awsAccessKeyId ? (
+              {isPrizeversityGateLoading ? (
+                <div className="no-credentials-message">
+                  <p>Checking Prizeversity reward link...</p>
+                </div>
+              ) : !isPrizeversityLinked ? (
+                <div className="account-challenge-gate">
+                  <div>
+                    <span>Prizeversity required</span>
+                    <h4>Link your reward account before starting this challenge.</h4>
+                    <p>
+                      AWS challenge completions are rewarded through Prizeversity, so we need to
+                      verify your classroom account before revealing challenge credentials.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="show-modal-btn"
+                    onClick={focusPrizeversityLinking}
+                  >
+                    <Link2 size={16} aria-hidden="true" /> Link Prizeversity
+                  </button>
+                </div>
+              ) : (
                 <div className="account-credentials-section">
                   {!awsCredentials ? (
                     <div className="account-challenge-actions">
@@ -904,15 +1293,6 @@ function Account({ theme: _theme }: AccountProps) {
                         whileTap={{ scale: 0.98 }}
                       >
                         <Lock size={16} aria-hidden="true" /> Reveal credentials
-                      </motion.button>
-
-                      <motion.button
-                        className="show-modal-btn"
-                        onClick={handleShowCyberModal}
-                        whileHover={{ y: -2 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <Target size={16} aria-hidden="true" /> Open instructions
                       </motion.button>
                     </div>
                   ) : (
@@ -970,10 +1350,6 @@ function Account({ theme: _theme }: AccountProps) {
                       </div>
                     </div>
                   )}
-                </div>
-              ) : (
-                <div className="no-credentials-message">
-                  <p>AWS credentials not available for this account.</p>
                 </div>
               )}
             </div>

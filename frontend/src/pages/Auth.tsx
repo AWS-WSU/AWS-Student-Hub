@@ -246,7 +246,7 @@ function Auth({ theme }: AuthProps) {
         return;
       }
 
-      if (currentUser && !currentUser.profileSetupCompleted) {
+      if (currentUser && currentUser.profileSetupCompleted === false) {
         navigate('/setup', { replace: true });
       } else {
         navigate(redirectPath, { replace: true });

@@ -6,6 +6,7 @@ import User from '../models/User';
 import logger from '../config/logger';
 
 const log = logger.child({ module: 'auth' });
+type UserStatus = Express.UserStatus;
 
 interface AccessTokenPayload extends jwt.JwtPayload {
   id: string;
@@ -54,7 +55,9 @@ const checkJwt = async (req: Request, res: Response, next: NextFunction): Promis
       return;
     }
 
-    if (user.status !== 'active') {
+    const userStatus = (user.status || 'active') as UserStatus;
+
+    if (userStatus !== 'active') {
       res.status(401).json({
         error: 'Account is not active',
       });

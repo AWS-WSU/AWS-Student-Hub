@@ -6,6 +6,10 @@ import { useToast } from '../context/ToastContext';
 import { adminAPI } from '../utils/api';
 import './styles/AdminDashboard.css';
 import type { AdminStats, AdminUser, EmailQueueEntry } from '../types/admin';
+import type {
+  RewardIntegrationInstance,
+  RewardIntegrationInstancePayload,
+} from '../types/rewardIntegration';
 import type { Theme } from '../types/ui';
 import type { UserRole, UserStatus } from '../types/user';
 
@@ -17,10 +21,20 @@ interface IconProps {
   className?: string;
 }
 
-type AdminTab = 'dashboard' | 'users' | 'queue';
+type AdminTab = 'dashboard' | 'users' | 'queue' | 'rewards';
 type RoleFilter = UserRole | '';
 type StatusFilter = UserStatus | '';
 type QueueStats = Record<string, any>;
+
+interface RewardIntegrationFormData {
+  name: string;
+  description: string;
+  apiBaseUrl: string;
+  apiKey: string;
+  classroomId: string;
+  classroomName: string;
+  scopes: string;
+}
 
 interface DashboardStats extends AdminStats {
   newsletterSubscribers?: number;
@@ -41,9 +55,25 @@ interface DashboardQueueEntry extends EmailQueueEntry {
 }
 
 const adminRoles: UserRole[] = ['moderator', 'admin', 'superuser'];
+const defaultRewardScopes = 'users:read,users:match,reward:grant';
+const emptyRewardForm: RewardIntegrationFormData = {
+  name: '',
+  description: '',
+  apiBaseUrl: 'https://www.prizeversity.com',
+  apiKey: '',
+  classroomId: '',
+  classroomName: '',
+  scopes: defaultRewardScopes,
+};
 
 const getErrorMessage = (err: unknown, fallback: string): string =>
   err instanceof Error ? err.message : fallback;
+
+const cleanPastedRewardValue = (value: string): string =>
+  value
+    .trim()
+    .replace(/^["'`]+|["'`]+$/g, '')
+    .trim();
 
 const getUserId = (targetUser?: AdminUser | null): string =>
   String(targetUser?._id || targetUser?.id || '');
@@ -140,6 +170,13 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   const [processingQueue, setProcessingQueue] = useState<boolean>(false);
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
+  // Reward integration state
+  const [rewardInstances, setRewardInstances] = useState<RewardIntegrationInstance[]>([]);
+  const [rewardForm, setRewardForm] = useState<RewardIntegrationFormData>(emptyRewardForm);
+  const [rewardLoading, setRewardLoading] = useState<boolean>(false);
+  const [rewardSaving, setRewardSaving] = useState<boolean>(false);
+  const [testingRewardId, setTestingRewardId] = useState<string | null>(null);
+
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
@@ -173,18 +210,20 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       );
       setUsers(response.users as AdminUser[]);
       setTotalPages(response.pagination?.totalPages || 1);
-    } catch {
-      showToast('Failed to load users', 'error');
+      setError('');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to load users'));
     } finally {
       setUsersLoading(false);
     }
-  }, [currentPage, searchTerm, roleFilter, statusFilter, showToast]);
+  }, [currentPage, searchTerm, roleFilter, statusFilter]);
 
   useEffect(() => {
     const loadStats = async () => {
       try {
         const response = await adminAPI.getDashboardStats();
         setStats(response.stats as DashboardStats);
+        setError('');
       } catch {
         setError('Failed to load dashboard stats');
       } finally {
@@ -209,7 +248,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       const response = await adminAPI.getEmailQueueStats();
       setQueueStats(response.stats);
     } catch (err) {
-      console.error('failed to load queue stats.', err);
+      setError(getErrorMessage(err, 'Failed to load queue stats'));
     }
   }, []);
 
@@ -223,12 +262,13 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       );
       setQueueEntries((response.entries || []) as DashboardQueueEntry[]);
       setQueueTotalPages(response.pagination?.totalPages || 1);
-    } catch {
-      showToast('Failed to load queue entries', 'error');
+      setError('');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to load queue entries'));
     } finally {
       setQueueLoading(false);
     }
-  }, [queueStatusFilter, queuePage, showToast]);
+  }, [queueStatusFilter, queuePage]);
 
   useEffect(() => {
     if (activeTab === 'queue') {
@@ -236,6 +276,25 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       loadQueueEntries();
     }
   }, [activeTab, loadQueueStats, loadQueueEntries]);
+
+  const loadRewardIntegrations = useCallback(async () => {
+    setRewardLoading(true);
+    try {
+      const response = await adminAPI.listRewardIntegrations();
+      setRewardInstances(response.instances || []);
+      setError('');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to load reward integrations'));
+    } finally {
+      setRewardLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'rewards') {
+      loadRewardIntegrations();
+    }
+  }, [activeTab, loadRewardIntegrations]);
 
   const handleRetryEmail = async (queueId: string) => {
     if (!queueId) {
@@ -271,6 +330,73 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       showToast(getErrorMessage(err, 'Failed to process queue'), 'error');
     } finally {
       setProcessingQueue(false);
+    }
+  };
+
+  const handleRewardFieldChange = (field: keyof RewardIntegrationFormData, value: string) => {
+    setRewardForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const buildRewardPayload = (): RewardIntegrationInstancePayload => ({
+    name: cleanPastedRewardValue(rewardForm.name),
+    description: cleanPastedRewardValue(rewardForm.description),
+    apiBaseUrl: cleanPastedRewardValue(rewardForm.apiBaseUrl),
+    apiKey: cleanPastedRewardValue(rewardForm.apiKey),
+    classroomId: cleanPastedRewardValue(rewardForm.classroomId),
+    classroomName: cleanPastedRewardValue(rewardForm.classroomName),
+    scopes: rewardForm.scopes.split(',').map(cleanPastedRewardValue).filter(Boolean),
+    active: true,
+  });
+
+  const handleCreateRewardIntegration = async () => {
+    const payload = buildRewardPayload();
+    if (!payload.name || !payload.apiKey || !payload.classroomId) {
+      showToast('Name, API key, and classroom ID are required', 'error');
+      return;
+    }
+
+    setRewardSaving(true);
+    try {
+      await adminAPI.createRewardIntegration(payload);
+      showToast('Reward integration instance created', 'success');
+      setRewardForm(emptyRewardForm);
+      loadRewardIntegrations();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to create reward integration'), 'error');
+    } finally {
+      setRewardSaving(false);
+    }
+  };
+
+  const handleTestRewardIntegration = async (instanceId: string) => {
+    setTestingRewardId(instanceId);
+    try {
+      const response = await adminAPI.testRewardIntegration(instanceId);
+      showToast(`Verified ${response.test?.userCount ?? 0} classroom users`, 'success');
+      loadRewardIntegrations();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to verify reward integration'), 'error');
+      loadRewardIntegrations();
+    } finally {
+      setTestingRewardId(null);
+    }
+  };
+
+  const handleToggleRewardIntegration = async (instance: RewardIntegrationInstance) => {
+    try {
+      if (instance.active) {
+        await adminAPI.deactivateRewardIntegration(instance.id);
+        showToast('Reward integration deactivated', 'success');
+      } else {
+        await adminAPI.updateRewardIntegration(instance.id, { active: true });
+        showToast('Reward integration activated', 'success');
+      }
+      loadRewardIntegrations();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to update reward integration'), 'error');
     }
   };
 
@@ -381,6 +507,16 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
             <AccountIcon className="tab-icon" />
             User Management
           </button>
+          {(user?.role === 'admin' || user?.role === 'superuser') && (
+            <button
+              className={`tab-button ${activeTab === 'rewards' ? 'active' : ''}`}
+              data-tab="rewards"
+              onClick={() => setActiveTab('rewards')}
+            >
+              <AwsIcon className="tab-icon" />
+              Reward Integrations
+            </button>
+          )}
           {(user?.role === 'admin' || user?.role === 'superuser') && (
             <button
               className={`tab-button ${activeTab === 'queue' ? 'active' : ''}`}
@@ -631,6 +767,184 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                 )}
               </>
             )}
+          </motion.div>
+        )}
+
+        {activeTab === 'rewards' && (
+          <motion.div
+            className="rewards-content"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="reward-admin-grid">
+              <section className="reward-admin-panel">
+                <div className="reward-admin-heading">
+                  <span>New instance</span>
+                  <h2>Prizeversity classroom</h2>
+                  <p>
+                    Store a Prizeversity integration API key scoped to one classroom. AWS Student
+                    Hub uses this server-side key for account linking and challenge rewards.
+                  </p>
+                </div>
+
+                <div className="reward-form">
+                  <label>
+                    Instance name
+                    <input
+                      type="text"
+                      value={rewardForm.name}
+                      onChange={(e) => handleRewardFieldChange('name', e.target.value)}
+                      placeholder="Cyber Challenge Section A"
+                    />
+                  </label>
+
+                  <label>
+                    Classroom ID
+                    <input
+                      type="text"
+                      value={rewardForm.classroomId}
+                      onChange={(e) => handleRewardFieldChange('classroomId', e.target.value)}
+                      placeholder="68e169fa349b208d3db7b129"
+                    />
+                  </label>
+
+                  <label>
+                    API key
+                    <input
+                      type="password"
+                      value={rewardForm.apiKey}
+                      onChange={(e) => handleRewardFieldChange('apiKey', e.target.value)}
+                      placeholder="pvk_..."
+                    />
+                  </label>
+
+                  <label>
+                    Prizeversity base URL
+                    <input
+                      type="url"
+                      value={rewardForm.apiBaseUrl}
+                      onChange={(e) => handleRewardFieldChange('apiBaseUrl', e.target.value)}
+                      placeholder="https://prizeversity.com"
+                    />
+                  </label>
+
+                  <label>
+                    Classroom label
+                    <input
+                      type="text"
+                      value={rewardForm.classroomName}
+                      onChange={(e) => handleRewardFieldChange('classroomName', e.target.value)}
+                      placeholder="Optional; verified value will replace this when available"
+                    />
+                  </label>
+
+                  <label>
+                    Expected scopes
+                    <input
+                      type="text"
+                      value={rewardForm.scopes}
+                      onChange={(e) => handleRewardFieldChange('scopes', e.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    Description
+                    <textarea
+                      value={rewardForm.description}
+                      onChange={(e) => handleRewardFieldChange('description', e.target.value)}
+                      placeholder="Who should use this classroom integration?"
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    className="create-reward-instance-btn"
+                    onClick={handleCreateRewardIntegration}
+                    disabled={rewardSaving}
+                  >
+                    {rewardSaving ? 'Verifying...' : 'Create and verify instance'}
+                  </button>
+                </div>
+              </section>
+
+              <section className="reward-admin-panel">
+                <div className="reward-admin-heading">
+                  <span>Configured</span>
+                  <h2>Reward instances</h2>
+                  <p>
+                    Active instances appear on user account linking. API keys are never returned to
+                    the browser after creation.
+                  </p>
+                </div>
+
+                {rewardLoading ? (
+                  <div className="loading-users">Loading reward integrations...</div>
+                ) : rewardInstances.length === 0 ? (
+                  <div className="empty-reward-instances">
+                    No reward integration instances have been created yet.
+                  </div>
+                ) : (
+                  <div className="reward-instance-list">
+                    {rewardInstances.map((instance) => (
+                      <article key={instance.id} className="reward-instance-card">
+                        <div className="reward-instance-topline">
+                          <span data-active={instance.active}>
+                            {instance.active ? 'Active' : 'Inactive'}
+                          </span>
+                          <span>{instance.lastVerificationStatus || 'untested'}</span>
+                        </div>
+                        <h3>{instance.name}</h3>
+                        <p>{instance.description || 'No description provided.'}</p>
+
+                        <div className="reward-instance-meta">
+                          <div>
+                            <span>Classroom</span>
+                            <strong>{instance.classroomName || instance.classroomId}</strong>
+                          </div>
+                          <div>
+                            <span>Classroom ID</span>
+                            <strong>{instance.classroomId}</strong>
+                          </div>
+                          <div>
+                            <span>API key</span>
+                            <strong>{instance.apiKeyPreview || 'Stored'}</strong>
+                          </div>
+                          <div>
+                            <span>Users seen</span>
+                            <strong>{instance.lastUserCount ?? 'Not tested'}</strong>
+                          </div>
+                        </div>
+
+                        {instance.lastVerificationError && (
+                          <div className="reward-instance-error">
+                            {instance.lastVerificationError}
+                          </div>
+                        )}
+
+                        <div className="reward-instance-actions">
+                          <button
+                            type="button"
+                            className="action-btn role-btn"
+                            onClick={() => handleTestRewardIntegration(instance.id)}
+                            disabled={testingRewardId === instance.id}
+                          >
+                            {testingRewardId === instance.id ? 'Testing...' : 'Test'}
+                          </button>
+                          <button
+                            type="button"
+                            className={`action-btn ${instance.active ? 'ban-btn' : 'unban-btn'}`}
+                            onClick={() => handleToggleRewardIntegration(instance)}
+                          >
+                            {instance.active ? 'Deactivate' : 'Activate'}
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </div>
           </motion.div>
         )}
 

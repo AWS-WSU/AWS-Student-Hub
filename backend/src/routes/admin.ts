@@ -1,6 +1,7 @@
 import express from 'express';
 
 import * as adminController from '../controllers/adminController';
+import * as rewardIntegrationAdminController from '../controllers/rewardIntegrationAdminController';
 import { canManageUser, requireAdmin, requireModerator } from '../middleware/adminAuth';
 
 const router = express.Router();
@@ -16,5 +17,22 @@ router.get('/email-queue/stats', requireAdmin, adminController.getEmailQueueStat
 router.get('/email-queue/entries', requireAdmin, adminController.getEmailQueueEntries);
 router.post('/email-queue/:queueId/retry', requireAdmin, adminController.retryQueuedEmail);
 router.post('/email-queue/process', requireAdmin, adminController.processQueue);
+router.get('/reward-integrations', requireAdmin, rewardIntegrationAdminController.listInstances);
+router.post('/reward-integrations', requireAdmin, rewardIntegrationAdminController.createInstance);
+router.put(
+  '/reward-integrations/:instanceId',
+  requireAdmin,
+  rewardIntegrationAdminController.updateInstance
+);
+router.post(
+  '/reward-integrations/:instanceId/test',
+  requireAdmin,
+  rewardIntegrationAdminController.testInstance
+);
+router.delete(
+  '/reward-integrations/:instanceId',
+  requireAdmin,
+  rewardIntegrationAdminController.deactivateInstance
+);
 
 export default router;
