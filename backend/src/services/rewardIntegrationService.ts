@@ -143,6 +143,7 @@ export interface PrizeversityRewardRequest {
 
 export interface PrizeversityRewardResult {
   alreadySent: boolean;
+  emissionId?: string;
   response: Record<string, unknown> | null;
 }
 
@@ -905,6 +906,7 @@ export const grantPrizeversityChallengeReward = async ({
   if (existing?.status === 'sent') {
     return {
       alreadySent: true,
+      emissionId: existing._id.toString(),
       response: (existing.responsePayload as Record<string, unknown>) || null,
     };
   }
@@ -939,6 +941,7 @@ export const grantPrizeversityChallengeReward = async ({
 
     return {
       alreadySent: false,
+      emissionId: emission._id.toString(),
       response,
     };
   } catch (error: unknown) {
