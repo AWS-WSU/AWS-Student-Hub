@@ -16,6 +16,11 @@ const getAuthenticatedUser = async (req: Request) => {
   return User.findById(req.user.id);
 };
 
+const getErrorStatus = (error: unknown, fallback = 400): number => {
+  const status = (error as { status?: unknown })?.status;
+  return typeof status === 'number' && status >= 400 && status < 600 ? status : fallback;
+};
+
 router.get('/status', checkJwt, async (req: Request, res: Response): Promise<void> => {
   try {
     const user = await getAuthenticatedUser(req);
@@ -51,7 +56,7 @@ router.post('/link', checkJwt, async (req: Request, res: Response): Promise<void
       user: user.toSafeObject(),
     });
   } catch (error: unknown) {
-    res.status(400).json({
+    res.status(getErrorStatus(error)).json({
       error: error instanceof Error ? error.message : 'Unable to link Prizeversity account',
     });
   }
@@ -74,7 +79,7 @@ router.post('/link/verify', checkJwt, async (req: Request, res: Response): Promi
       user: user.toSafeObject(),
     });
   } catch (error: unknown) {
-    res.status(400).json({
+    res.status(getErrorStatus(error)).json({
       error: error instanceof Error ? error.message : 'Unable to verify Prizeversity link code',
     });
   }

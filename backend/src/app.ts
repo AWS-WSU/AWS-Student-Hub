@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import connectDB, { checkConnection } from './config/database';
 import adminRoutes from './routes/admin';
 import authRoutes from './routes/auth';
+import challengeRoutes from './routes/challenges';
 import discordInviteRoutes from './routes/discordInvite';
 import eventRoutes from './routes/events';
 import newsletterRoutes from './routes/newsletter';
@@ -151,6 +152,7 @@ app.use('/upload', uploadRoutes);
 app.use('/', discordInviteRoutes);
 app.use('/admin', adminRoutes);
 app.use('/events', eventRoutes);
+app.use('/challenges', challengeRoutes);
 app.use('/integrations/prizeversity', rewardIntegrationRoutes);
 app.use('/verify', verifyRoutes);
 
