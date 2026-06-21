@@ -22,6 +22,7 @@ router.get('/challenges', requireAdmin, challengeAdminController.listChallenges)
 router.post('/challenges', requireAdmin, challengeAdminController.createChallenge);
 router.get('/challenges/:challengeId', requireAdmin, challengeAdminController.getChallenge);
 router.patch('/challenges/:challengeId', requireAdmin, challengeAdminController.updateChallenge);
+router.delete('/challenges/:challengeId', requireAdmin, challengeAdminController.deleteChallenge);
 router.post(
   '/challenges/:challengeId/publish',
   requireAdmin,

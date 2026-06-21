@@ -7,6 +7,13 @@ import { adminAPI } from '../utils/api';
 import './styles/AdminDashboard.css';
 import type { AdminStats, AdminUser, EmailQueueEntry } from '../types/admin';
 import type {
+  AdminChallenge,
+  AdminChallengePayload,
+  ChallengeDifficulty,
+  ChallengeKind,
+  ChallengeStatus,
+} from '../types/challenge';
+import type {
   RewardIntegrationInstance,
   RewardIntegrationInstancePayload,
 } from '../types/rewardIntegration';
@@ -21,7 +28,7 @@ interface IconProps {
   className?: string;
 }
 
-type AdminTab = 'dashboard' | 'users' | 'queue' | 'rewards';
+type AdminTab = 'dashboard' | 'users' | 'queue' | 'rewards' | 'challenges';
 type RoleFilter = UserRole | '';
 type StatusFilter = UserStatus | '';
 type QueueStats = Record<string, any>;
@@ -34,6 +41,24 @@ interface RewardIntegrationFormData {
   classroomId: string;
   classroomName: string;
   scopes: string;
+}
+
+interface ChallengeFormData {
+  key: string;
+  slug: string;
+  title: string;
+  summary: string;
+  description: string;
+  instructions: string;
+  kind: ChallengeKind;
+  difficulty: ChallengeDifficulty;
+  estimatedMinutes: string;
+  tags: string;
+  maxAttempts: string;
+  validationJson: string;
+  rewardEnabled: boolean;
+  rewardBits: string;
+  rewardXpAmount: string;
 }
 
 interface DashboardStats extends AdminStats {
@@ -64,6 +89,34 @@ const emptyRewardForm: RewardIntegrationFormData = {
   classroomId: '',
   classroomName: '',
   scopes: defaultRewardScopes,
+};
+
+const emptyChallengeForm: ChallengeFormData = {
+  key: 'aws_cloud_security_lab',
+  slug: 'aws-cloud-security-lab',
+  title: 'AWS Cloud Security Lab',
+  summary: 'Use your assigned AWS workspace to retrieve the next challenge secret.',
+  description:
+    'Configure your AWS credentials, inspect your assigned S3 secret file, and submit the secret value to complete the lab.',
+  instructions:
+    'S3 bucket: wayne-aws-club-secrets\nSecret path: secrets/{username}.txt\nExpected file format: next_password=<secret>',
+  kind: 'single',
+  difficulty: 'medium',
+  estimatedMinutes: '20',
+  tags: 'aws,s3,security',
+  maxAttempts: '',
+  validationJson: JSON.stringify(
+    {
+      type: 'aws_secret',
+      source: 'user_next_challenge_password',
+      acceptedPrefixes: ['next_password='],
+    },
+    null,
+    2
+  ),
+  rewardEnabled: true,
+  rewardBits: '50',
+  rewardXpAmount: '30',
 };
 
 const getErrorMessage = (err: unknown, fallback: string): string =>
@@ -176,6 +229,15 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   const [rewardLoading, setRewardLoading] = useState<boolean>(false);
   const [rewardSaving, setRewardSaving] = useState<boolean>(false);
   const [testingRewardId, setTestingRewardId] = useState<string | null>(null);
+
+  // Challenge admin state
+  const [adminChallenges, setAdminChallenges] = useState<AdminChallenge[]>([]);
+  const [challengeForm, setChallengeForm] = useState<ChallengeFormData>(emptyChallengeForm);
+  const [challengeLoading, setChallengeLoading] = useState<boolean>(false);
+  const [challengeSaving, setChallengeSaving] = useState<boolean>(false);
+  const [challengeStatusFilter, setChallengeStatusFilter] = useState<ChallengeStatus | ''>('');
+  const [updatingChallengeId, setUpdatingChallengeId] = useState<string | null>(null);
+  const [challengeToDelete, setChallengeToDelete] = useState<AdminChallenge | null>(null);
 
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -296,6 +358,25 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
     }
   }, [activeTab, loadRewardIntegrations]);
 
+  const loadAdminChallenges = useCallback(async () => {
+    setChallengeLoading(true);
+    try {
+      const response = await adminAPI.listChallenges(challengeStatusFilter || undefined);
+      setAdminChallenges(response.items || []);
+      setError('');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to load challenges'));
+    } finally {
+      setChallengeLoading(false);
+    }
+  }, [challengeStatusFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'challenges') {
+      loadAdminChallenges();
+    }
+  }, [activeTab, loadAdminChallenges]);
+
   const handleRetryEmail = async (queueId: string) => {
     if (!queueId) {
       showToast('Unable to retry email: missing queue ID', 'error');
@@ -397,6 +478,122 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       loadRewardIntegrations();
     } catch (err) {
       showToast(getErrorMessage(err, 'Failed to update reward integration'), 'error');
+    }
+  };
+
+  const handleChallengeFieldChange = <K extends keyof ChallengeFormData>(
+    field: K,
+    value: ChallengeFormData[K]
+  ) => {
+    setChallengeForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const buildChallengePayload = (): AdminChallengePayload => {
+    const validation = JSON.parse(challengeForm.validationJson) as Record<string, unknown>;
+    return {
+      key: challengeForm.key.trim(),
+      slug: challengeForm.slug.trim(),
+      title: challengeForm.title.trim(),
+      summary: challengeForm.summary.trim(),
+      description: challengeForm.description.trim(),
+      instructions: challengeForm.instructions.trim(),
+      kind: challengeForm.kind,
+      difficulty: challengeForm.difficulty,
+      estimatedMinutes: Number(challengeForm.estimatedMinutes) || undefined,
+      tags: challengeForm.tags
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+      maxAttempts: Number(challengeForm.maxAttempts) || undefined,
+      validation,
+      reward: {
+        enabled: challengeForm.rewardEnabled,
+        bits: Number(challengeForm.rewardBits) || 0,
+        xpMode: challengeForm.rewardXpAmount ? 'custom' : 'none',
+        xpAmount: Number(challengeForm.rewardXpAmount) || undefined,
+        activityName: challengeForm.title.trim(),
+        description: `Completed ${challengeForm.title.trim()}`,
+      },
+    };
+  };
+
+  const handleCreateChallenge = async () => {
+    if (
+      !challengeForm.title.trim() ||
+      !challengeForm.summary.trim() ||
+      !challengeForm.description.trim()
+    ) {
+      showToast('Title, summary, and description are required', 'error');
+      return;
+    }
+
+    setChallengeSaving(true);
+    try {
+      await adminAPI.createChallenge(buildChallengePayload());
+      showToast('Challenge created', 'success');
+      setChallengeForm(emptyChallengeForm);
+      loadAdminChallenges();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to create challenge'), 'error');
+    } finally {
+      setChallengeSaving(false);
+    }
+  };
+
+  const handlePublishChallenge = async (challengeId: string) => {
+    setUpdatingChallengeId(challengeId);
+    try {
+      await adminAPI.publishChallenge(challengeId);
+      showToast('Challenge published', 'success');
+      loadAdminChallenges();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to publish challenge'), 'error');
+    } finally {
+      setUpdatingChallengeId(null);
+    }
+  };
+
+  const handleArchiveChallenge = async (challengeId: string) => {
+    setUpdatingChallengeId(challengeId);
+    try {
+      await adminAPI.archiveChallenge(challengeId);
+      showToast('Challenge archived', 'success');
+      loadAdminChallenges();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to archive challenge'), 'error');
+    } finally {
+      setUpdatingChallengeId(null);
+    }
+  };
+
+  const handleDeleteChallenge = (challenge: AdminChallenge) => {
+    if (challenge.status === 'published') {
+      showToast('Archive the challenge before deleting it', 'error');
+      return;
+    }
+
+    setChallengeToDelete(challenge);
+  };
+
+  const handleConfirmDeleteChallenge = async () => {
+    if (!challengeToDelete) return;
+
+    setUpdatingChallengeId(challengeToDelete.id);
+    try {
+      const response = await adminAPI.deleteChallenge(challengeToDelete.id);
+      showToast(
+        `Challenge deleted. Removed ${response.progressDeleted} progress records and ${response.submissionsDeleted} submissions.`,
+        'success'
+      );
+      setChallengeToDelete(null);
+      loadAdminChallenges();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to delete challenge'), 'error');
+    } finally {
+      setUpdatingChallengeId(null);
     }
   };
 
@@ -507,6 +704,16 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
             <AccountIcon className="tab-icon" />
             User Management
           </button>
+          {(user?.role === 'admin' || user?.role === 'superuser') && (
+            <button
+              className={`tab-button ${activeTab === 'challenges' ? 'active' : ''}`}
+              data-tab="challenges"
+              onClick={() => setActiveTab('challenges')}
+            >
+              <CheckIcon className="tab-icon" />
+              Challenges
+            </button>
+          )}
           {(user?.role === 'admin' || user?.role === 'superuser') && (
             <button
               className={`tab-button ${activeTab === 'rewards' ? 'active' : ''}`}
@@ -767,6 +974,306 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                 )}
               </>
             )}
+          </motion.div>
+        )}
+
+        {activeTab === 'challenges' && (
+          <motion.div
+            className="challenges-admin-content"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="reward-admin-grid">
+              <section className="reward-admin-panel">
+                <div className="reward-admin-heading">
+                  <span>Authoring</span>
+                  <h2>Create challenge</h2>
+                  <p>
+                    Create provider-neutral challenges. The default config migrates the existing AWS
+                    Cyber Challenge into the new validator/reward flow.
+                  </p>
+                </div>
+
+                <div className="reward-form">
+                  <label>
+                    Title
+                    <input
+                      type="text"
+                      value={challengeForm.title}
+                      onChange={(e) => handleChallengeFieldChange('title', e.target.value)}
+                    />
+                  </label>
+
+                  <div className="challenge-admin-two-col">
+                    <label>
+                      Key
+                      <input
+                        type="text"
+                        value={challengeForm.key}
+                        onChange={(e) => handleChallengeFieldChange('key', e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Slug
+                      <input
+                        type="text"
+                        value={challengeForm.slug}
+                        onChange={(e) => handleChallengeFieldChange('slug', e.target.value)}
+                      />
+                    </label>
+                  </div>
+
+                  <label>
+                    Summary
+                    <input
+                      type="text"
+                      value={challengeForm.summary}
+                      onChange={(e) => handleChallengeFieldChange('summary', e.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    Description
+                    <textarea
+                      value={challengeForm.description}
+                      onChange={(e) => handleChallengeFieldChange('description', e.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    Instructions
+                    <textarea
+                      value={challengeForm.instructions}
+                      onChange={(e) => handleChallengeFieldChange('instructions', e.target.value)}
+                    />
+                  </label>
+
+                  <div className="challenge-admin-two-col">
+                    <label>
+                      Kind
+                      <select
+                        value={challengeForm.kind}
+                        onChange={(e) =>
+                          handleChallengeFieldChange('kind', e.target.value as ChallengeKind)
+                        }
+                      >
+                        <option value="single">Single goal</option>
+                        <option value="multi_part">Multi-part</option>
+                      </select>
+                    </label>
+                    <label>
+                      Difficulty
+                      <select
+                        value={challengeForm.difficulty}
+                        onChange={(e) =>
+                          handleChallengeFieldChange(
+                            'difficulty',
+                            e.target.value as ChallengeDifficulty
+                          )
+                        }
+                      >
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                        <option value="expert">Expert</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className="challenge-admin-two-col">
+                    <label>
+                      Estimated minutes
+                      <input
+                        type="number"
+                        min="1"
+                        value={challengeForm.estimatedMinutes}
+                        onChange={(e) =>
+                          handleChallengeFieldChange('estimatedMinutes', e.target.value)
+                        }
+                      />
+                    </label>
+                    <label>
+                      Max attempts
+                      <input
+                        type="number"
+                        min="1"
+                        value={challengeForm.maxAttempts}
+                        onChange={(e) => handleChallengeFieldChange('maxAttempts', e.target.value)}
+                        placeholder="Unlimited"
+                      />
+                    </label>
+                  </div>
+
+                  <label>
+                    Tags
+                    <input
+                      type="text"
+                      value={challengeForm.tags}
+                      onChange={(e) => handleChallengeFieldChange('tags', e.target.value)}
+                      placeholder="aws,s3,security"
+                    />
+                  </label>
+
+                  <label>
+                    Validation JSON
+                    <textarea
+                      value={challengeForm.validationJson}
+                      onChange={(e) => handleChallengeFieldChange('validationJson', e.target.value)}
+                    />
+                  </label>
+
+                  <div className="challenge-admin-two-col">
+                    <label>
+                      Reward bits
+                      <input
+                        type="number"
+                        min="0"
+                        value={challengeForm.rewardBits}
+                        onChange={(e) => handleChallengeFieldChange('rewardBits', e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Reward XP
+                      <input
+                        type="number"
+                        min="0"
+                        value={challengeForm.rewardXpAmount}
+                        onChange={(e) =>
+                          handleChallengeFieldChange('rewardXpAmount', e.target.value)
+                        }
+                      />
+                    </label>
+                  </div>
+
+                  <label className="challenge-admin-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={challengeForm.rewardEnabled}
+                      onChange={(e) =>
+                        handleChallengeFieldChange('rewardEnabled', e.target.checked)
+                      }
+                    />
+                    Reward enabled
+                  </label>
+
+                  <button
+                    type="button"
+                    className="create-reward-instance-btn"
+                    onClick={handleCreateChallenge}
+                    disabled={challengeSaving}
+                  >
+                    {challengeSaving ? 'Creating...' : 'Create challenge'}
+                  </button>
+                </div>
+              </section>
+
+              <section className="reward-admin-panel">
+                <div className="reward-admin-heading">
+                  <span>Catalog</span>
+                  <h2>Challenge records</h2>
+                  <p>Publish, archive, and inspect the current challenge catalog.</p>
+                </div>
+
+                <div className="challenge-admin-actions">
+                  <select
+                    value={challengeStatusFilter}
+                    onChange={(e) =>
+                      setChallengeStatusFilter(e.target.value as ChallengeStatus | '')
+                    }
+                  >
+                    <option value="">All statuses</option>
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                  <button type="button" onClick={loadAdminChallenges}>
+                    Refresh
+                  </button>
+                </div>
+
+                {challengeLoading ? (
+                  <div className="loading-users">Loading challenges...</div>
+                ) : adminChallenges.length === 0 ? (
+                  <div className="empty-reward-instances">No challenges created yet.</div>
+                ) : (
+                  <div className="reward-instance-list">
+                    {adminChallenges.map((challenge) => (
+                      <article key={challenge.id} className="reward-instance-card">
+                        <div className="reward-instance-topline">
+                          <span data-active={challenge.status === 'published'}>
+                            {challenge.status}
+                          </span>
+                          <span>{challenge.validation?.type as string}</span>
+                        </div>
+                        <h3>{challenge.title}</h3>
+                        <p>{challenge.summary}</p>
+
+                        <div className="reward-instance-meta">
+                          <div>
+                            <span>Slug</span>
+                            <strong>{challenge.slug}</strong>
+                          </div>
+                          <div>
+                            <span>Difficulty</span>
+                            <strong>{challenge.difficulty}</strong>
+                          </div>
+                          <div>
+                            <span>Reward</span>
+                            <strong>
+                              {challenge.reward.enabled ? `${challenge.reward.bits} bits` : 'Off'}
+                            </strong>
+                          </div>
+                          <div>
+                            <span>Attempts</span>
+                            <strong>{challenge.maxAttempts || 'Unlimited'}</strong>
+                          </div>
+                        </div>
+
+                        <div className="reward-instance-actions">
+                          {challenge.status !== 'published' && (
+                            <button
+                              type="button"
+                              className="action-btn role-btn"
+                              onClick={() => handlePublishChallenge(challenge.id)}
+                              disabled={updatingChallengeId === challenge.id}
+                            >
+                              Publish
+                            </button>
+                          )}
+                          {challenge.status !== 'archived' && (
+                            <button
+                              type="button"
+                              className="action-btn ban-btn"
+                              onClick={() => handleArchiveChallenge(challenge.id)}
+                              disabled={updatingChallengeId === challenge.id}
+                            >
+                              Archive
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="action-btn delete-btn"
+                            onClick={() => handleDeleteChallenge(challenge)}
+                            disabled={
+                              updatingChallengeId === challenge.id ||
+                              challenge.status === 'published'
+                            }
+                            title={
+                              challenge.status === 'published'
+                                ? 'Archive this challenge before deleting it.'
+                                : 'Delete this challenge and its related records.'
+                            }
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </div>
           </motion.div>
         )}
 
@@ -1159,6 +1666,67 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
               </button>
               <button onClick={handleDeleteUser} className="delete-btn">
                 Delete User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {challengeToDelete && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            if (updatingChallengeId !== challengeToDelete.id) {
+              setChallengeToDelete(null);
+            }
+          }}
+        >
+          <div
+            className="modal-content challenge-delete-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="modal-eyebrow">Delete challenge</span>
+            <h3>{challengeToDelete.title}</h3>
+            <p>
+              This will permanently remove the challenge record and all related progress and
+              submissions.
+            </p>
+
+            <div className="challenge-delete-summary">
+              <div>
+                <span>Status</span>
+                <strong>{challengeToDelete.status}</strong>
+              </div>
+              <div>
+                <span>Slug</span>
+                <strong>{challengeToDelete.slug}</strong>
+              </div>
+              <div>
+                <span>Reward</span>
+                <strong>
+                  {challengeToDelete.reward.enabled
+                    ? `${challengeToDelete.reward.bits} bits`
+                    : 'Off'}
+                </strong>
+              </div>
+            </div>
+
+            <p className="warning-text">This action cannot be undone.</p>
+
+            <div className="modal-actions">
+              <button
+                onClick={() => setChallengeToDelete(null)}
+                className="cancel-btn"
+                disabled={updatingChallengeId === challengeToDelete.id}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteChallenge}
+                className="delete-btn"
+                disabled={updatingChallengeId === challengeToDelete.id}
+              >
+                {updatingChallengeId === challengeToDelete.id ? 'Deleting...' : 'Delete Challenge'}
               </button>
             </div>
           </div>

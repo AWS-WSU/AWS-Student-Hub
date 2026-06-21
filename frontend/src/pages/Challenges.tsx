@@ -1,79 +1,72 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { useAuth } from '../context/AuthContext';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Link2, ShieldCheck, Target, Star, Trophy, X } from 'lucide-react';
-import { rewardIntegrationAPI } from '../utils/api';
+import { motion } from 'motion/react';
+import { Link2, ShieldCheck, Star, Target, Trophy, X } from 'lucide-react';
+
+import { useAuth } from '../context/AuthContext';
+import { challengeAPI } from '../utils/api';
+import type { ChallengeListItem, ChallengeListResponse } from '../types/challenge';
 import type { ThemeProps } from '../types';
-import type { RewardIntegrationStatusResponse } from '../types/rewardIntegration';
 import './styles/Challenges.css';
 import '../pages/styles/Landing.css';
 
 type ChallengeTab = 'all' | 'single' | 'multi' | 'completed';
-type ChallengeType = 'single' | 'multi';
-type ChallengeDifficulty = 'Easy' | 'Medium' | 'Hard' | string;
 
-interface Challenge {
-  id: string;
-  title: string;
-  description: string;
-  difficulty: ChallengeDifficulty;
-  points: number;
-  type: ChallengeType;
-  completed?: boolean;
-  completedParts?: number;
-  parts?: number;
-}
+const completedStatuses = new Set(['completed', 'reward_pending', 'reward_sent', 'reward_failed']);
+
+const difficultyColors: Record<string, string> = {
+  easy: '#4ade80',
+  medium: '#fbbf24',
+  hard: '#f87171',
+  expert: '#c084fc',
+};
+
+const formatDifficulty = (difficulty: string): string => {
+  return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+};
+
+const getChallengeStatusLabel = (challenge: ChallengeListItem): string => {
+  const status = challenge.progress?.status;
+  if (!status || status === 'not_started') return 'Not started';
+  if (status === 'in_progress') return 'In progress';
+  if (status === 'reward_failed') return 'Reward failed';
+  if (status === 'reward_sent') return 'Completed';
+  if (status === 'reward_pending') return 'Reward pending';
+  return 'Completed';
+};
 
 function Challenges({ theme: _theme }: ThemeProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<ChallengeTab>('all');
-  const [challenges] = useState<Challenge[]>([]);
+  const [challengeResponse, setChallengeResponse] = useState<ChallengeListResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [rewardStatus, setRewardStatus] = useState<RewardIntegrationStatusResponse | null>(null);
-  const [rewardStatusLoading, setRewardStatusLoading] = useState<boolean>(false);
-  const [rewardStatusError, setRewardStatusError] = useState<string>('');
+  const [error, setError] = useState('');
   const [rewardGateDismissed, setRewardGateDismissed] = useState<boolean>(false);
   const rewardGateDismissKey = user
     ? `awsStudentHub:challengeRewardGateDismissed:${user.id || user._id || user.email}`
     : '';
 
   useEffect(() => {
-    const loadChallenges = async () => {
-      setLoading(false);
-    };
-    loadChallenges();
-  }, []);
-
-  useEffect(() => {
-    if (!user) {
-      setRewardStatus(null);
-      setRewardStatusError('');
-      return;
-    }
-
     let shouldUpdate = true;
-    setRewardStatusLoading(true);
-    setRewardStatusError('');
+    setLoading(true);
+    setError('');
 
-    rewardIntegrationAPI
-      .status()
-      .then((status) => {
+    challengeAPI
+      .list()
+      .then((response) => {
         if (shouldUpdate) {
-          setRewardStatus(status);
+          setChallengeResponse(response);
         }
       })
       .catch((err) => {
         if (shouldUpdate) {
-          setRewardStatusError(
-            err instanceof Error ? err.message : 'Failed to load Prizeversity link status'
-          );
+          setError(err instanceof Error ? err.message : 'Failed to load challenges');
         }
       })
       .finally(() => {
         if (shouldUpdate) {
-          setRewardStatusLoading(false);
+          setLoading(false);
         }
       });
 
@@ -91,6 +84,11 @@ function Challenges({ theme: _theme }: ThemeProps) {
     setRewardGateDismissed(localStorage.getItem(rewardGateDismissKey) === 'true');
   }, [rewardGateDismissKey]);
 
+  const rewardLink = challengeResponse?.rewardLink;
+  const challenges = challengeResponse?.challenges || [];
+  const rewardLinked = Boolean(rewardLink?.linked);
+  const rewardConfigured = Boolean(rewardLink?.configured);
+
   const handleSignIn = () => {
     navigate('/auth?redirect=/challenges');
   };
@@ -106,26 +104,13 @@ function Challenges({ theme: _theme }: ThemeProps) {
     setRewardGateDismissed(true);
   };
 
-  const filteredChallenges = challenges.filter((c) => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'single') return c.type === 'single';
-    if (activeTab === 'multi') return c.type === 'multi';
-    if (activeTab === 'completed') return c.completed;
+  const filteredChallenges = challenges.filter((challenge) => {
+    const completed = completedStatuses.has(challenge.progress?.status || '');
+    if (activeTab === 'single') return challenge.kind === 'single';
+    if (activeTab === 'multi') return challenge.kind === 'multi_part';
+    if (activeTab === 'completed') return completed;
     return true;
   });
-
-  const getDifficultyColor = (difficulty: ChallengeDifficulty): string => {
-    switch (difficulty) {
-      case 'Easy':
-        return '#4ade80';
-      case 'Medium':
-        return '#fbbf24';
-      case 'Hard':
-        return '#f87171';
-      default:
-        return '#94a3b8';
-    }
-  };
 
   return (
     <div className="landing-container">
@@ -151,7 +136,7 @@ function Challenges({ theme: _theme }: ThemeProps) {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
           >
-            Test your skills with OSINT-inspired challenges and earn rewards
+            Solve technical labs, prove completion, and sync rewards through your linked classroom.
           </motion.p>
         </div>
 
@@ -162,51 +147,47 @@ function Challenges({ theme: _theme }: ThemeProps) {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            <p>Sign in to track your progress and earn points</p>
+            <p>Sign in to track progress and earn rewards.</p>
             <button onClick={handleSignIn}>Sign In</button>
           </motion.div>
         )}
 
-        {user && (!rewardStatus?.linked || !rewardGateDismissed) && (
+        {user && rewardLink && (!rewardLinked || !rewardGateDismissed) && (
           <motion.div
-            className={`challenges-reward-gate ${rewardStatus?.linked ? 'linked' : ''}`}
+            className={`challenges-reward-gate ${rewardLinked ? 'linked' : ''}`}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.28 }}
           >
             <div className="reward-gate-icon" aria-hidden="true">
-              {rewardStatus?.linked ? <ShieldCheck size={26} /> : <Link2 size={26} />}
+              {rewardLinked ? <ShieldCheck size={26} /> : <Link2 size={26} />}
             </div>
             <div className="reward-gate-copy">
-              <span>{rewardStatus?.linked ? 'Rewards connected' : 'Required before play'}</span>
+              <span>{rewardLinked ? 'Rewards connected' : 'Required before rewards'}</span>
               <h3>
-                {rewardStatus?.linked
+                {rewardLinked
                   ? 'Prizeversity is linked for challenge rewards.'
-                  : 'Link Prizeversity to unlock rewardable challenges.'}
+                  : 'Link Prizeversity to complete rewardable challenges.'}
               </h3>
               <p>
-                {rewardStatusLoading
-                  ? 'Checking your classroom reward link...'
-                  : rewardStatusError
-                    ? rewardStatusError
-                    : rewardStatus?.linked
-                      ? `Completions will sync to ${rewardStatus.account?.matchedName || rewardStatus.account?.email || 'your Prizeversity classroom account'}.`
-                      : rewardStatus && !rewardStatus.configured
-                        ? 'An admin needs to configure a Prizeversity classroom instance before challenges can award progress.'
-                        : 'Use your AWS Student Hub profile to connect the Prizeversity classroom account that will receive challenge progress and rewards.'}
+                {rewardLinked
+                  ? 'Challenge completions will sync to your verified Prizeversity classroom account.'
+                  : rewardConfigured
+                    ? 'Use Account Settings to verify the classroom account that should receive challenge progress.'
+                    : 'An admin needs to configure a Prizeversity classroom instance before challenge rewards can be emitted.'}
               </p>
             </div>
-            {!rewardStatus?.linked && (
+            {!rewardLinked && (
               <button
                 type="button"
                 className="reward-gate-button"
                 onClick={handleLinkPrizeversity}
-                disabled={rewardStatusLoading || Boolean(rewardStatus && !rewardStatus.configured)}
+                disabled={!rewardConfigured}
               >
                 Link in Account
               </button>
             )}
-            {rewardStatus?.linked && (
+            {rewardLinked && (
               <button
                 type="button"
                 className="reward-gate-dismiss"
@@ -219,90 +200,96 @@ function Challenges({ theme: _theme }: ThemeProps) {
           </motion.div>
         )}
 
-        <motion.div
-          className="challenges-coming-soon"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-        >
-          <span className="coming-soon-badge">Coming soon</span>
-          <h3>Challenge Hub is under active development</h3>
-          <p>
-            We are rebuilding the challenge experience with progress tracking, points, and rewards.
-            Check back here for updates as the new system rolls out.
-          </p>
-        </motion.div>
-
         <div className="challenges-tabs">
-          <button
-            className={activeTab === 'all' ? 'active' : ''}
-            onClick={() => setActiveTab('all')}
-          >
-            All Challenges
-          </button>
-          <button
-            className={activeTab === 'single' ? 'active' : ''}
-            onClick={() => setActiveTab('single')}
-          >
-            Single Goal
-          </button>
-          <button
-            className={activeTab === 'multi' ? 'active' : ''}
-            onClick={() => setActiveTab('multi')}
-          >
-            Multi-Part
-          </button>
-          <button
-            className={activeTab === 'completed' ? 'active' : ''}
-            onClick={() => setActiveTab('completed')}
-          >
-            Completed
-          </button>
+          {(['all', 'single', 'multi', 'completed'] as ChallengeTab[]).map((tab) => (
+            <button
+              key={tab}
+              className={activeTab === tab ? 'active' : ''}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab === 'all'
+                ? 'All Challenges'
+                : tab === 'single'
+                  ? 'Single Goal'
+                  : tab === 'multi'
+                    ? 'Multi-Part'
+                    : 'Completed'}
+            </button>
+          ))}
         </div>
+
+        {error && <div className="challenge-error-banner">{error}</div>}
 
         <div className="challenges-grid">
           {loading ? (
             <div className="challenges-loading">Loading challenges...</div>
           ) : filteredChallenges.length === 0 ? (
             <div className="challenges-empty">
-              New challenges are coming soon. Thanks for your patience while we finish building this
-              experience.
+              No published challenges match this view yet. Admins can publish challenges from the
+              admin dashboard.
             </div>
           ) : (
-            filteredChallenges.map((challenge, index) => (
-              <motion.div
-                key={challenge.id}
-                className={`challenge-card ${challenge.completed ? 'completed' : ''}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.1 }}
-                whileHover={{ scale: 1.02, y: -4 }}
-              >
-                <div className="challenge-card-header">
-                  <span
-                    className="challenge-difficulty"
-                    style={{ color: getDifficultyColor(challenge.difficulty) }}
-                  >
-                    {challenge.difficulty}
-                  </span>
-                  <span className="challenge-points">{challenge.points} pts</span>
-                </div>
+            filteredChallenges.map((challenge, index) => {
+              const completed = completedStatuses.has(challenge.progress?.status || '');
+              const locked = Boolean(
+                challenge.reward.enabled && user && rewardLink && !rewardLinked
+              );
 
-                <h3 className="challenge-title">{challenge.title}</h3>
-                <p className="challenge-description">{challenge.description}</p>
+              return (
+                <motion.article
+                  key={challenge.id}
+                  className={`challenge-card ${completed ? 'completed' : ''} ${locked ? 'locked' : ''}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.06 }}
+                  whileHover={{ scale: 1.02, y: -4 }}
+                >
+                  <div className="challenge-card-header">
+                    <span
+                      className="challenge-difficulty"
+                      style={{ color: difficultyColors[challenge.difficulty] || '#94a3b8' }}
+                    >
+                      {formatDifficulty(challenge.difficulty)}
+                    </span>
+                    {challenge.reward.enabled && (
+                      <span className="challenge-points">{challenge.reward.bits} bits</span>
+                    )}
+                  </div>
 
-                <div className="challenge-card-footer">
-                  <span className="challenge-type">
-                    {challenge.type === 'multi'
-                      ? `Multi-Part (${challenge.completedParts}/${challenge.parts})`
-                      : 'Single Goal'}
-                  </span>
-                  <button className="challenge-start-btn">
-                    {challenge.completed ? 'View' : 'Start'}
-                  </button>
-                </div>
-              </motion.div>
-            ))
+                  <h3 className="challenge-title">{challenge.title}</h3>
+                  <p className="challenge-description">{challenge.summary}</p>
+
+                  <div className="challenge-card-meta">
+                    <span>{challenge.kind === 'multi_part' ? 'Multi-part' : 'Single goal'}</span>
+                    {challenge.estimatedMinutes && <span>{challenge.estimatedMinutes} min</span>}
+                    <span>{getChallengeStatusLabel(challenge)}</span>
+                  </div>
+
+                  {locked && (
+                    <div className="challenge-lock-note">
+                      Link Prizeversity before submitting this rewardable challenge.
+                    </div>
+                  )}
+
+                  <div className="challenge-card-footer">
+                    <span className="challenge-type">
+                      {challenge.tags.length ? challenge.tags.slice(0, 2).join(' / ') : 'AWS Club'}
+                    </span>
+                    <button
+                      type="button"
+                      className="challenge-start-btn"
+                      onClick={() => navigate(`/challenges/${challenge.slug}`)}
+                    >
+                      {completed
+                        ? 'Review'
+                        : challenge.progress?.status === 'in_progress'
+                          ? 'Resume'
+                          : 'Start'}
+                    </button>
+                  </div>
+                </motion.article>
+              );
+            })
           )}
         </div>
 
@@ -316,18 +303,20 @@ function Challenges({ theme: _theme }: ThemeProps) {
           <div className="info-cards">
             <div className="info-card">
               <Target className="info-icon" size={32} />
-              <h3>Complete Challenges</h3>
-              <p>Solve OSINT-style puzzles that test your investigative and technical skills</p>
+              <h3>Start a Lab</h3>
+              <p>Open a challenge, follow the instructions, and submit proof from the lab.</p>
             </div>
             <div className="info-card">
               <Star className="info-icon" size={32} />
-              <h3>Earn Points</h3>
-              <p>Each challenge rewards you with points based on difficulty</p>
+              <h3>Validate Progress</h3>
+              <p>The backend validator checks your answer and records every attempt safely.</p>
             </div>
             <div className="info-card">
               <Trophy className="info-icon" size={32} />
-              <h3>Get Rewards</h3>
-              <p>Points sync with Prizeversity where you can redeem real rewards</p>
+              <h3>Sync Rewards</h3>
+              <p>
+                Completed rewardable challenges emit rewards to your linked Prizeversity account.
+              </p>
             </div>
           </div>
         </motion.div>
