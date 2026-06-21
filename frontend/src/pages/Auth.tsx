@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { ChangeEvent, FocusEventHandler, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { authAPI } from '../utils/api';
@@ -67,6 +67,7 @@ interface AuthFormData {
   password: string;
   confirmPassword: string;
   rememberMe: boolean;
+  acceptedPolicies: boolean;
 }
 
 type ForgotPasswordStep =
@@ -76,7 +77,7 @@ type ForgotPasswordStep =
   | 'reset-password'
   | null;
 
-type AuthRequestData = Omit<AuthFormData, 'confirmPassword'>;
+type AuthRequestData = Omit<AuthFormData, 'confirmPassword' | 'acceptedPolicies'>;
 
 interface ForgotPasswordResponse {
   needsEmailVerification?: boolean;
@@ -200,6 +201,7 @@ function Auth({ theme }: AuthProps) {
     password: '',
     confirmPassword: '',
     rememberMe: false,
+    acceptedPolicies: false,
   });
   const [showPassword, setShowPassword] = useState<PasswordVisibilityState>({
     password: false,
@@ -318,7 +320,15 @@ function Auth({ theme }: AuthProps) {
         throw new Error('Passwords do not match');
       }
 
-      const { confirmPassword: _confirmPassword, ...authData } = formData;
+      if (!isLogin && !formData.acceptedPolicies) {
+        throw new Error('You must acknowledge the Privacy Policy and WSU conduct expectations.');
+      }
+
+      const {
+        confirmPassword: _confirmPassword,
+        acceptedPolicies: _acceptedPolicies,
+        ...authData
+      } = formData;
       const requestData: AuthRequestData = authData;
 
       const timeoutPromise = new Promise<never>((_, reject) =>
@@ -865,6 +875,24 @@ function Auth({ theme }: AuthProps) {
                 )}
               </div>
 
+              {!isLogin && (
+                <label className="policy-acknowledgement">
+                  <input
+                    type="checkbox"
+                    name="acceptedPolicies"
+                    checked={formData.acceptedPolicies}
+                    onChange={handleInputChange}
+                    className="remember-me-checkbox"
+                    required={!isLogin}
+                  />
+                  <span>
+                    I acknowledge the <Link to="/privacy">Privacy Policy</Link> and agree to follow
+                    applicable Wayne State University conduct policies while using club spaces,
+                    challenges, events, and communications.
+                  </span>
+                </label>
+              )}
+
               <motion.button
                 type="submit"
                 className="auth-submit"
@@ -898,6 +926,10 @@ function Auth({ theme }: AuthProps) {
                 Continue with Google
               </motion.button>
             </div>
+            <p className="auth-policy-note">
+              By continuing, you acknowledge the <Link to="/privacy">Privacy Policy</Link> and
+              applicable Wayne State University conduct expectations.
+            </p>
 
             <motion.button
               className="back-home"
