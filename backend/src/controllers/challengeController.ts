@@ -88,7 +88,8 @@ export const submit = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    await submitChallenge(req.params.slug, req.user.id, req.body?.payload);
+    const result = await submitChallenge(req.params.slug, req.user.id, req.body?.payload);
+    res.json(result);
   } catch (error: unknown) {
     res.status(getErrorStatus(error, 400)).json(getErrorBody(error, 'Unable to submit challenge'));
   }

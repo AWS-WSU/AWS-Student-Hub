@@ -158,9 +158,23 @@ export const listProgress = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-export const testValidation = async (_req: Request, res: Response): Promise<void> => {
+export const testValidation = async (req: Request, res: Response): Promise<void> => {
   try {
-    await testAdminChallengeValidation();
+    const userId =
+      typeof req.body?.userId === 'string' && req.body.userId.trim()
+        ? req.body.userId.trim()
+        : req.user?.id;
+    if (!userId) {
+      res.status(400).json({ error: 'A userId is required to test challenge validation.' });
+      return;
+    }
+
+    const result = await testAdminChallengeValidation(
+      req.params.challengeId,
+      userId,
+      req.body?.payload
+    );
+    res.json(result);
   } catch (error: unknown) {
     res.status(getErrorStatus(error, 501)).json(getErrorBody(error, 'Unable to test validation'));
   }

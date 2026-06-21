@@ -14,6 +14,17 @@ import ChallengeProgress, {
 } from '../models/ChallengeProgress';
 import ChallengeSubmission from '../models/ChallengeSubmission';
 import User from '../models/User';
+import {
+  buildChallengeCompletionEvent,
+  grantChallengeCompletionReward,
+  hasRewardIdentity,
+  RewardGrantResult,
+} from './challengeRewardService';
+import {
+  ChallengeValidatorError,
+  sanitizeChallengeSubmissionPayload,
+  validateChallengeSubmission,
+} from './challengeValidatorService';
 import { getPrizeversityStatus } from './rewardIntegrationService';
 
 export type ChallengeErrorCode =
@@ -68,6 +79,14 @@ interface RewardLinkSummary {
   required: boolean;
   linked: boolean;
   configured: boolean;
+}
+
+interface ChallengeSubmitResult {
+  accepted: boolean;
+  completed: boolean;
+  message: string;
+  progress: ReturnType<typeof toProgressDto>;
+  reward?: RewardGrantResult;
 }
 
 interface ChallengeMutationInput {
@@ -415,34 +434,6 @@ const getOrCreateProgress = async (
   return progress;
 };
 
-const sanitizePayloadPreview = (payload: unknown): Record<string, unknown> => {
-  if (!isRecord(payload)) return {};
-
-  return Object.fromEntries(
-    Object.entries(payload).map(([key, value]) => {
-      const lowerKey = key.toLowerCase();
-      if (
-        lowerKey.includes('secret') ||
-        lowerKey.includes('password') ||
-        lowerKey.includes('token') ||
-        lowerKey.includes('key')
-      ) {
-        return [key, '[redacted]'];
-      }
-
-      if (typeof value === 'string') {
-        return [key, value.length > 80 ? `${value.slice(0, 80)}...` : value];
-      }
-
-      if (typeof value === 'number' || typeof value === 'boolean' || value === null) {
-        return [key, value];
-      }
-
-      return [key, '[object]'];
-    })
-  );
-};
-
 const normalizePagination = (page?: number, limit?: number) => {
   const normalizedPage = Math.max(1, Number(page) || 1);
   const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 25));
@@ -549,14 +540,41 @@ export const submitChallenge = async (
   slug: string,
   userId: string,
   payload: unknown
-): Promise<never> => {
+): Promise<ChallengeSubmitResult> => {
   const challenge = await ensurePublishedChallenge(slug);
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ChallengeServiceError('User not found.', 'INVALID_CHALLENGE_INPUT', 404);
+  }
+
+  if (challenge.reward?.enabled && !hasRewardIdentity(user)) {
+    throw new ChallengeServiceError(
+      'Link your Prizeversity account before completing rewardable challenges.',
+      'REWARD_LINK_REQUIRED',
+      403
+    );
+  }
+
   const progress = await getOrCreateProgress(challenge, userId);
 
   if (completedStatuses.includes(progress.status)) {
-    throw new ChallengeServiceError('Challenge is already completed.', 'VALIDATION_FAILED', 409, {
+    return {
+      accepted: true,
+      completed: true,
+      message: 'Challenge is already completed.',
       progress: toProgressDto(progress),
-    });
+      reward: challenge.reward?.enabled
+        ? {
+            status:
+              progress.status === 'reward_sent'
+                ? 'already_sent'
+                : progress.status === 'reward_failed'
+                  ? 'failed'
+                  : 'not_required',
+            emissionId: progress.rewardEmissionId?.toString(),
+          }
+        : { status: 'not_required' },
+    };
   }
 
   if (challenge.maxAttempts && progress.attemptCount >= challenge.maxAttempts) {
@@ -570,7 +588,75 @@ export const submitChallenge = async (
 
   progress.attemptCount += 1;
   progress.lastSubmittedAt = new Date();
-  progress.lastValidationMessage = 'Challenge validation engine is not implemented yet.';
+
+  let validationResult;
+  try {
+    validationResult = await validateChallengeSubmission(challenge.validation, payload, {
+      user,
+      challenge,
+      progress,
+    });
+  } catch (error: unknown) {
+    const message =
+      error instanceof ChallengeValidatorError
+        ? error.message
+        : 'Challenge validation failed unexpectedly.';
+    progress.lastValidationMessage = message;
+    await progress.save();
+
+    await ChallengeSubmission.create({
+      userId: new Types.ObjectId(userId),
+      challengeId: challenge._id,
+      progressId: progress._id,
+      challengeKey: challenge.key,
+      validatorType: getValidatorType(challenge),
+      status: 'error',
+      submittedPayloadPreview: sanitizeChallengeSubmissionPayload(challenge.validation, payload),
+      validationResult: {
+        code: error instanceof ChallengeValidatorError ? 'VALIDATOR_ERROR' : 'VALIDATOR_EXCEPTION',
+      },
+      message,
+    });
+
+    throw new ChallengeServiceError(message, 'VALIDATOR_ERROR', 500, {
+      progress: toProgressDto(progress),
+    });
+  }
+
+  progress.lastValidationMessage = validationResult.message;
+
+  if (!validationResult.accepted) {
+    await progress.save();
+    await ChallengeSubmission.create({
+      userId: new Types.ObjectId(userId),
+      challengeId: challenge._id,
+      progressId: progress._id,
+      challengeKey: challenge.key,
+      validatorType: getValidatorType(challenge),
+      status: 'rejected',
+      submittedPayloadPreview: sanitizeChallengeSubmissionPayload(challenge.validation, payload),
+      validationResult: {
+        accepted: false,
+        publicDetails: validationResult.publicDetails,
+        privateDetails: validationResult.privateDetails,
+      },
+      message: validationResult.message,
+    });
+
+    return {
+      accepted: false,
+      completed: false,
+      message: validationResult.message,
+      progress: toProgressDto(progress),
+      reward: { status: 'not_required' },
+    };
+  }
+
+  const completedAt = new Date();
+  progress.status = challenge.reward?.enabled ? 'reward_pending' : 'completed';
+  progress.completedAt = progress.completedAt || completedAt;
+  progress.completionEventId =
+    progress.completionEventId || `challenge-completed:${userId}:${challenge.key}`;
   await progress.save();
 
   await ChallengeSubmission.create({
@@ -579,20 +665,38 @@ export const submitChallenge = async (
     progressId: progress._id,
     challengeKey: challenge.key,
     validatorType: getValidatorType(challenge),
-    status: 'error',
-    submittedPayloadPreview: sanitizePayloadPreview(payload),
+    status: 'accepted',
+    submittedPayloadPreview: sanitizeChallengeSubmissionPayload(challenge.validation, payload),
     validationResult: {
-      code: 'VALIDATOR_NOT_IMPLEMENTED',
+      accepted: true,
+      publicDetails: validationResult.publicDetails,
+      privateDetails: validationResult.privateDetails,
     },
-    message: 'Challenge validation engine is not implemented yet.',
+    message: validationResult.message,
   });
 
-  throw new ChallengeServiceError(
-    'Challenge validation engine is not implemented yet.',
-    'VALIDATOR_ERROR',
-    501,
-    { progress: toProgressDto(progress) }
-  );
+  const event = buildChallengeCompletionEvent(user, challenge, progress);
+  const reward = await grantChallengeCompletionReward(event, user);
+
+  if (reward.status === 'sent' || reward.status === 'already_sent') {
+    progress.status = 'reward_sent';
+    progress.rewardEmissionId = reward.emissionId ? new Types.ObjectId(reward.emissionId) : null;
+  } else if (reward.status === 'failed') {
+    progress.status = 'reward_failed';
+    progress.rewardEmissionId = reward.emissionId ? new Types.ObjectId(reward.emissionId) : null;
+  } else {
+    progress.status = 'completed';
+  }
+
+  await progress.save();
+
+  return {
+    accepted: true,
+    completed: true,
+    message: validationResult.message,
+    progress: toProgressDto(progress),
+    reward,
+  };
 };
 
 export const listAdminChallenges = async (
@@ -810,10 +914,44 @@ export const listAdminChallengeProgress = async (
   };
 };
 
-export const testAdminChallengeValidation = async (): Promise<never> => {
-  throw new ChallengeServiceError(
-    'Challenge validation engine is not implemented yet.',
-    'VALIDATOR_ERROR',
-    501
-  );
+export const testAdminChallengeValidation = async (
+  challengeId: string,
+  userId: string,
+  payload: unknown
+): Promise<{
+  accepted: boolean;
+  message: string;
+  details?: Record<string, unknown>;
+}> => {
+  const challenge = await ensureChallengeById(challengeId);
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ChallengeServiceError('User not found.', 'INVALID_CHALLENGE_INPUT', 404);
+  }
+
+  const progress =
+    (await ChallengeProgress.findOne({
+      userId: user._id,
+      challengeId: challenge._id,
+    })) ||
+    new ChallengeProgress({
+      userId: user._id,
+      challengeId: challenge._id,
+      challengeKey: challenge.key,
+      challengeVersion: challenge.version,
+      status: 'not_started',
+      attemptCount: 0,
+    });
+
+  const result = await validateChallengeSubmission(challenge.validation, payload, {
+    user,
+    challenge,
+    progress,
+  });
+
+  return {
+    accepted: result.accepted,
+    message: result.message,
+    details: result.publicDetails,
+  };
 };
