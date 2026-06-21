@@ -145,3 +145,11 @@ export interface AdminChallengeResponse {
   message?: string;
   challenge: AdminChallenge;
 }
+
+export interface AdminChallengeDeleteResponse {
+  message?: string;
+  deleted: true;
+  challengeId: string;
+  progressDeleted: number;
+  submissionsDeleted: number;
+}

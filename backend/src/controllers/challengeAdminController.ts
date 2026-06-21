@@ -4,6 +4,7 @@ import {
   ChallengeServiceError,
   archiveAdminChallenge,
   createAdminChallenge,
+  deleteAdminChallenge,
   getAdminChallenge,
   listAdminChallengeProgress,
   listAdminChallengeSubmissions,
@@ -12,8 +13,31 @@ import {
   testAdminChallengeValidation,
   updateAdminChallenge,
 } from '../services/challengeService';
+import type { ChallengeStatus } from '../models/Challenge';
+import type { ChallengeProgressStatus } from '../models/ChallengeProgress';
 
 const getAdminUserId = (req: Request): string | null => req.user?.id || null;
+const challengeStatuses: ChallengeStatus[] = ['draft', 'published', 'archived'];
+const progressStatuses: ChallengeProgressStatus[] = [
+  'not_started',
+  'in_progress',
+  'completed',
+  'reward_pending',
+  'reward_sent',
+  'reward_failed',
+];
+
+const parseChallengeStatus = (value: unknown): ChallengeStatus | undefined => {
+  return typeof value === 'string' && challengeStatuses.includes(value as ChallengeStatus)
+    ? (value as ChallengeStatus)
+    : undefined;
+};
+
+const parseProgressStatus = (value: unknown): ChallengeProgressStatus | undefined => {
+  return typeof value === 'string' && progressStatuses.includes(value as ChallengeProgressStatus)
+    ? (value as ChallengeProgressStatus)
+    : undefined;
+};
 
 const getErrorBody = (error: unknown, fallback: string) => {
   if (error instanceof ChallengeServiceError) {
@@ -37,7 +61,7 @@ const getErrorStatus = (error: unknown, fallback = 500): number => {
 export const listChallenges = async (req: Request, res: Response): Promise<void> => {
   try {
     const result = await listAdminChallenges({
-      status: typeof req.query.status === 'string' ? (req.query.status as any) : undefined,
+      status: parseChallengeStatus(req.query.status),
       search: typeof req.query.search === 'string' ? req.query.search : undefined,
       page: Number(req.query.page),
       limit: Number(req.query.limit),
@@ -133,6 +157,18 @@ export const archiveChallenge = async (req: Request, res: Response): Promise<voi
   }
 };
 
+export const deleteChallenge = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const result = await deleteAdminChallenge(req.params.challengeId);
+    res.json({
+      message: 'Challenge deleted',
+      ...result,
+    });
+  } catch (error: unknown) {
+    res.status(getErrorStatus(error, 400)).json(getErrorBody(error, 'Unable to delete challenge'));
+  }
+};
+
 export const listSubmissions = async (req: Request, res: Response): Promise<void> => {
   try {
     const result = await listAdminChallengeSubmissions(req.params.challengeId, {
@@ -150,7 +186,7 @@ export const listProgress = async (req: Request, res: Response): Promise<void> =
     const result = await listAdminChallengeProgress(req.params.challengeId, {
       page: Number(req.query.page),
       limit: Number(req.query.limit),
-      status: typeof req.query.status === 'string' ? (req.query.status as any) : undefined,
+      status: parseProgressStatus(req.query.status),
     });
     res.json(result);
   } catch (error: unknown) {

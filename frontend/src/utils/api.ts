@@ -2,6 +2,7 @@ import type { AdminStats, EmailQueueEntry } from '../types/admin';
 import type { ApiResponse } from '../types/api';
 import type { AuthResponse, LoginCredentials, SignupPayload } from '../types/auth';
 import type {
+  AdminChallengeDeleteResponse,
   AdminChallengeListResponse,
   AdminChallengePayload,
   AdminChallengeResponse,
@@ -807,6 +808,12 @@ export const adminAPI = {
   archiveChallenge: async (challengeId: string): Promise<AdminChallengeResponse> => {
     return apiRequest(`/admin/challenges/${challengeId}/archive`, {
       method: 'POST',
+    });
+  },
+
+  deleteChallenge: async (challengeId: string): Promise<AdminChallengeDeleteResponse> => {
+    return apiRequest(`/admin/challenges/${challengeId}`, {
+      method: 'DELETE',
     });
   },
 

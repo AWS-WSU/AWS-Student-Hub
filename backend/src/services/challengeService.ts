@@ -12,7 +12,7 @@ import ChallengeProgress, {
   ChallengeProgressStatus,
   IChallengeProgressDocument,
 } from '../models/ChallengeProgress';
-import ChallengeSubmission from '../models/ChallengeSubmission';
+import ChallengeSubmission, { IChallengeSubmissionDocument } from '../models/ChallengeSubmission';
 import User from '../models/User';
 import {
   buildChallengeCompletionEvent,
@@ -34,6 +34,7 @@ export type ChallengeErrorCode =
   | 'MAX_ATTEMPTS_REACHED'
   | 'VALIDATION_FAILED'
   | 'VALIDATOR_ERROR'
+  | 'CHALLENGE_DELETE_BLOCKED'
   | 'INVALID_CHALLENGE_INPUT';
 
 export class ChallengeServiceError extends Error {
@@ -346,7 +347,7 @@ const toAdminChallengeDto = (challenge: IChallengeDocument) => ({
   updatedAt: challenge.updatedAt,
 });
 
-const toSubmissionDto = (submission: any) => ({
+const toSubmissionDto = (submission: IChallengeSubmissionDocument) => ({
   id: String(submission._id),
   userId: submission.userId?.toString(),
   challengeId: submission.challengeId?.toString(),
@@ -868,6 +869,40 @@ export const archiveAdminChallenge = async (
   challenge.updatedBy = new Types.ObjectId(adminUserId);
   await challenge.save();
   return toAdminChallengeDto(challenge);
+};
+
+export const deleteAdminChallenge = async (
+  challengeId: string
+): Promise<{
+  deleted: true;
+  challengeId: string;
+  progressDeleted: number;
+  submissionsDeleted: number;
+}> => {
+  const challenge = await ensureChallengeById(challengeId);
+
+  if (challenge.status === 'published') {
+    throw new ChallengeServiceError(
+      'Archive the challenge before deleting it.',
+      'CHALLENGE_DELETE_BLOCKED',
+      409,
+      { status: challenge.status }
+    );
+  }
+
+  const [submissionResult, progressResult] = await Promise.all([
+    ChallengeSubmission.deleteMany({ challengeId: challenge._id }),
+    ChallengeProgress.deleteMany({ challengeId: challenge._id }),
+  ]);
+
+  await Challenge.deleteOne({ _id: challenge._id });
+
+  return {
+    deleted: true,
+    challengeId: String(challenge._id),
+    progressDeleted: progressResult.deletedCount || 0,
+    submissionsDeleted: submissionResult.deletedCount || 0,
+  };
 };
 
 export const listAdminChallengeSubmissions = async (

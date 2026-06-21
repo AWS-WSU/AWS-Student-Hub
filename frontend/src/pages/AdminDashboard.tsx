@@ -237,6 +237,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   const [challengeSaving, setChallengeSaving] = useState<boolean>(false);
   const [challengeStatusFilter, setChallengeStatusFilter] = useState<ChallengeStatus | ''>('');
   const [updatingChallengeId, setUpdatingChallengeId] = useState<string | null>(null);
+  const [challengeToDelete, setChallengeToDelete] = useState<AdminChallenge | null>(null);
 
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -563,6 +564,34 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       loadAdminChallenges();
     } catch (err) {
       showToast(getErrorMessage(err, 'Failed to archive challenge'), 'error');
+    } finally {
+      setUpdatingChallengeId(null);
+    }
+  };
+
+  const handleDeleteChallenge = (challenge: AdminChallenge) => {
+    if (challenge.status === 'published') {
+      showToast('Archive the challenge before deleting it', 'error');
+      return;
+    }
+
+    setChallengeToDelete(challenge);
+  };
+
+  const handleConfirmDeleteChallenge = async () => {
+    if (!challengeToDelete) return;
+
+    setUpdatingChallengeId(challengeToDelete.id);
+    try {
+      const response = await adminAPI.deleteChallenge(challengeToDelete.id);
+      showToast(
+        `Challenge deleted. Removed ${response.progressDeleted} progress records and ${response.submissionsDeleted} submissions.`,
+        'success'
+      );
+      setChallengeToDelete(null);
+      loadAdminChallenges();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to delete challenge'), 'error');
     } finally {
       setUpdatingChallengeId(null);
     }
@@ -1222,6 +1251,22 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                               Archive
                             </button>
                           )}
+                          <button
+                            type="button"
+                            className="action-btn delete-btn"
+                            onClick={() => handleDeleteChallenge(challenge)}
+                            disabled={
+                              updatingChallengeId === challenge.id ||
+                              challenge.status === 'published'
+                            }
+                            title={
+                              challenge.status === 'published'
+                                ? 'Archive this challenge before deleting it.'
+                                : 'Delete this challenge and its related records.'
+                            }
+                          >
+                            Delete
+                          </button>
                         </div>
                       </article>
                     ))}
@@ -1621,6 +1666,67 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
               </button>
               <button onClick={handleDeleteUser} className="delete-btn">
                 Delete User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {challengeToDelete && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            if (updatingChallengeId !== challengeToDelete.id) {
+              setChallengeToDelete(null);
+            }
+          }}
+        >
+          <div
+            className="modal-content challenge-delete-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="modal-eyebrow">Delete challenge</span>
+            <h3>{challengeToDelete.title}</h3>
+            <p>
+              This will permanently remove the challenge record and all related progress and
+              submissions.
+            </p>
+
+            <div className="challenge-delete-summary">
+              <div>
+                <span>Status</span>
+                <strong>{challengeToDelete.status}</strong>
+              </div>
+              <div>
+                <span>Slug</span>
+                <strong>{challengeToDelete.slug}</strong>
+              </div>
+              <div>
+                <span>Reward</span>
+                <strong>
+                  {challengeToDelete.reward.enabled
+                    ? `${challengeToDelete.reward.bits} bits`
+                    : 'Off'}
+                </strong>
+              </div>
+            </div>
+
+            <p className="warning-text">This action cannot be undone.</p>
+
+            <div className="modal-actions">
+              <button
+                onClick={() => setChallengeToDelete(null)}
+                className="cancel-btn"
+                disabled={updatingChallengeId === challengeToDelete.id}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteChallenge}
+                className="delete-btn"
+                disabled={updatingChallengeId === challengeToDelete.id}
+              >
+                {updatingChallengeId === challengeToDelete.id ? 'Deleting...' : 'Delete Challenge'}
               </button>
             </div>
           </div>
