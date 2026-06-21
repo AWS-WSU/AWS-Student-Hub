@@ -16,6 +16,7 @@ import PublicProfile from './pages/PublicProfile';
 import AdminDashboard from './pages/AdminDashboard';
 import NotFoundPage from './pages/NotFoundPage';
 import QuickSetup from './pages/QuickSetup';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import './App.css';
 
 function AppContent() {
@@ -46,6 +47,7 @@ function AppContent() {
           <Route path="/account" element={<Account theme={theme} />} />
           <Route path="/profile/:username" element={<PublicProfile theme={theme} />} />
           <Route path="/admin" element={<AdminDashboard theme={theme} />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

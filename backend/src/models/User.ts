@@ -32,6 +32,9 @@ export interface IUser {
   bannedBy?: Types.ObjectId | null;
   banReason?: string | null;
   wantsEmails: boolean;
+  privacyPolicyAcknowledgedAt?: Date | null;
+  privacyPolicyVersion?: string;
+  codeOfConductAcknowledgedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
   lastLogin: Date;
@@ -186,6 +189,18 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
     wantsEmails: {
       type: Boolean,
       default: false,
+    },
+    privacyPolicyAcknowledgedAt: {
+      type: Date,
+      default: null,
+    },
+    privacyPolicyVersion: {
+      type: String,
+      default: '',
+    },
+    codeOfConductAcknowledgedAt: {
+      type: Date,
+      default: null,
     },
     createdAt: {
       type: Date,

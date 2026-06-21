@@ -238,6 +238,43 @@
   color: var(--text-primary);
 }
 
+.policy-acknowledgement {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: -0.35rem 0 1.35rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+
+.policy-acknowledgement .remember-me-checkbox {
+  margin-top: 0.15rem;
+}
+
+.policy-acknowledgement a,
+.auth-policy-note a {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.policy-acknowledgement a:hover,
+.auth-policy-note a:hover {
+  color: var(--accent-secondary);
+  text-decoration: underline;
+}
+
+.auth-policy-note {
+  margin: 0.85rem 0 1.25rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .remember-me-checkbox {
   appearance: none;
   -webkit-appearance: none;
