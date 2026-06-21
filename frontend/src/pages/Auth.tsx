@@ -77,7 +77,7 @@ type ForgotPasswordStep =
   | 'reset-password'
   | null;
 
-type AuthRequestData = Omit<AuthFormData, 'confirmPassword' | 'acceptedPolicies'>;
+type AuthRequestData = Omit<AuthFormData, 'confirmPassword'>;
 
 interface ForgotPasswordResponse {
   needsEmailVerification?: boolean;
@@ -320,15 +320,11 @@ function Auth({ theme }: AuthProps) {
         throw new Error('Passwords do not match');
       }
 
-      if (!isLogin && !formData.acceptedPolicies) {
+      if (!formData.acceptedPolicies) {
         throw new Error('You must acknowledge the Privacy Policy and WSU conduct expectations.');
       }
 
-      const {
-        confirmPassword: _confirmPassword,
-        acceptedPolicies: _acceptedPolicies,
-        ...authData
-      } = formData;
+      const { confirmPassword: _confirmPassword, ...authData } = formData;
       const requestData: AuthRequestData = authData;
 
       const timeoutPromise = new Promise<never>((_, reject) =>
@@ -481,6 +477,11 @@ function Auth({ theme }: AuthProps) {
 
   const handleSocialLogin = async () => {
     try {
+      if (!formData.acceptedPolicies) {
+        setError('You must acknowledge the Privacy Policy and WSU conduct expectations.');
+        return;
+      }
+
       setIsLoading(true);
       await loginWithRedirect({
         appState: { returnTo: window.location.origin },
@@ -875,23 +876,21 @@ function Auth({ theme }: AuthProps) {
                 )}
               </div>
 
-              {!isLogin && (
-                <label className="policy-acknowledgement">
-                  <input
-                    type="checkbox"
-                    name="acceptedPolicies"
-                    checked={formData.acceptedPolicies}
-                    onChange={handleInputChange}
-                    className="remember-me-checkbox"
-                    required={!isLogin}
-                  />
-                  <span>
-                    I acknowledge the <Link to="/privacy">Privacy Policy</Link> and agree to follow
-                    applicable Wayne State University conduct policies while using club spaces,
-                    challenges, events, and communications.
-                  </span>
-                </label>
-              )}
+              <label className="policy-acknowledgement">
+                <input
+                  type="checkbox"
+                  name="acceptedPolicies"
+                  checked={formData.acceptedPolicies}
+                  onChange={handleInputChange}
+                  className="remember-me-checkbox"
+                  required
+                />
+                <span>
+                  I acknowledge the <Link to="/privacy">Privacy Policy</Link> and agree to follow
+                  applicable Wayne State University conduct policies while using club spaces,
+                  challenges, events, and communications.
+                </span>
+              </label>
 
               <motion.button
                 type="submit"

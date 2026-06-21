@@ -17,6 +17,9 @@ export interface User {
   role?: UserRole;
   status?: UserStatus;
   wantsEmails?: boolean;
+  privacyPolicyAcknowledgedAt?: string | null;
+  privacyPolicyVersion?: string;
+  codeOfConductAcknowledgedAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
   lastLogin?: string;

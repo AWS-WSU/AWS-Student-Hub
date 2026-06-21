@@ -21,6 +21,7 @@ export interface LoginCredentials {
   password: string;
   deviceId?: string;
   rememberMe?: boolean;
+  acceptedPolicies?: boolean;
 }
 
 export interface SignupPayload {
@@ -30,6 +31,7 @@ export interface SignupPayload {
   password: string;
   deviceId?: string;
   rememberMe?: boolean;
+  acceptedPolicies?: boolean;
 }
 
 export interface AuthContextValue {

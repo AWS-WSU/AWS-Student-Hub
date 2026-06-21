@@ -58,7 +58,8 @@ function PrivacyPolicy() {
           <ul>
             <li>
               Account information, including name, username, email address, password, account role,
-              account status, creation date, last login, and password reset codes.
+              account status, creation date, last login, policy acknowledgement timestamps and
+              versions, and password reset codes.
             </li>
             <li>
               Profile information, including profile photo, bio, major, grade, programming
