@@ -25,6 +25,58 @@ const isAccessTokenPayload = (decoded: string | jwt.JwtPayload): decoded is Acce
   return typeof decoded !== 'string' && typeof decoded.id === 'string';
 };
 
+const authenticateAccessToken = async (token: string): Promise<Express.UserPayload> => {
+  const decoded = jwt.verify(token, getJwtSecret());
+
+  if (!isAccessTokenPayload(decoded)) {
+    throw new jwt.JsonWebTokenError('Token is malformed');
+  }
+
+  const user = await User.findById(decoded.id).select('tokenVersion status');
+
+  if (!user) {
+    throw new jwt.JsonWebTokenError('Token is not valid - user not found');
+  }
+
+  const userStatus = (user.status || 'active') as UserStatus;
+
+  if (userStatus !== 'active') {
+    throw new jwt.JsonWebTokenError('Account is not active');
+  }
+
+  if (decoded.tokenVersion !== user.tokenVersion) {
+    throw new jwt.JsonWebTokenError('Token has been revoked');
+  }
+
+  return {
+    id: decoded.id,
+    email: decoded.email,
+    tokenVersion: decoded.tokenVersion,
+  };
+};
+
+const sendJwtError = (res: Response, err: unknown): void => {
+  if (err instanceof jwt.TokenExpiredError) {
+    res.status(401).json({
+      error: 'Token has expired',
+      expired: true,
+    });
+    return;
+  }
+
+  if (err instanceof jwt.JsonWebTokenError) {
+    res.status(401).json({
+      error: err.message || 'Token is malformed',
+    });
+    return;
+  }
+
+  log.error('jwt verification error.', err);
+  res.status(401).json({
+    error: 'Token is not valid',
+  });
+};
+
 const checkJwt = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.header('Authorization');
   const token = authHeader && authHeader.split(' ')[1];
@@ -37,67 +89,31 @@ const checkJwt = async (req: Request, res: Response, next: NextFunction): Promis
   }
 
   try {
-    const decoded = jwt.verify(token, getJwtSecret());
-
-    if (!isAccessTokenPayload(decoded)) {
-      res.status(401).json({
-        error: 'Token is malformed',
-      });
-      return;
-    }
-
-    const user = await User.findById(decoded.id).select('tokenVersion status');
-
-    if (!user) {
-      res.status(401).json({
-        error: 'Token is not valid - user not found',
-      });
-      return;
-    }
-
-    const userStatus = (user.status || 'active') as UserStatus;
-
-    if (userStatus !== 'active') {
-      res.status(401).json({
-        error: 'Account is not active',
-      });
-      return;
-    }
-
-    if (decoded.tokenVersion !== user.tokenVersion) {
-      res.status(401).json({
-        error: 'Token has been revoked',
-      });
-      return;
-    }
-
-    req.user = {
-      id: decoded.id,
-      email: decoded.email,
-      tokenVersion: decoded.tokenVersion,
-    };
-
+    req.user = await authenticateAccessToken(token);
     next();
   } catch (err: unknown) {
-    if (err instanceof jwt.TokenExpiredError) {
-      res.status(401).json({
-        error: 'Token has expired',
-        expired: true,
-      });
-      return;
-    }
+    sendJwtError(res, err);
+  }
+};
 
-    if (err instanceof jwt.JsonWebTokenError) {
-      res.status(401).json({
-        error: 'Token is malformed',
-      });
-      return;
-    }
+export const optionalJwt = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const authHeader = req.header('Authorization');
+  const token = authHeader && authHeader.split(' ')[1];
 
-    log.error('jwt verification error.', err);
-    res.status(401).json({
-      error: 'Token is not valid',
-    });
+  if (!token) {
+    next();
+    return;
+  }
+
+  try {
+    req.user = await authenticateAccessToken(token);
+    next();
+  } catch (err: unknown) {
+    sendJwtError(res, err);
   }
 };
 
