@@ -94,6 +94,16 @@
   gap: 10px;
 }
 
+.contact-info a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.contact-info a:hover {
+  color: var(--accent);
+}
+
 .contact-info i {
   color: var(--accent);
   font-size: 1rem;
@@ -203,6 +213,16 @@
   padding-top: 1.5rem;
   border-top: 1px solid rgba(var(--text-secondary-rgb), 0.1);
   font-size: 0.9rem;
+}
+
+.footer-bottom a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer-bottom a:hover {
+  color: var(--accent);
 }
 
 @media (max-width: 1024px) {

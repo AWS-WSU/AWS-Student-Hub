@@ -40,6 +40,7 @@ interface AwsCredentialUser {
 }
 
 const filter = new Filter();
+const CURRENT_POLICY_VERSION = '2026-06-21';
 
 const getJwtSecret = (): string => {
   if (!env.JWT_SECRET) {
@@ -127,6 +128,29 @@ const attachAwsCredentialsIfLinked = (
   }
 };
 
+const hasCurrentPolicyAcknowledgement = (user: {
+  privacyPolicyAcknowledgedAt?: Date | null;
+  privacyPolicyVersion?: string;
+  codeOfConductAcknowledgedAt?: Date | null;
+}): boolean => {
+  return Boolean(
+    user.privacyPolicyAcknowledgedAt &&
+    user.codeOfConductAcknowledgedAt &&
+    user.privacyPolicyVersion === CURRENT_POLICY_VERSION
+  );
+};
+
+const applyPolicyAcknowledgement = (user: {
+  privacyPolicyAcknowledgedAt?: Date | null;
+  privacyPolicyVersion?: string;
+  codeOfConductAcknowledgedAt?: Date | null;
+}): void => {
+  const acknowledgedAt = new Date();
+  user.privacyPolicyAcknowledgedAt = acknowledgedAt;
+  user.privacyPolicyVersion = CURRENT_POLICY_VERSION;
+  user.codeOfConductAcknowledgedAt = acknowledgedAt;
+};
+
 const getRefreshTokenRememberMe = (
   user: {
     refreshTokens?: Array<{
@@ -197,6 +221,7 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
       username: providedUsername,
       deviceId,
       rememberMe,
+      acceptedPolicies,
     } = req.body as {
       fullName: string;
       email: string;
@@ -204,7 +229,15 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
       username?: string;
       deviceId?: string;
       rememberMe?: boolean;
+      acceptedPolicies?: boolean;
     };
+
+    if (!acceptedPolicies) {
+      res.status(400).json({
+        error: 'You must acknowledge the Privacy Policy and WSU conduct expectations.',
+      });
+      return;
+    }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -243,6 +276,7 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
       email,
       password,
     });
+    applyPolicyAcknowledgement(user);
 
     const currentDeviceId = deviceId || generateDeviceId();
     const { accessToken, refreshToken } = generateTokens(user, currentDeviceId, !!rememberMe);
@@ -318,11 +352,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const { email, password, deviceId, rememberMe } = req.body as {
+    const { email, password, deviceId, rememberMe, acceptedPolicies } = req.body as {
       email: string;
       password: string;
       deviceId?: string;
       rememberMe?: boolean;
+      acceptedPolicies?: boolean;
     };
 
     let user;
@@ -349,6 +384,19 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         error: 'Invalid credentials',
       });
       return;
+    }
+
+    if (!hasCurrentPolicyAcknowledgement(user)) {
+      if (!acceptedPolicies) {
+        res.status(403).json({
+          error: 'You must acknowledge the Privacy Policy and WSU conduct expectations.',
+          acknowledgementRequired: true,
+          policyVersion: CURRENT_POLICY_VERSION,
+        });
+        return;
+      }
+
+      applyPolicyAcknowledgement(user);
     }
 
     const currentDeviceId = deviceId || generateDeviceId();

@@ -1302,6 +1302,14 @@ function Account({ theme: _theme }: AccountProps) {
                       >
                         <Lock size={16} aria-hidden="true" /> Reveal credentials
                       </motion.button>
+                      <motion.button
+                        className="show-modal-btn"
+                        onClick={() => navigate('/challenges/aws-cloud-security-lab')}
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Target size={16} aria-hidden="true" /> Open challenge page
+                      </motion.button>
                     </div>
                   ) : (
                     <div className="credentials-display">
@@ -1354,6 +1362,14 @@ function Account({ theme: _theme }: AccountProps) {
                           whileTap={{ scale: 0.98 }}
                         >
                           <Target size={16} aria-hidden="true" /> Open instructions
+                        </motion.button>
+                        <motion.button
+                          className="show-modal-btn"
+                          onClick={() => navigate('/challenges/aws-cloud-security-lab')}
+                          whileHover={{ y: -2 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <Target size={16} aria-hidden="true" /> Open challenge page
                         </motion.button>
                       </div>
                     </div>

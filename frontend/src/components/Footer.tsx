@@ -92,6 +92,9 @@ function Footer({ theme }: ThemeProps) {
             <li>
               <Link to="/resources">Resources</Link>
             </li>
+            <li>
+              <Link to="/privacy">Privacy Policy</Link>
+            </li>
           </ul>
         </motion.div>
 
@@ -105,7 +108,11 @@ function Footer({ theme }: ThemeProps) {
           <h3>Contact Us</h3>
           <div className="contact-info">
             <i className="fas fa-envelope"></i>
-            <span>awscloudclubs@wayne.edu</span>
+            <a href="mailto:awscloudclubs@wayne.edu">awscloudclubs@wayne.edu</a>
+          </div>
+          <div className="contact-info">
+            <i className="fas fa-user-shield"></i>
+            <a href="mailto:awssbg@wayne.edu">Account deletion: awssbg@wayne.edu</a>
           </div>
         </motion.div>
 
@@ -157,7 +164,10 @@ function Footer({ theme }: ThemeProps) {
       </div>
 
       <div className="footer-bottom">
-        <p>&copy; {new Date().getFullYear()} Wayne State University AWS Cloud Computing Club</p>
+        <p>
+          &copy; {new Date().getFullYear()} Wayne State University AWS Cloud Computing Club -{' '}
+          <Link to="/privacy">Privacy Policy</Link>
+        </p>
       </div>
     </footer>
   );
