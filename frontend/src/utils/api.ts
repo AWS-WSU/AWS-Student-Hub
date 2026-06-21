@@ -1,6 +1,17 @@
 import type { AdminStats, EmailQueueEntry } from '../types/admin';
 import type { ApiResponse } from '../types/api';
 import type { AuthResponse, LoginCredentials, SignupPayload } from '../types/auth';
+import type {
+  AdminChallengeListResponse,
+  AdminChallengePayload,
+  AdminChallengeResponse,
+  ChallengeDetailResponse,
+  ChallengeListResponse,
+  ChallengeProgressResponse,
+  ChallengeSubmitResponse,
+  ChallengeProgressStatus,
+  ChallengeStatus,
+} from '../types/challenge';
 import type { Event as FrontendEvent, EventFormPayload } from '../types/event';
 import type {
   RewardIntegrationInstance,
@@ -493,6 +504,36 @@ export const rewardIntegrationAPI = {
   },
 };
 
+export const challengeAPI = {
+  list: async (): Promise<ChallengeListResponse> => {
+    return apiRequest('/challenges');
+  },
+
+  get: async (slug: string): Promise<ChallengeDetailResponse> => {
+    return apiRequest(`/challenges/${encodeURIComponent(slug)}`);
+  },
+
+  progress: async (slug: string): Promise<ChallengeProgressResponse> => {
+    return apiRequest(`/challenges/${encodeURIComponent(slug)}/progress`);
+  },
+
+  start: async (slug: string): Promise<ChallengeProgressResponse> => {
+    return apiRequest(`/challenges/${encodeURIComponent(slug)}/start`, {
+      method: 'POST',
+    });
+  },
+
+  submit: async (
+    slug: string,
+    payload: Record<string, unknown>
+  ): Promise<ChallengeSubmitResponse> => {
+    return apiRequest(`/challenges/${encodeURIComponent(slug)}/submit`, {
+      method: 'POST',
+      body: JSON.stringify({ payload }),
+    });
+  },
+};
+
 interface RewardIntegrationInstancesResponse {
   instances: RewardIntegrationInstance[];
 }
@@ -723,6 +764,69 @@ export const adminAPI = {
     return apiRequest(`/admin/reward-integrations/${instanceId}`, {
       method: 'DELETE',
     });
+  },
+
+  listChallenges: async (
+    status?: ChallengeStatus,
+    search = '',
+    page = 1,
+    limit = 25
+  ): Promise<AdminChallengeListResponse> => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      ...(status && { status }),
+      ...(search && { search }),
+    });
+    return apiRequest(`/admin/challenges?${params}`);
+  },
+
+  createChallenge: async (payload: AdminChallengePayload): Promise<AdminChallengeResponse> => {
+    return apiRequest('/admin/challenges', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateChallenge: async (
+    challengeId: string,
+    payload: Partial<AdminChallengePayload>
+  ): Promise<AdminChallengeResponse> => {
+    return apiRequest(`/admin/challenges/${challengeId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  publishChallenge: async (challengeId: string): Promise<AdminChallengeResponse> => {
+    return apiRequest(`/admin/challenges/${challengeId}/publish`, {
+      method: 'POST',
+    });
+  },
+
+  archiveChallenge: async (challengeId: string): Promise<AdminChallengeResponse> => {
+    return apiRequest(`/admin/challenges/${challengeId}/archive`, {
+      method: 'POST',
+    });
+  },
+
+  listChallengeProgress: async (
+    challengeId: string,
+    status?: ChallengeProgressStatus,
+    page = 1,
+    limit = 25
+  ): Promise<{
+    items: ChallengeProgressResponse['progress'][];
+    total: number;
+    page: number;
+    limit: number;
+  }> => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      ...(status && { status }),
+    });
+    return apiRequest(`/admin/challenges/${challengeId}/progress?${params}`);
   },
 };
 

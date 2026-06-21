@@ -96,6 +96,7 @@
 
 .dashboard-content,
 .users-content,
+.challenges-admin-content,
 .rewards-content,
 .queue-content {
   animation: fadeInUp 0.5s ease forwards;
@@ -281,7 +282,8 @@
 }
 
 .reward-form input,
-.reward-form textarea {
+.reward-form textarea,
+.reward-form select {
   width: 100%;
   background: var(--bg-primary);
   border: 2px solid rgba(var(--text-secondary-rgb), 0.18);
@@ -300,10 +302,48 @@
 }
 
 .reward-form input:focus,
-.reward-form textarea:focus {
+.reward-form textarea:focus,
+.reward-form select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
   outline: none;
+}
+
+.challenge-admin-two-col {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.challenge-admin-checkbox {
+  align-items: center;
+  display: flex !important;
+  gap: 10px !important;
+}
+
+.challenge-admin-checkbox input {
+  width: auto;
+}
+
+.challenge-admin-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.challenge-admin-actions select,
+.challenge-admin-actions button {
+  background: var(--bg-primary);
+  border: 2px solid rgba(var(--text-secondary-rgb), 0.18);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font: inherit;
+  padding: 10px 12px;
+}
+
+.challenge-admin-actions button {
+  cursor: pointer;
+  font-weight: 800;
 }
 
 .create-reward-instance-btn {
