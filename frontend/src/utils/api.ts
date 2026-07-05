@@ -6,6 +6,9 @@ import type {
   AdminChallengeListResponse,
   AdminChallengePayload,
   AdminChallengeResponse,
+  AdminChallengeReviewResponse,
+  AdminChallengeSubmissionsResponse,
+  ChallengeSubmissionStatus,
   ChallengeDetailResponse,
   ChallengeListResponse,
   ChallengeProgressResponse,
@@ -814,6 +817,42 @@ export const adminAPI = {
   deleteChallenge: async (challengeId: string): Promise<AdminChallengeDeleteResponse> => {
     return apiRequest(`/admin/challenges/${challengeId}`, {
       method: 'DELETE',
+    });
+  },
+
+  listChallengeSubmissions: async (
+    challengeId: string,
+    status?: ChallengeSubmissionStatus,
+    page = 1,
+    limit = 25
+  ): Promise<AdminChallengeSubmissionsResponse> => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      ...(status && { status }),
+    });
+    return apiRequest(`/admin/challenges/${challengeId}/submissions?${params}`);
+  },
+
+  approveChallengeSubmission: async (
+    challengeId: string,
+    submissionId: string,
+    message?: string
+  ): Promise<AdminChallengeReviewResponse> => {
+    return apiRequest(`/admin/challenges/${challengeId}/submissions/${submissionId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+  },
+
+  rejectChallengeSubmission: async (
+    challengeId: string,
+    submissionId: string,
+    message?: string
+  ): Promise<AdminChallengeReviewResponse> => {
+    return apiRequest(`/admin/challenges/${challengeId}/submissions/${submissionId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
     });
   },
 

@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import {
   ChallengeServiceError,
   archiveAdminChallenge,
+  approveAdminChallengeSubmission,
   createAdminChallenge,
   deleteAdminChallenge,
   getAdminChallenge,
@@ -10,21 +11,30 @@ import {
   listAdminChallengeSubmissions,
   listAdminChallenges,
   publishAdminChallenge,
+  rejectAdminChallengeSubmission,
   testAdminChallengeValidation,
   updateAdminChallenge,
 } from '../services/challengeService';
 import type { ChallengeStatus } from '../models/Challenge';
 import type { ChallengeProgressStatus } from '../models/ChallengeProgress';
+import type { ChallengeSubmissionStatus } from '../models/ChallengeSubmission';
 
 const getAdminUserId = (req: Request): string | null => req.user?.id || null;
 const challengeStatuses: ChallengeStatus[] = ['draft', 'published', 'archived'];
 const progressStatuses: ChallengeProgressStatus[] = [
   'not_started',
   'in_progress',
+  'pending_review',
   'completed',
   'reward_pending',
   'reward_sent',
   'reward_failed',
+];
+const submissionStatuses: ChallengeSubmissionStatus[] = [
+  'accepted',
+  'pending_review',
+  'rejected',
+  'error',
 ];
 
 const parseChallengeStatus = (value: unknown): ChallengeStatus | undefined => {
@@ -36,6 +46,13 @@ const parseChallengeStatus = (value: unknown): ChallengeStatus | undefined => {
 const parseProgressStatus = (value: unknown): ChallengeProgressStatus | undefined => {
   return typeof value === 'string' && progressStatuses.includes(value as ChallengeProgressStatus)
     ? (value as ChallengeProgressStatus)
+    : undefined;
+};
+
+const parseSubmissionStatus = (value: unknown): ChallengeSubmissionStatus | undefined => {
+  return typeof value === 'string' &&
+    submissionStatuses.includes(value as ChallengeSubmissionStatus)
+    ? (value as ChallengeSubmissionStatus)
     : undefined;
 };
 
@@ -174,10 +191,53 @@ export const listSubmissions = async (req: Request, res: Response): Promise<void
     const result = await listAdminChallengeSubmissions(req.params.challengeId, {
       page: Number(req.query.page),
       limit: Number(req.query.limit),
+      status: parseSubmissionStatus(req.query.status),
     });
     res.json(result);
   } catch (error: unknown) {
     res.status(getErrorStatus(error, 400)).json(getErrorBody(error, 'Unable to list submissions'));
+  }
+};
+
+export const approveSubmission = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const adminUserId = getAdminUserId(req);
+    if (!adminUserId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const result = await approveAdminChallengeSubmission(
+      req.params.challengeId,
+      req.params.submissionId,
+      adminUserId,
+      req.body?.message
+    );
+    res.json(result);
+  } catch (error: unknown) {
+    res
+      .status(getErrorStatus(error, 400))
+      .json(getErrorBody(error, 'Unable to approve submission'));
+  }
+};
+
+export const rejectSubmission = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const adminUserId = getAdminUserId(req);
+    if (!adminUserId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const result = await rejectAdminChallengeSubmission(
+      req.params.challengeId,
+      req.params.submissionId,
+      adminUserId,
+      req.body?.message
+    );
+    res.json(result);
+  } catch (error: unknown) {
+    res.status(getErrorStatus(error, 400)).json(getErrorBody(error, 'Unable to reject submission'));
   }
 };
 

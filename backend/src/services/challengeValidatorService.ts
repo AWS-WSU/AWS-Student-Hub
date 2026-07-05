@@ -10,8 +10,11 @@ export interface ChallengeValidatorContext {
   progress: IChallengeProgressDocument;
 }
 
+export type ChallengeValidationOutcome = 'accepted' | 'pending_review' | 'rejected';
+
 export interface ChallengeValidationResult {
   accepted: boolean;
+  outcome?: ChallengeValidationOutcome;
   message: string;
   publicDetails?: Record<string, unknown>;
   privateDetails?: Record<string, unknown>;
@@ -50,6 +53,33 @@ interface AwsSecretSubmissionPayload {
   value?: string;
 }
 
+interface StaticSecretValidationConfig {
+  type: 'static_secret';
+  expectedValue?: string;
+  expectedValueHash?: string;
+  hashAlgorithm?: 'sha256';
+  trimSubmission?: boolean;
+  caseSensitive?: boolean;
+  acceptedPrefixes?: string[];
+}
+
+interface ManualReviewValidationConfig {
+  type: 'manual_review';
+  minLength?: number;
+  maxLength?: number;
+  submittedMessage?: string;
+}
+
+interface GenericProofSubmissionPayload {
+  secret?: string;
+  answer?: string;
+  value?: string;
+  proof?: string;
+  text?: string;
+  link?: string;
+  url?: string;
+}
+
 const validators = new Map<string, ChallengeValidator>();
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
@@ -63,6 +93,16 @@ const cleanString = (value: unknown): string => {
 const normalizeStringArray = (value: unknown): string[] | undefined => {
   if (!Array.isArray(value)) return undefined;
   return value.map(cleanString).filter(Boolean);
+};
+
+const normalizeBoolean = (value: unknown): boolean | undefined => {
+  return typeof value === 'boolean' ? value : undefined;
+};
+
+const normalizePositiveInteger = (value: unknown): number | undefined => {
+  if (value === null || value === undefined || value === '') return undefined;
+  const numberValue = Number(value);
+  return Number.isInteger(numberValue) && numberValue > 0 ? numberValue : undefined;
 };
 
 const normalizeAwsSecretConfig = (config: Record<string, unknown>): AwsSecretValidationConfig => {
@@ -102,7 +142,72 @@ const normalizeAwsSecretPayload = (payload: unknown): AwsSecretSubmissionPayload
   };
 };
 
-const normalizeSecret = (secret: string, config: AwsSecretValidationConfig): string => {
+const normalizeStaticSecretConfig = (
+  config: Record<string, unknown>
+): StaticSecretValidationConfig => {
+  if (config.type !== 'static_secret') {
+    throw new ChallengeValidatorError('Invalid static secret validator config type.');
+  }
+
+  const expectedValue = cleanString(config.expectedValue) || undefined;
+  const expectedValueHash = cleanString(config.expectedValueHash) || undefined;
+
+  if (!expectedValue && !expectedValueHash) {
+    throw new ChallengeValidatorError(
+      'Static secret validation requires expectedValue or expectedValueHash.'
+    );
+  }
+
+  return {
+    type: 'static_secret',
+    expectedValue,
+    expectedValueHash,
+    hashAlgorithm: 'sha256',
+    trimSubmission: normalizeBoolean(config.trimSubmission),
+    caseSensitive: normalizeBoolean(config.caseSensitive),
+    acceptedPrefixes: normalizeStringArray(config.acceptedPrefixes),
+  };
+};
+
+const normalizeManualReviewConfig = (
+  config: Record<string, unknown>
+): ManualReviewValidationConfig => {
+  if (config.type !== 'manual_review') {
+    throw new ChallengeValidatorError('Invalid manual review validator config type.');
+  }
+
+  const minLength = normalizePositiveInteger(config.minLength);
+  const maxLength = normalizePositiveInteger(config.maxLength);
+
+  if (minLength && maxLength && minLength > maxLength) {
+    throw new ChallengeValidatorError('Manual review minLength cannot exceed maxLength.');
+  }
+
+  return {
+    type: 'manual_review',
+    minLength,
+    maxLength,
+    submittedMessage: cleanString(config.submittedMessage) || undefined,
+  };
+};
+
+const normalizeGenericProofPayload = (payload: unknown): GenericProofSubmissionPayload => {
+  if (!isRecord(payload)) return {};
+  return {
+    secret: cleanString(payload.secret) || undefined,
+    answer: cleanString(payload.answer) || undefined,
+    value: cleanString(payload.value) || undefined,
+    proof: cleanString(payload.proof) || undefined,
+    text: cleanString(payload.text) || undefined,
+    link: cleanString(payload.link) || undefined,
+    url: cleanString(payload.url) || undefined,
+  };
+};
+
+const normalizeSecret = (
+  secret: string,
+  config: AwsSecretValidationConfig | StaticSecretValidationConfig
+): string => {
   const trimSubmission = config.trimSubmission !== false;
   const caseSensitive = config.caseSensitive !== false;
   const trimmed = trimSubmission ? secret.trim() : secret;
@@ -114,10 +219,12 @@ const hashSecret = (secret: string): string => {
 };
 
 const extractSubmittedSecret = (
-  payload: AwsSecretSubmissionPayload,
-  config: AwsSecretValidationConfig
+  payload: AwsSecretSubmissionPayload | GenericProofSubmissionPayload,
+  config: AwsSecretValidationConfig | StaticSecretValidationConfig
 ): string => {
-  const rawSecret = cleanString(payload.secret || payload.answer || payload.value);
+  const proof = 'proof' in payload ? payload.proof : undefined;
+  const text = 'text' in payload ? payload.text : undefined;
+  const rawSecret = cleanString(payload.secret || payload.answer || payload.value || proof || text);
   if (!rawSecret) return '';
 
   const acceptedPrefixes = config.acceptedPrefixes || ['next_password='];
@@ -128,6 +235,16 @@ const extractSubmittedSecret = (
   }
 
   return rawSecret;
+};
+
+const extractManualReviewProof = (payload: GenericProofSubmissionPayload): string => {
+  return cleanString(
+    payload.proof || payload.text || payload.answer || payload.value || payload.secret
+  );
+};
+
+const buildStaticSecretHash = (secret: string, config: StaticSecretValidationConfig): string => {
+  return hashSecret(normalizeSecret(secret, config));
 };
 
 const getExpectedSecret = async (
@@ -201,6 +318,112 @@ const awsSecretValidator: ChallengeValidator = {
   },
 };
 
+const staticSecretValidator: ChallengeValidator = {
+  type: 'static_secret',
+
+  async validate(rawConfig, rawPayload) {
+    const config = normalizeStaticSecretConfig(rawConfig);
+    const payload = normalizeGenericProofPayload(rawPayload);
+    const submittedSecret = extractSubmittedSecret(payload, config);
+    if (!submittedSecret) {
+      return {
+        accepted: false,
+        outcome: 'rejected',
+        message: 'Secret value is required.',
+      };
+    }
+
+    const expectedHash =
+      config.expectedValueHash || buildStaticSecretHash(config.expectedValue || '', config);
+    const submittedHash = buildStaticSecretHash(submittedSecret, config);
+    const accepted = submittedHash === expectedHash;
+
+    return {
+      accepted,
+      outcome: accepted ? 'accepted' : 'rejected',
+      message: accepted ? 'Challenge secret accepted.' : 'Challenge secret did not match.',
+      privateDetails: {
+        mode: 'static_secret',
+        hashAlgorithm: config.hashAlgorithm || 'sha256',
+      },
+    };
+  },
+
+  sanitizePayload(payload) {
+    const normalizedPayload = normalizeGenericProofPayload(payload);
+    return {
+      submitted: Boolean(
+        normalizedPayload.secret ||
+        normalizedPayload.answer ||
+        normalizedPayload.value ||
+        normalizedPayload.proof ||
+        normalizedPayload.text
+      ),
+      secret: '[redacted]',
+    };
+  },
+};
+
+const manualReviewValidator: ChallengeValidator = {
+  type: 'manual_review',
+
+  async validate(rawConfig, rawPayload) {
+    const config = normalizeManualReviewConfig(rawConfig);
+    const payload = normalizeGenericProofPayload(rawPayload);
+    const proof = extractManualReviewProof(payload);
+    const link = cleanString(payload.link || payload.url);
+
+    if (!proof && !link) {
+      return {
+        accepted: false,
+        outcome: 'rejected',
+        message: 'Submission proof is required.',
+      };
+    }
+
+    if (config.minLength && proof.length > 0 && proof.length < config.minLength) {
+      return {
+        accepted: false,
+        outcome: 'rejected',
+        message: `Submission proof must be at least ${config.minLength} characters.`,
+      };
+    }
+
+    if (config.maxLength && proof.length > config.maxLength) {
+      return {
+        accepted: false,
+        outcome: 'rejected',
+        message: `Submission proof must be ${config.maxLength} characters or fewer.`,
+      };
+    }
+
+    return {
+      accepted: true,
+      outcome: 'pending_review',
+      message: config.submittedMessage || 'Submission received for review.',
+      publicDetails: {
+        reviewRequired: true,
+      },
+      privateDetails: {
+        hasProof: Boolean(proof),
+        hasLink: Boolean(link),
+      },
+    };
+  },
+
+  sanitizePayload(payload) {
+    const normalizedPayload = normalizeGenericProofPayload(payload);
+    const proof = extractManualReviewProof(normalizedPayload);
+    const link = cleanString(normalizedPayload.link || normalizedPayload.url);
+
+    return {
+      submitted: Boolean(proof || link),
+      proofPreview: proof ? proof.slice(0, 500) : undefined,
+      link: link ? link.slice(0, 300) : undefined,
+    };
+  },
+};
+
 export const registerChallengeValidator = (validator: ChallengeValidator): void => {
   validators.set(validator.type, validator);
 };
@@ -254,4 +477,51 @@ export const sanitizeChallengeSubmissionPayload = (
   );
 };
 
+export const prepareChallengeValidationConfigForStorage = (
+  config: Record<string, unknown>
+): Record<string, unknown> => {
+  const type = cleanString(config.type);
+  if (!type) {
+    throw new ChallengeValidatorError('Challenge validation type is missing.');
+  }
+
+  if (type === 'static_secret') {
+    const normalizedConfig = normalizeStaticSecretConfig({ ...config, type });
+    const expectedValueHash =
+      normalizedConfig.expectedValueHash ||
+      buildStaticSecretHash(normalizedConfig.expectedValue || '', normalizedConfig);
+
+    return {
+      type,
+      expectedValueHash,
+      hashAlgorithm: 'sha256',
+      trimSubmission: normalizedConfig.trimSubmission,
+      caseSensitive: normalizedConfig.caseSensitive,
+      acceptedPrefixes: normalizedConfig.acceptedPrefixes,
+    };
+  }
+
+  if (type === 'manual_review') {
+    const normalizedConfig = normalizeManualReviewConfig({ ...config, type });
+    return {
+      type,
+      minLength: normalizedConfig.minLength,
+      maxLength: normalizedConfig.maxLength,
+      submittedMessage: normalizedConfig.submittedMessage,
+    };
+  }
+
+  if (type === 'aws_secret') {
+    return { ...normalizeAwsSecretConfig({ ...config, type }) };
+  }
+
+  getChallengeValidator(type);
+  return {
+    ...config,
+    type,
+  };
+};
+
 registerChallengeValidator(awsSecretValidator);
+registerChallengeValidator(staticSecretValidator);
+registerChallengeValidator(manualReviewValidator);

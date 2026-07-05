@@ -38,6 +38,16 @@ router.get(
   requireAdmin,
   challengeAdminController.listSubmissions
 );
+router.post(
+  '/challenges/:challengeId/submissions/:submissionId/approve',
+  requireAdmin,
+  challengeAdminController.approveSubmission
+);
+router.post(
+  '/challenges/:challengeId/submissions/:submissionId/reject',
+  requireAdmin,
+  challengeAdminController.rejectSubmission
+);
 router.get(
   '/challenges/:challengeId/progress',
   requireAdmin,

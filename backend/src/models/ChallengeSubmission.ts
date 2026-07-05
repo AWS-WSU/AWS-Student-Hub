@@ -1,6 +1,6 @@
 import mongoose, { HydratedDocument, Model, Schema, Types } from 'mongoose';
 
-export type ChallengeSubmissionStatus = 'accepted' | 'rejected' | 'error';
+export type ChallengeSubmissionStatus = 'accepted' | 'pending_review' | 'rejected' | 'error';
 
 export interface IChallengeSubmission {
   userId: Types.ObjectId;
@@ -52,7 +52,7 @@ const challengeSubmissionSchema = new Schema<IChallengeSubmission, ChallengeSubm
     },
     status: {
       type: String,
-      enum: ['accepted', 'rejected', 'error'],
+      enum: ['accepted', 'pending_review', 'rejected', 'error'],
       required: true,
       index: true,
     },

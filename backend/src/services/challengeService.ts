@@ -12,8 +12,11 @@ import ChallengeProgress, {
   ChallengeProgressStatus,
   IChallengeProgressDocument,
 } from '../models/ChallengeProgress';
-import ChallengeSubmission, { IChallengeSubmissionDocument } from '../models/ChallengeSubmission';
-import User from '../models/User';
+import ChallengeSubmission, {
+  ChallengeSubmissionStatus,
+  IChallengeSubmissionDocument,
+} from '../models/ChallengeSubmission';
+import User, { IUserDocument } from '../models/User';
 import {
   buildChallengeCompletionEvent,
   grantChallengeCompletionReward,
@@ -22,6 +25,7 @@ import {
 } from './challengeRewardService';
 import {
   ChallengeValidatorError,
+  prepareChallengeValidationConfigForStorage,
   sanitizeChallengeSubmissionPayload,
   validateChallengeSubmission,
 } from './challengeValidatorService';
@@ -35,6 +39,8 @@ export type ChallengeErrorCode =
   | 'VALIDATION_FAILED'
   | 'VALIDATOR_ERROR'
   | 'CHALLENGE_DELETE_BLOCKED'
+  | 'SUBMISSION_NOT_FOUND'
+  | 'SUBMISSION_NOT_REVIEWABLE'
   | 'INVALID_CHALLENGE_INPUT';
 
 export class ChallengeServiceError extends Error {
@@ -86,6 +92,13 @@ interface ChallengeSubmitResult {
   accepted: boolean;
   completed: boolean;
   message: string;
+  progress: ReturnType<typeof toProgressDto>;
+  reward?: RewardGrantResult;
+}
+
+interface ChallengeReviewResult {
+  message: string;
+  submission: ReturnType<typeof toSubmissionDto>;
   progress: ReturnType<typeof toProgressDto>;
   reward?: RewardGrantResult;
 }
@@ -199,10 +212,17 @@ const normalizeValidation = (
     );
   }
 
-  return {
-    ...validation,
-    type,
-  };
+  try {
+    return prepareChallengeValidationConfigForStorage({
+      ...validation,
+      type,
+    });
+  } catch (error: unknown) {
+    if (error instanceof ChallengeValidatorError) {
+      throw new ChallengeServiceError(error.message, 'INVALID_CHALLENGE_INPUT', 400);
+    }
+    throw error;
+  }
 };
 
 const normalizeReward = (reward: unknown): IChallengeRewardConfig => {
@@ -327,6 +347,7 @@ const toPublicChallengeDto = (
   estimatedMinutes: challenge.estimatedMinutes,
   tags: challenge.tags,
   version: challenge.version,
+  validationType: getValidatorType(challenge),
   startsAt: challenge.startsAt,
   endsAt: challenge.endsAt,
   reward: toRewardPreview(challenge.reward),
@@ -443,6 +464,35 @@ const normalizePagination = (page?: number, limit?: number) => {
     limit: normalizedLimit,
     skip: (normalizedPage - 1) * normalizedLimit,
   };
+};
+
+const completeChallengeProgress = async (
+  challenge: IChallengeDocument,
+  user: IUserDocument,
+  progress: IChallengeProgressDocument
+): Promise<RewardGrantResult> => {
+  const completedAt = new Date();
+  progress.status = challenge.reward?.enabled ? 'reward_pending' : 'completed';
+  progress.completedAt = progress.completedAt || completedAt;
+  progress.completionEventId =
+    progress.completionEventId || `challenge-completed:${String(user._id)}:${challenge.key}`;
+  await progress.save();
+
+  const event = buildChallengeCompletionEvent(user, challenge, progress);
+  const reward = await grantChallengeCompletionReward(event, user);
+
+  if (reward.status === 'sent' || reward.status === 'already_sent') {
+    progress.status = 'reward_sent';
+    progress.rewardEmissionId = reward.emissionId ? new Types.ObjectId(reward.emissionId) : null;
+  } else if (reward.status === 'failed') {
+    progress.status = 'reward_failed';
+    progress.rewardEmissionId = reward.emissionId ? new Types.ObjectId(reward.emissionId) : null;
+  } else {
+    progress.status = 'completed';
+  }
+
+  await progress.save();
+  return reward;
 };
 
 export const listPublishedChallenges = async (
@@ -625,8 +675,40 @@ export const submitChallenge = async (
   }
 
   progress.lastValidationMessage = validationResult.message;
+  const validationOutcome =
+    validationResult.outcome || (validationResult.accepted ? 'accepted' : 'rejected');
 
-  if (!validationResult.accepted) {
+  if (validationOutcome === 'pending_review') {
+    progress.status = 'pending_review';
+    await progress.save();
+
+    await ChallengeSubmission.create({
+      userId: new Types.ObjectId(userId),
+      challengeId: challenge._id,
+      progressId: progress._id,
+      challengeKey: challenge.key,
+      validatorType: getValidatorType(challenge),
+      status: 'pending_review',
+      submittedPayloadPreview: sanitizeChallengeSubmissionPayload(challenge.validation, payload),
+      validationResult: {
+        accepted: true,
+        outcome: 'pending_review',
+        publicDetails: validationResult.publicDetails,
+        privateDetails: validationResult.privateDetails,
+      },
+      message: validationResult.message,
+    });
+
+    return {
+      accepted: true,
+      completed: false,
+      message: validationResult.message,
+      progress: toProgressDto(progress),
+      reward: { status: 'not_required' },
+    };
+  }
+
+  if (!validationResult.accepted || validationOutcome === 'rejected') {
     await progress.save();
     await ChallengeSubmission.create({
       userId: new Types.ObjectId(userId),
@@ -653,13 +735,6 @@ export const submitChallenge = async (
     };
   }
 
-  const completedAt = new Date();
-  progress.status = challenge.reward?.enabled ? 'reward_pending' : 'completed';
-  progress.completedAt = progress.completedAt || completedAt;
-  progress.completionEventId =
-    progress.completionEventId || `challenge-completed:${userId}:${challenge.key}`;
-  await progress.save();
-
   await ChallengeSubmission.create({
     userId: new Types.ObjectId(userId),
     challengeId: challenge._id,
@@ -676,20 +751,7 @@ export const submitChallenge = async (
     message: validationResult.message,
   });
 
-  const event = buildChallengeCompletionEvent(user, challenge, progress);
-  const reward = await grantChallengeCompletionReward(event, user);
-
-  if (reward.status === 'sent' || reward.status === 'already_sent') {
-    progress.status = 'reward_sent';
-    progress.rewardEmissionId = reward.emissionId ? new Types.ObjectId(reward.emissionId) : null;
-  } else if (reward.status === 'failed') {
-    progress.status = 'reward_failed';
-    progress.rewardEmissionId = reward.emissionId ? new Types.ObjectId(reward.emissionId) : null;
-  } else {
-    progress.status = 'completed';
-  }
-
-  await progress.save();
+  const reward = await completeChallengeProgress(challenge, user, progress);
 
   return {
     accepted: true,
@@ -907,11 +969,13 @@ export const deleteAdminChallenge = async (
 
 export const listAdminChallengeSubmissions = async (
   challengeId: string,
-  options: { page?: number; limit?: number } = {}
+  options: { page?: number; limit?: number; status?: ChallengeSubmissionStatus } = {}
 ): Promise<ListResult<ReturnType<typeof toSubmissionDto>>> => {
   const challenge = await ensureChallengeById(challengeId);
   const { page, limit, skip } = normalizePagination(options.page, options.limit);
-  const query = { challengeId: challenge._id };
+  const query: Record<string, unknown> = { challengeId: challenge._id };
+
+  if (options.status) query.status = options.status;
 
   const [items, total] = await Promise.all([
     ChallengeSubmission.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
@@ -923,6 +987,125 @@ export const listAdminChallengeSubmissions = async (
     total,
     page,
     limit,
+  };
+};
+
+const ensureReviewableSubmission = async (
+  challengeId: string,
+  submissionId: string
+): Promise<{
+  challenge: IChallengeDocument;
+  submission: IChallengeSubmissionDocument;
+}> => {
+  const challenge = await ensureChallengeById(challengeId);
+  if (!Types.ObjectId.isValid(submissionId)) {
+    throw new ChallengeServiceError('Submission not found.', 'SUBMISSION_NOT_FOUND', 404);
+  }
+
+  const submission = await ChallengeSubmission.findOne({
+    _id: new Types.ObjectId(submissionId),
+    challengeId: challenge._id,
+  });
+
+  if (!submission) {
+    throw new ChallengeServiceError('Submission not found.', 'SUBMISSION_NOT_FOUND', 404);
+  }
+
+  if (submission.status !== 'pending_review') {
+    throw new ChallengeServiceError(
+      'Only pending manual-review submissions can be reviewed.',
+      'SUBMISSION_NOT_REVIEWABLE',
+      409,
+      { status: submission.status }
+    );
+  }
+
+  return { challenge, submission };
+};
+
+export const approveAdminChallengeSubmission = async (
+  challengeId: string,
+  submissionId: string,
+  adminUserId: string,
+  reviewMessage?: string
+): Promise<ChallengeReviewResult> => {
+  const { challenge, submission } = await ensureReviewableSubmission(challengeId, submissionId);
+  const [progress, submittedUser] = await Promise.all([
+    ChallengeProgress.findById(submission.progressId),
+    User.findById(submission.userId),
+  ]);
+
+  if (!progress || !submittedUser) {
+    throw new ChallengeServiceError(
+      'Submission progress or user record was not found.',
+      'SUBMISSION_NOT_FOUND',
+      404
+    );
+  }
+
+  const message = cleanString(reviewMessage) || 'Manual review approved.';
+  submission.status = 'accepted';
+  submission.message = message;
+  submission.validationResult = {
+    ...submission.validationResult,
+    accepted: true,
+    outcome: 'accepted',
+    reviewedAt: new Date(),
+    reviewedBy: adminUserId,
+    reviewMessage: message,
+  };
+  await submission.save();
+
+  progress.lastValidationMessage = message;
+  const reward = await completeChallengeProgress(challenge, submittedUser, progress);
+
+  return {
+    message,
+    submission: toSubmissionDto(submission),
+    progress: toProgressDto(progress),
+    reward,
+  };
+};
+
+export const rejectAdminChallengeSubmission = async (
+  challengeId: string,
+  submissionId: string,
+  adminUserId: string,
+  reviewMessage?: string
+): Promise<ChallengeReviewResult> => {
+  const { submission } = await ensureReviewableSubmission(challengeId, submissionId);
+  const progress = await ChallengeProgress.findById(submission.progressId);
+
+  if (!progress) {
+    throw new ChallengeServiceError(
+      'Submission progress record was not found.',
+      'SUBMISSION_NOT_FOUND',
+      404
+    );
+  }
+
+  const message = cleanString(reviewMessage) || 'Manual review rejected.';
+  submission.status = 'rejected';
+  submission.message = message;
+  submission.validationResult = {
+    ...submission.validationResult,
+    accepted: false,
+    outcome: 'rejected',
+    reviewedAt: new Date(),
+    reviewedBy: adminUserId,
+    reviewMessage: message,
+  };
+  await submission.save();
+
+  progress.status = 'in_progress';
+  progress.lastValidationMessage = message;
+  await progress.save();
+
+  return {
+    message,
+    submission: toSubmissionDto(submission),
+    progress: toProgressDto(progress),
+    reward: { status: 'not_required' },
   };
 };
 

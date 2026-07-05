@@ -301,6 +301,25 @@
   resize: vertical;
 }
 
+.challenge-validation-templates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.challenge-validation-templates button {
+  background: rgba(var(--accent-rgb), 0.1);
+  border: 1px solid rgba(var(--accent-rgb), 0.22);
+  border-radius: 999px;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  padding: 7px 10px;
+  text-transform: uppercase;
+}
+
 .reward-form input:focus,
 .reward-form textarea:focus,
 .reward-form select:focus {
@@ -405,6 +424,35 @@
   color: var(--text-primary);
   font-size: 1.18rem;
   margin: 0 0 8px;
+}
+
+.challenge-review-panel {
+  grid-column: 1 / -1;
+}
+
+.challenge-review-list {
+  display: grid;
+  gap: 14px;
+}
+
+.challenge-review-card {
+  background: var(--bg-primary);
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.12);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.challenge-review-card pre {
+  background: rgba(var(--text-secondary-rgb), 0.06);
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.1);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-family: var(--font-family-mono, monospace);
+  line-height: 1.55;
+  margin: 12px 0;
+  overflow-x: auto;
+  padding: 14px;
+  white-space: pre-wrap;
 }
 
 .reward-instance-meta {

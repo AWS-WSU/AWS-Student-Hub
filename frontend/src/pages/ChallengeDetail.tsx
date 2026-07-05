@@ -1,7 +1,16 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ArrowLeft, CheckCircle2, Link2, Lock, Send, ShieldCheck, Trophy } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Clock3,
+  Link2,
+  Lock,
+  Send,
+  ShieldCheck,
+  Trophy,
+} from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { challengeAPI } from '../utils/api';
@@ -21,6 +30,7 @@ type RewardBurstStyle = CSSProperties & { '--burst-index': number };
 const getStatusCopy = (progress?: ChallengeProgress | null): string => {
   if (!progress || progress.status === 'not_started') return 'Not started';
   if (progress.status === 'in_progress') return 'In progress';
+  if (progress.status === 'pending_review') return 'Pending review';
   if (progress.status === 'reward_pending') return 'Reward pending';
   if (progress.status === 'reward_sent') return 'Completed and rewarded';
   if (progress.status === 'reward_failed') return 'Completed, reward failed';
@@ -97,6 +107,7 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
   }, [slug]);
 
   const isCompleted = completedStatuses.has(progress?.status || '');
+  const isManualReview = challenge?.validationType === 'manual_review';
   const rewardLocked = Boolean(
     user && challenge?.reward.enabled && rewardLink && !rewardLink.linked
   );
@@ -125,7 +136,11 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!secret.trim()) {
-      setError('Enter the challenge secret before submitting.');
+      setError(
+        isManualReview
+          ? 'Enter proof before submitting.'
+          : 'Enter the challenge secret before submitting.'
+      );
       return;
     }
 
@@ -134,7 +149,10 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
     setSuccess('');
 
     try {
-      const response = await challengeAPI.submit(slug, { secret });
+      const response = await challengeAPI.submit(
+        slug,
+        isManualReview ? { proof: secret } : { secret }
+      );
       setProgress(response.progress);
       setSuccess(response.message);
       if (response.accepted && response.completed) {
@@ -276,17 +294,35 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
                 )}
                 {progress.lastValidationMessage && <small>{progress.lastValidationMessage}</small>}
               </div>
+            ) : progress.status === 'pending_review' ? (
+              <div className="challenge-submit-state pending">
+                <Clock3 size={24} aria-hidden="true" />
+                <p>Submitted for manual review</p>
+                <small>
+                  {progress.lastValidationMessage ||
+                    'An admin will review this submission before rewards are granted.'}
+                </small>
+              </div>
             ) : (
               <form onSubmit={handleSubmit} className="challenge-submit-form">
                 <label>
-                  Challenge secret
-                  <input
-                    type="text"
-                    value={secret}
-                    onChange={(event) => setSecret(event.target.value)}
-                    placeholder="Paste the secret value"
-                    disabled={submitting || rewardLocked}
-                  />
+                  {isManualReview ? 'Submission proof' : 'Challenge secret'}
+                  {isManualReview ? (
+                    <textarea
+                      value={secret}
+                      onChange={(event) => setSecret(event.target.value)}
+                      placeholder="Describe your work or paste a proof link"
+                      disabled={submitting || rewardLocked}
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={secret}
+                      onChange={(event) => setSecret(event.target.value)}
+                      placeholder="Paste the secret value"
+                      disabled={submitting || rewardLocked}
+                    />
+                  )}
                 </label>
                 <button type="submit" disabled={submitting || rewardLocked}>
                   <Send size={16} aria-hidden="true" />

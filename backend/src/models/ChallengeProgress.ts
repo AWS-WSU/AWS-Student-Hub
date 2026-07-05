@@ -3,6 +3,7 @@ import mongoose, { HydratedDocument, Model, Schema, Types } from 'mongoose';
 export type ChallengeProgressStatus =
   | 'not_started'
   | 'in_progress'
+  | 'pending_review'
   | 'completed'
   | 'reward_pending'
   | 'reward_sent'
@@ -58,6 +59,7 @@ const challengeProgressSchema = new Schema<IChallengeProgress, ChallengeProgress
       enum: [
         'not_started',
         'in_progress',
+        'pending_review',
         'completed',
         'reward_pending',
         'reward_sent',

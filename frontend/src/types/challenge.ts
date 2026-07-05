@@ -4,11 +4,14 @@ export type ChallengeDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
 export type ChallengeProgressStatus =
   | 'not_started'
   | 'in_progress'
+  | 'pending_review'
   | 'completed'
   | 'reward_pending'
   | 'reward_sent'
   | 'reward_failed';
 export type ChallengeXpMode = 'none' | 'classroom' | 'custom';
+export type ChallengeValidationType = 'aws_secret' | 'static_secret' | 'manual_review' | string;
+export type ChallengeSubmissionStatus = 'accepted' | 'pending_review' | 'rejected' | 'error';
 
 export interface ChallengeRewardPreview {
   enabled: boolean;
@@ -60,6 +63,7 @@ export interface ChallengeListItem {
   estimatedMinutes?: number;
   tags: string[];
   version: number;
+  validationType?: ChallengeValidationType;
   startsAt?: string | null;
   endsAt?: string | null;
   reward: ChallengeRewardPreview;
@@ -122,6 +126,39 @@ export interface AdminChallengeListResponse {
   total: number;
   page: number;
   limit: number;
+}
+
+export interface AdminChallengeSubmission {
+  id: string;
+  userId: string;
+  challengeId: string;
+  progressId: string;
+  challengeKey: string;
+  validatorType: ChallengeValidationType;
+  status: ChallengeSubmissionStatus;
+  submittedPayloadPreview: Record<string, unknown>;
+  validationResult: Record<string, unknown>;
+  message?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AdminChallengeSubmissionsResponse {
+  items: AdminChallengeSubmission[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface AdminChallengeReviewResponse {
+  message: string;
+  submission: AdminChallengeSubmission;
+  progress: ChallengeProgress;
+  reward?: {
+    status: 'not_required' | 'sent' | 'already_sent' | 'failed';
+    emissionId?: string;
+    message?: string;
+  };
 }
 
 export interface AdminChallengePayload {

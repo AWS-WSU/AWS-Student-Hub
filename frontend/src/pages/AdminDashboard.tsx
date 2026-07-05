@@ -9,9 +9,11 @@ import type { AdminStats, AdminUser, EmailQueueEntry } from '../types/admin';
 import type {
   AdminChallenge,
   AdminChallengePayload,
+  AdminChallengeSubmission,
   ChallengeDifficulty,
   ChallengeKind,
   ChallengeStatus,
+  ChallengeValidationType,
 } from '../types/challenge';
 import type {
   RewardIntegrationInstance,
@@ -60,6 +62,8 @@ interface ChallengeFormData {
   rewardBits: string;
   rewardXpAmount: string;
 }
+
+type ChallengeValidationTemplate = 'aws_secret' | 'static_secret' | 'manual_review';
 
 interface DashboardStats extends AdminStats {
   newsletterSubscribers?: number;
@@ -133,6 +137,18 @@ const getUserId = (targetUser?: AdminUser | null): string =>
 
 const getQueueEntryId = (entry?: DashboardQueueEntry | null): string =>
   String(entry?._id || entry?.id || '');
+
+const getChallengeValidationType = (challenge: AdminChallenge): ChallengeValidationType =>
+  challenge.validationType || String(challenge.validation?.type || '');
+
+const formatSubmissionPreview = (submission: AdminChallengeSubmission): string => {
+  const preview = submission.submittedPayloadPreview || {};
+  const values = Object.entries(preview)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`);
+
+  return values.length ? values.join('\n') : 'No preview available.';
+};
 
 const DashBoardIcon = ({ className }: IconProps) => (
   <img
@@ -238,6 +254,12 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   const [challengeStatusFilter, setChallengeStatusFilter] = useState<ChallengeStatus | ''>('');
   const [updatingChallengeId, setUpdatingChallengeId] = useState<string | null>(null);
   const [challengeToDelete, setChallengeToDelete] = useState<AdminChallenge | null>(null);
+  const [reviewChallenge, setReviewChallenge] = useState<AdminChallenge | null>(null);
+  const [manualReviewSubmissions, setManualReviewSubmissions] = useState<
+    AdminChallengeSubmission[]
+  >([]);
+  const [reviewLoading, setReviewLoading] = useState<boolean>(false);
+  const [reviewingSubmissionId, setReviewingSubmissionId] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -491,6 +513,33 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
     }));
   };
 
+  const applyChallengeValidationTemplate = (template: ChallengeValidationTemplate) => {
+    const templates: Record<ChallengeValidationTemplate, Record<string, unknown>> = {
+      aws_secret: {
+        type: 'aws_secret',
+        source: 'user_next_challenge_password',
+        acceptedPrefixes: ['next_password='],
+      },
+      static_secret: {
+        type: 'static_secret',
+        expectedValue: 'replace-with-secret-answer',
+        trimSubmission: true,
+        caseSensitive: true,
+      },
+      manual_review: {
+        type: 'manual_review',
+        minLength: 20,
+        maxLength: 2000,
+        submittedMessage: 'Submission received for review.',
+      },
+    };
+
+    setChallengeForm((prev) => ({
+      ...prev,
+      validationJson: JSON.stringify(templates[template], null, 2),
+    }));
+  };
+
   const buildChallengePayload = (): AdminChallengePayload => {
     const validation = JSON.parse(challengeForm.validationJson) as Record<string, unknown>;
     return {
@@ -594,6 +643,50 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       showToast(getErrorMessage(err, 'Failed to delete challenge'), 'error');
     } finally {
       setUpdatingChallengeId(null);
+    }
+  };
+
+  const loadManualReviewSubmissions = async (challenge: AdminChallenge) => {
+    setReviewChallenge(challenge);
+    setReviewLoading(true);
+    try {
+      const response = await adminAPI.listChallengeSubmissions(
+        challenge.id,
+        'pending_review',
+        1,
+        50
+      );
+      setManualReviewSubmissions(response.items || []);
+      showToast(`Loaded ${response.items?.length || 0} pending submissions`, 'success');
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to load manual review submissions'), 'error');
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  const handleManualReviewDecision = async (
+    submission: AdminChallengeSubmission,
+    decision: 'approve' | 'reject'
+  ) => {
+    if (!reviewChallenge) return;
+
+    setReviewingSubmissionId(submission.id);
+    try {
+      if (decision === 'approve') {
+        await adminAPI.approveChallengeSubmission(reviewChallenge.id, submission.id);
+        showToast('Submission approved', 'success');
+      } else {
+        await adminAPI.rejectChallengeSubmission(reviewChallenge.id, submission.id);
+        showToast('Submission rejected', 'success');
+      }
+
+      await loadManualReviewSubmissions(reviewChallenge);
+      loadAdminChallenges();
+    } catch (err) {
+      showToast(getErrorMessage(err, `Failed to ${decision} submission`), 'error');
+    } finally {
+      setReviewingSubmissionId(null);
     }
   };
 
@@ -1117,6 +1210,26 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
 
                   <label>
                     Validation JSON
+                    <div className="challenge-validation-templates">
+                      <button
+                        type="button"
+                        onClick={() => applyChallengeValidationTemplate('aws_secret')}
+                      >
+                        AWS secret
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyChallengeValidationTemplate('static_secret')}
+                      >
+                        Static secret
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyChallengeValidationTemplate('manual_review')}
+                      >
+                        Manual review
+                      </button>
+                    </div>
                     <textarea
                       value={challengeForm.validationJson}
                       onChange={(e) => handleChallengeFieldChange('validationJson', e.target.value)}
@@ -1204,7 +1317,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                           <span data-active={challenge.status === 'published'}>
                             {challenge.status}
                           </span>
-                          <span>{challenge.validation?.type as string}</span>
+                          <span>{getChallengeValidationType(challenge)}</span>
                         </div>
                         <h3>{challenge.title}</h3>
                         <p>{challenge.summary}</p>
@@ -1231,6 +1344,16 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                         </div>
 
                         <div className="reward-instance-actions">
+                          {getChallengeValidationType(challenge) === 'manual_review' && (
+                            <button
+                              type="button"
+                              className="action-btn role-btn"
+                              onClick={() => loadManualReviewSubmissions(challenge)}
+                              disabled={reviewLoading}
+                            >
+                              Review
+                            </button>
+                          )}
                           {challenge.status !== 'published' && (
                             <button
                               type="button"
@@ -1273,6 +1396,58 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                   </div>
                 )}
               </section>
+
+              {reviewChallenge && (
+                <section className="reward-admin-panel challenge-review-panel">
+                  <div className="reward-admin-heading">
+                    <span>Manual review</span>
+                    <h2>{reviewChallenge.title}</h2>
+                    <p>Approve or reject pending proof submissions for this challenge.</p>
+                  </div>
+
+                  {reviewLoading ? (
+                    <div className="loading-users">Loading submissions...</div>
+                  ) : manualReviewSubmissions.length === 0 ? (
+                    <div className="empty-reward-instances">
+                      No pending submissions for this challenge.
+                    </div>
+                  ) : (
+                    <div className="challenge-review-list">
+                      {manualReviewSubmissions.map((submission) => (
+                        <article key={submission.id} className="challenge-review-card">
+                          <div className="reward-instance-topline">
+                            <span data-active>{submission.status}</span>
+                            <span>{new Date(submission.createdAt || '').toLocaleString()}</span>
+                          </div>
+
+                          <pre>{formatSubmissionPreview(submission)}</pre>
+
+                          {submission.message && <p>{submission.message}</p>}
+
+                          <div className="reward-instance-actions">
+                            <button
+                              type="button"
+                              className="action-btn role-btn"
+                              onClick={() => handleManualReviewDecision(submission, 'approve')}
+                              disabled={reviewingSubmissionId === submission.id}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              className="action-btn ban-btn"
+                              onClick={() => handleManualReviewDecision(submission, 'reject')}
+                              disabled={reviewingSubmissionId === submission.id}
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
             </div>
           </motion.div>
         )}
