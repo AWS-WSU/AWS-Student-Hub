@@ -66,6 +66,7 @@ export interface ChallengeListItem {
   validationType?: ChallengeValidationType;
   startsAt?: string | null;
   endsAt?: string | null;
+  rewardIntegrationInstanceId?: string | null;
   reward: ChallengeRewardPreview;
   progress?: ChallengeProgress;
 }
@@ -79,6 +80,8 @@ export interface ChallengeRewardLinkSummary {
   required: boolean;
   linked: boolean;
   configured: boolean;
+  requiredInstanceId?: string | null;
+  linkedInstanceId?: string | null;
 }
 
 export interface ChallengeListResponse {
@@ -174,6 +177,7 @@ export interface AdminChallengePayload {
   estimatedMinutes?: number;
   tags?: string[];
   maxAttempts?: number;
+  rewardIntegrationInstanceId?: string | null;
   validation: Record<string, unknown>;
   reward?: Partial<ChallengeRewardConfig>;
 }
