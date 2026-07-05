@@ -58,6 +58,7 @@ interface ChallengeFormData {
   tags: string;
   maxAttempts: string;
   validationJson: string;
+  rewardIntegrationInstanceId: string;
   rewardEnabled: boolean;
   rewardBits: string;
   rewardXpAmount: string;
@@ -118,6 +119,7 @@ const emptyChallengeForm: ChallengeFormData = {
     null,
     2
   ),
+  rewardIntegrationInstanceId: '',
   rewardEnabled: true,
   rewardBits: '50',
   rewardXpAmount: '30',
@@ -148,6 +150,11 @@ const formatSubmissionPreview = (submission: AdminChallengeSubmission): string =
     .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`);
 
   return values.length ? values.join('\n') : 'No preview available.';
+};
+
+const formatRewardInstanceLabel = (instance: RewardIntegrationInstance): string => {
+  const classroomLabel = instance.classroomName || instance.classroomId;
+  return `${instance.name} (${classroomLabel})`;
 };
 
 const DashBoardIcon = ({ className }: IconProps) => (
@@ -264,6 +271,16 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
+  const activeRewardInstances = rewardInstances.filter(
+    (instance) => instance.active && instance.source === 'database'
+  );
+  const getChallengeRewardScopeLabel = (challenge: AdminChallenge): string => {
+    if (!challenge.rewardIntegrationInstanceId) return 'Global';
+    const instance = rewardInstances.find(
+      (rewardInstance) => rewardInstance.id === challenge.rewardIntegrationInstanceId
+    );
+    return instance ? formatRewardInstanceLabel(instance) : 'Unknown classroom';
+  };
 
   useEffect(() => {
     if (authLoading) {
@@ -375,7 +392,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'rewards') {
+    if (activeTab === 'rewards' || activeTab === 'challenges') {
       loadRewardIntegrations();
     }
   }, [activeTab, loadRewardIntegrations]);
@@ -557,6 +574,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
         .map((tag) => tag.trim())
         .filter(Boolean),
       maxAttempts: Number(challengeForm.maxAttempts) || undefined,
+      rewardIntegrationInstanceId: challengeForm.rewardIntegrationInstanceId || null,
       validation,
       reward: {
         enabled: challengeForm.rewardEnabled,
@@ -1209,6 +1227,23 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                   </label>
 
                   <label>
+                    Reward classroom
+                    <select
+                      value={challengeForm.rewardIntegrationInstanceId}
+                      onChange={(e) =>
+                        handleChallengeFieldChange('rewardIntegrationInstanceId', e.target.value)
+                      }
+                    >
+                      <option value="">Global / any linked classroom</option>
+                      {activeRewardInstances.map((instance) => (
+                        <option key={instance.id} value={instance.id}>
+                          {formatRewardInstanceLabel(instance)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
                     Validation JSON
                     <div className="challenge-validation-templates">
                       <button
@@ -1340,6 +1375,10 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                           <div>
                             <span>Attempts</span>
                             <strong>{challenge.maxAttempts || 'Unlimited'}</strong>
+                          </div>
+                          <div>
+                            <span>Classroom</span>
+                            <strong>{getChallengeRewardScopeLabel(challenge)}</strong>
                           </div>
                         </div>
 

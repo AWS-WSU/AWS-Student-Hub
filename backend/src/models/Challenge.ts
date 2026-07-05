@@ -40,6 +40,7 @@ export interface IChallenge {
   startsAt?: Date | null;
   endsAt?: Date | null;
   maxAttempts?: number;
+  rewardIntegrationInstanceId?: Types.ObjectId | null;
   validation: Record<string, unknown>;
   reward: IChallengeRewardConfig;
   createdBy: Types.ObjectId;
@@ -195,6 +196,12 @@ const challengeSchema = new Schema<IChallenge, ChallengeModel>(
       type: Number,
       min: 1,
     },
+    rewardIntegrationInstanceId: {
+      type: Schema.Types.ObjectId,
+      ref: 'RewardIntegrationInstance',
+      default: null,
+      index: true,
+    },
     validation: {
       type: Schema.Types.Mixed,
       required: true,
@@ -220,6 +227,7 @@ const challengeSchema = new Schema<IChallenge, ChallengeModel>(
 );
 
 challengeSchema.index({ status: 1, startsAt: 1, endsAt: 1 });
+challengeSchema.index({ status: 1, rewardIntegrationInstanceId: 1 });
 
 const Challenge = mongoose.model<IChallenge, ChallengeModel>('Challenge', challengeSchema);
 

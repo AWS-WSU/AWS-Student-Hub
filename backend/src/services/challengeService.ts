@@ -16,6 +16,7 @@ import ChallengeSubmission, {
   ChallengeSubmissionStatus,
   IChallengeSubmissionDocument,
 } from '../models/ChallengeSubmission';
+import RewardIntegrationInstance from '../models/RewardIntegrationInstance';
 import User, { IUserDocument } from '../models/User';
 import {
   buildChallengeCompletionEvent,
@@ -86,6 +87,8 @@ interface RewardLinkSummary {
   required: boolean;
   linked: boolean;
   configured: boolean;
+  requiredInstanceId?: string | null;
+  linkedInstanceId?: string | null;
 }
 
 interface ChallengeSubmitResult {
@@ -118,6 +121,7 @@ interface ChallengeMutationInput {
   startsAt?: string | Date | null;
   endsAt?: string | Date | null;
   maxAttempts?: number | null;
+  rewardIntegrationInstanceId?: string | null;
   validation?: Record<string, unknown>;
   reward?: Partial<IChallengeRewardConfig>;
 }
@@ -188,6 +192,46 @@ const normalizeNumber = (value: unknown): number | undefined => {
   if (value === null || value === undefined || value === '') return undefined;
   const numberValue = Number(value);
   return Number.isFinite(numberValue) ? numberValue : undefined;
+};
+
+const getChallengeScopeId = (challenge: IChallengeDocument): string | null => {
+  return challenge.rewardIntegrationInstanceId?.toString() || null;
+};
+
+const getLinkedRewardInstanceId = (user?: IUserDocument | null): string | null => {
+  return user?.rewardIntegrationInstanceId?.toString() || null;
+};
+
+const resolveRewardIntegrationInstanceId = async (
+  value: string | null | undefined
+): Promise<Types.ObjectId | null | undefined> => {
+  if (value === undefined) return undefined;
+
+  const cleanedValue = cleanString(value);
+  if (!cleanedValue) return null;
+
+  if (!Types.ObjectId.isValid(cleanedValue)) {
+    throw new ChallengeServiceError(
+      'Reward integration instance was not found.',
+      'INVALID_CHALLENGE_INPUT',
+      400
+    );
+  }
+
+  const instance = await RewardIntegrationInstance.exists({
+    _id: new Types.ObjectId(cleanedValue),
+    active: true,
+  });
+
+  if (!instance) {
+    throw new ChallengeServiceError(
+      'Reward integration instance was not found.',
+      'INVALID_CHALLENGE_INPUT',
+      400
+    );
+  }
+
+  return new Types.ObjectId(cleanedValue);
 };
 
 const normalizeValidation = (
@@ -288,6 +332,29 @@ const isPublishedNowQuery = () => {
   };
 };
 
+const appendAndClause = (query: Record<string, unknown>, clause: Record<string, unknown>): void => {
+  const existingClauses = Array.isArray(query.$and) ? query.$and : [];
+  query.$and = [...existingClauses, clause];
+};
+
+const getVisibilityScopeClause = (rewardIntegrationInstanceId?: string | null) => {
+  const globalChallengeClauses: Record<string, unknown>[] = [
+    { rewardIntegrationInstanceId: null },
+    { rewardIntegrationInstanceId: { $exists: false } },
+  ];
+
+  if (!rewardIntegrationInstanceId || !Types.ObjectId.isValid(rewardIntegrationInstanceId)) {
+    return { $or: globalChallengeClauses };
+  }
+
+  return {
+    $or: [
+      ...globalChallengeClauses,
+      { rewardIntegrationInstanceId: new Types.ObjectId(rewardIntegrationInstanceId) },
+    ],
+  };
+};
+
 const getValidatorType = (challenge: IChallengeDocument): string => {
   return cleanString(challenge.validation?.type) || 'unknown';
 };
@@ -350,6 +417,7 @@ const toPublicChallengeDto = (
   validationType: getValidatorType(challenge),
   startsAt: challenge.startsAt,
   endsAt: challenge.endsAt,
+  rewardIntegrationInstanceId: getChallengeScopeId(challenge),
   reward: toRewardPreview(challenge.reward),
   progress: progress === undefined ? undefined : toProgressDto(progress),
 });
@@ -383,19 +451,80 @@ const toSubmissionDto = (submission: IChallengeSubmissionDocument) => ({
   updatedAt: submission.updatedAt,
 });
 
-const getRewardLinkSummary = async (userId?: string): Promise<RewardLinkSummary> => {
+const getRewardLinkSummary = async (
+  userId?: string,
+  requiredInstanceId?: string | null
+): Promise<RewardLinkSummary> => {
   if (!userId || !Types.ObjectId.isValid(userId)) {
-    return { required: true, linked: false, configured: false };
+    return {
+      required: true,
+      linked: false,
+      configured: false,
+      requiredInstanceId: requiredInstanceId || null,
+      linkedInstanceId: null,
+    };
   }
 
   const user = await User.findById(userId);
   const status = await getPrizeversityStatus(user);
+  const linkedInstanceId = status.account?.instanceId || null;
+  const linked = Boolean(
+    status.linked && (!requiredInstanceId || linkedInstanceId === requiredInstanceId)
+  );
 
   return {
     required: true,
-    linked: status.linked,
+    linked,
     configured: status.configured,
+    requiredInstanceId: requiredInstanceId || null,
+    linkedInstanceId,
   };
+};
+
+const ensureChallengeScopeAccess = async (
+  challenge: IChallengeDocument,
+  userId?: string
+): Promise<IUserDocument | null> => {
+  const requiredInstanceId = getChallengeScopeId(challenge);
+  if (!requiredInstanceId) return null;
+
+  if (!userId || !Types.ObjectId.isValid(userId)) {
+    throw new ChallengeServiceError(
+      'Link your Prizeversity classroom account before opening this challenge.',
+      'REWARD_LINK_REQUIRED',
+      403,
+      { rewardIntegrationInstanceId: requiredInstanceId }
+    );
+  }
+
+  const user = await User.findById(userId);
+  if (!user || getLinkedRewardInstanceId(user) !== requiredInstanceId) {
+    throw new ChallengeServiceError(
+      'This challenge belongs to a different Prizeversity classroom. Link the matching classroom account to continue.',
+      'REWARD_LINK_REQUIRED',
+      403,
+      { rewardIntegrationInstanceId: requiredInstanceId }
+    );
+  }
+
+  return user;
+};
+
+const ensureUserMatchesChallengeScope = (
+  challenge: IChallengeDocument,
+  user: IUserDocument
+): void => {
+  const requiredInstanceId = getChallengeScopeId(challenge);
+  if (!requiredInstanceId) return;
+
+  if (getLinkedRewardInstanceId(user) !== requiredInstanceId) {
+    throw new ChallengeServiceError(
+      'This challenge belongs to a different Prizeversity classroom. Link the matching classroom account to continue.',
+      'REWARD_LINK_REQUIRED',
+      403,
+      { rewardIntegrationInstanceId: requiredInstanceId }
+    );
+  }
 };
 
 const ensurePublishedChallenge = async (slug: string): Promise<IChallengeDocument> => {
@@ -502,6 +631,12 @@ export const listPublishedChallenges = async (
   rewardLink: RewardLinkSummary;
 }> => {
   const query: Record<string, unknown> = isPublishedNowQuery();
+  const user =
+    options.userId && Types.ObjectId.isValid(options.userId)
+      ? await User.findById(options.userId)
+      : null;
+
+  appendAndClause(query, getVisibilityScopeClause(getLinkedRewardInstanceId(user)));
 
   if (options.tag) query.tags = cleanString(options.tag).toLowerCase();
   if (options.difficulty && challengeDifficulties.includes(options.difficulty)) {
@@ -511,9 +646,9 @@ export const listPublishedChallenges = async (
   const challenges = await Challenge.find(query).sort({ publishedAt: -1, createdAt: -1 });
   const progressByChallengeId = new Map<string, IChallengeProgressDocument>();
 
-  if (options.userId && challenges.length) {
+  if (user && challenges.length) {
     const progressRecords = await ChallengeProgress.find({
-      userId: new Types.ObjectId(options.userId),
+      userId: user._id,
       challengeId: { $in: challenges.map((challenge) => challenge._id) },
     });
 
@@ -538,6 +673,7 @@ export const getPublishedChallenge = async (
   rewardLink: RewardLinkSummary;
 }> => {
   const challenge = await ensurePublishedChallenge(slug);
+  await ensureChallengeScopeAccess(challenge, userId);
   const progress =
     userId && Types.ObjectId.isValid(userId)
       ? await ChallengeProgress.findOne({
@@ -548,7 +684,7 @@ export const getPublishedChallenge = async (
 
   return {
     challenge: toPublicChallengeDto(challenge, userId ? progress || null : undefined),
-    rewardLink: await getRewardLinkSummary(userId),
+    rewardLink: await getRewardLinkSummary(userId, getChallengeScopeId(challenge)),
   };
 };
 
@@ -560,6 +696,7 @@ export const getChallengeProgress = async (
   progress: ReturnType<typeof toProgressDto>;
 }> => {
   const challenge = await ensurePublishedChallenge(slug);
+  await ensureChallengeScopeAccess(challenge, userId);
   const progress = await ChallengeProgress.findOne({
     userId: new Types.ObjectId(userId),
     challengeId: challenge._id,
@@ -579,6 +716,7 @@ export const startChallenge = async (
   progress: ReturnType<typeof toProgressDto>;
 }> => {
   const challenge = await ensurePublishedChallenge(slug);
+  await ensureChallengeScopeAccess(challenge, userId);
   const progress = await getOrCreateProgress(challenge, userId);
 
   return {
@@ -597,6 +735,8 @@ export const submitChallenge = async (
   if (!user) {
     throw new ChallengeServiceError('User not found.', 'INVALID_CHALLENGE_INPUT', 404);
   }
+
+  ensureUserMatchesChallengeScope(challenge, user);
 
   if (challenge.reward?.enabled && !hasRewardIdentity(user)) {
     throw new ChallengeServiceError(
@@ -836,6 +976,9 @@ export const createAdminChallenge = async (
     : 'draft';
   const startsAt = parseDate(input.startsAt);
   const endsAt = parseDate(input.endsAt);
+  const rewardIntegrationInstanceId = await resolveRewardIntegrationInstanceId(
+    input.rewardIntegrationInstanceId
+  );
   const now = new Date();
 
   const challenge = await Challenge.create({
@@ -858,6 +1001,7 @@ export const createAdminChallenge = async (
     startsAt,
     endsAt,
     maxAttempts: normalizeNumber(input.maxAttempts),
+    rewardIntegrationInstanceId: rewardIntegrationInstanceId || null,
     validation: normalizeValidation(input.validation, true),
     reward: normalizeReward(input.reward),
     createdBy: new Types.ObjectId(adminUserId),
@@ -893,6 +1037,10 @@ export const updateAdminChallenge = async (
   if (input.endsAt !== undefined) challenge.endsAt = parseDate(input.endsAt) || null;
   if (input.maxAttempts !== undefined) {
     challenge.maxAttempts = normalizeNumber(input.maxAttempts) || undefined;
+  }
+  if (input.rewardIntegrationInstanceId !== undefined) {
+    challenge.rewardIntegrationInstanceId =
+      (await resolveRewardIntegrationInstanceId(input.rewardIntegrationInstanceId)) || null;
   }
   if (input.validation !== undefined) {
     challenge.validation = normalizeValidation(input.validation, true) as Record<string, unknown>;

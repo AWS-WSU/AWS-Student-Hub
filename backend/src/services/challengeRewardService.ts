@@ -14,6 +14,7 @@ export interface ChallengeCompletionEvent {
   challengeTitle: string;
   progressId: Types.ObjectId;
   completedAt: Date;
+  rewardIntegrationInstanceId?: string | null;
   reward: IChallengeRewardConfig;
 }
 
@@ -48,6 +49,7 @@ export const buildChallengeCompletionEvent = (
     challengeTitle: challenge.title,
     progressId: progress._id,
     completedAt,
+    rewardIntegrationInstanceId: challenge.rewardIntegrationInstanceId?.toString() || null,
     reward: challenge.reward,
   };
 };
@@ -84,10 +86,23 @@ export const grantChallengeCompletionReward = async (
   }
 
   try {
+    const targetRewardIntegrationInstanceId =
+      event.rewardIntegrationInstanceId || user.rewardIntegrationInstanceId?.toString();
+
+    if (
+      event.rewardIntegrationInstanceId &&
+      user.rewardIntegrationInstanceId?.toString() !== event.rewardIntegrationInstanceId
+    ) {
+      throw new ChallengeRewardError(
+        'This challenge belongs to a different Prizeversity classroom.',
+        403
+      );
+    }
+
     const result = await grantPrizeversityChallengeReward({
       awsUserId: event.userId,
       prizeversityUserId: user.prizeversityUserId as string,
-      rewardIntegrationInstanceId: user.rewardIntegrationInstanceId?.toString(),
+      rewardIntegrationInstanceId: targetRewardIntegrationInstanceId,
       classroomId: user.prizeversityClassroomId,
       challengeKey: event.challengeKey,
       activityName: event.reward.activityName || event.challengeTitle,
