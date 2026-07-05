@@ -1,0 +1,87 @@
+.vault-trap-container {
+  min-height: 100vh;
+  padding: 8rem 1.5rem 4rem;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255, 153, 0, 0.18), transparent 32%),
+    radial-gradient(circle at 85% 25%, rgba(35, 47, 62, 0.16), transparent 34%), var(--bg-primary);
+}
+
+.vault-trap-card {
+  max-width: 760px;
+  margin: 0 auto;
+  background:
+    linear-gradient(135deg, rgba(255, 153, 0, 0.12), rgba(var(--text-primary-rgb), 0.04)),
+    var(--card-bg);
+  border: 1px solid rgba(255, 153, 0, 0.26);
+  border-radius: 28px;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.16);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  position: relative;
+  overflow: hidden;
+}
+
+.vault-back-link {
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 2rem;
+  text-decoration: none;
+}
+
+.vault-back-link:hover {
+  color: var(--accent-color);
+}
+
+.vault-icon-grid {
+  display: flex;
+  gap: 0.8rem;
+  margin-bottom: 1.5rem;
+}
+
+.vault-icon-grid div {
+  width: 3.6rem;
+  height: 3.6rem;
+  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 153, 0, 0.13);
+  border: 1px solid rgba(255, 153, 0, 0.22);
+  color: var(--accent-color);
+}
+
+.vault-eyebrow {
+  color: var(--accent-color);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.vault-trap-card h1 {
+  color: var(--text-primary);
+  font-size: clamp(2.3rem, 6vw, 4.2rem);
+  line-height: 1;
+  margin: 0.6rem 0 1rem;
+}
+
+.vault-trap-card p {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  line-height: 1.65;
+  max-width: 620px;
+  margin: 0 0 1.6rem;
+}
+
+.vault-flag {
+  display: block;
+  background: rgba(var(--text-primary-rgb), 0.07);
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.16);
+  border-radius: 18px;
+  color: var(--text-primary);
+  font-size: clamp(1rem, 3vw, 1.35rem);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+  padding: 1.1rem 1.2rem;
+}
