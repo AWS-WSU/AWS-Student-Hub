@@ -14,7 +14,8 @@
     "rebuild-sharp-lambda": "bun install --force --os=linux --cpu=x64",
     "cleanup-aws": "tsx scripts/cleanup-aws-credentials.ts",
     "create-superuser": "tsx scripts/createSuperuser.ts",
-    "seed-aws-cyber-challenge": "tsx scripts/seedAwsCyberChallenge.ts"
+    "seed-aws-cyber-challenge": "tsx scripts/seedAwsCyberChallenge.ts",
+    "seed-robots-trap-challenge": "tsx scripts/challenges/seedRobotsTrapChallenge.ts"
   },
   "dependencies": {
     "@aws-sdk/client-iam": "^3.1050.0",

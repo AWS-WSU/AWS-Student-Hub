@@ -22,7 +22,7 @@ const baseLogger = pino({
         target: 'pino-pretty',
         options: {
           colorize: true,
-          ignore: 'pid,hostname',
+          ignore: 'pid,hostname,module',
           messageFormat: '[{module}] {msg}',
           translateTime: 'HH:MM:ss',
         },
