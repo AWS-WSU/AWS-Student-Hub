@@ -20,6 +20,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import VaultTrap from './challenges/robotsTxtTrap/VaultTrap';
 import CipheredSealProtocol from './challenges/cipheredSeal/CipheredSealProtocol';
 import './App.css';
+import './styles/VisualRefresh.css';
 
 function AppContent() {
   const [theme, setTheme] = useState<Theme>((localStorage.getItem('theme') as Theme) || 'dark');

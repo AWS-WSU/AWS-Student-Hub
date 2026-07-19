@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Link2 } from 'lucide-react';
+import { ArrowRight, BadgeCheck, BookOpen, CloudUpload, Link2 } from 'lucide-react';
 import SocialLinks from '../components/SocialLinks';
 import '../pages/styles/Landing.css';
 
@@ -32,12 +32,12 @@ function Resources() {
             viewport={{ once: true, amount: 0.3 }}
           >
             <div className="resource-icon">
-              <i className="fas fa-cloud-upload-alt"></i>
+              <CloudUpload size={22} aria-hidden="true" />
             </div>
             <h3>AWS Free Tier Access</h3>
             <p>Get started with AWS services at no cost through our educational partnership.</p>
             <a href="#" className="resource-link">
-              Access Now <i className="fas fa-arrow-right"></i>
+              Access Now <ArrowRight size={15} aria-hidden="true" />
             </a>
           </motion.div>
 
@@ -49,12 +49,12 @@ function Resources() {
             viewport={{ once: true, amount: 0.3 }}
           >
             <div className="resource-icon">
-              <i className="fas fa-certificate"></i>
+              <BadgeCheck size={22} aria-hidden="true" />
             </div>
             <h3>Certification Vouchers</h3>
             <p>Active members may qualify for discounted AWS certification exam vouchers.</p>
             <a href="#" className="resource-link">
-              Learn More <i className="fas fa-arrow-right"></i>
+              Learn More <ArrowRight size={15} aria-hidden="true" />
             </a>
           </motion.div>
 
@@ -66,12 +66,12 @@ function Resources() {
             viewport={{ once: true, amount: 0.3 }}
           >
             <div className="resource-icon">
-              <i className="fas fa-book"></i>
+              <BookOpen size={22} aria-hidden="true" />
             </div>
             <h3>Learning Materials</h3>
             <p>Access our curated collection of guides, tutorials, and practice exercises.</p>
             <a href="#" className="resource-link">
-              Browse Library <i className="fas fa-arrow-right"></i>
+              Browse Library <ArrowRight size={15} aria-hidden="true" />
             </a>
           </motion.div>
         </div>

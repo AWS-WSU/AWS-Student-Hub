@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Cloud } from 'lucide-react';
+import { Cloud, Code2, Target } from 'lucide-react';
 import '../pages/styles/Landing.css';
 
 function About() {
@@ -31,7 +31,7 @@ function About() {
             viewport={{ once: true, amount: 0.3 }}
           >
             <div className="about-card-icon">
-              <i className="fas fa-bullseye"></i>
+              <Target size={22} aria-hidden="true" />
             </div>
             <h3>Our Mission</h3>
             <p>
@@ -48,7 +48,7 @@ function About() {
             viewport={{ once: true, amount: 0.3 }}
           >
             <div className="about-card-icon">
-              <i className="fas fa-laptop-code"></i>
+              <Code2 size={22} aria-hidden="true" />
             </div>
             <h3>What We Do</h3>
             <p>
@@ -65,7 +65,7 @@ function About() {
             viewport={{ once: true, amount: 0.3 }}
           >
             <div className="about-card-icon">
-              <i className="fas fa-cloud"></i>
+              <Cloud size={22} aria-hidden="true" />
             </div>
             <h3>Why AWS?</h3>
             <p>

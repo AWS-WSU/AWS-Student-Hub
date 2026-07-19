@@ -19,6 +19,9 @@ const log = logger.child({ module: 'app' });
 
 const app = express();
 
+// API responses are dynamic and should never be revalidated into an empty 304 response.
+app.disable('etag');
+
 if (env.IS_LAMBDA) {
   app.set('trust proxy', true);
 }
@@ -93,6 +96,10 @@ const corsOptions: CorsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.use((_req: Request, res: Response, next: NextFunction): void => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 

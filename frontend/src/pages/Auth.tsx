@@ -237,12 +237,6 @@ function Auth({ theme: _theme }: AuthProps) {
         !currentUser.hasViewedAwsCredentials &&
         !showCyberModal
       ) {
-        console.log('setting aws credentials for modal.', {
-          hasAccessKey: !!currentUser.awsAccessKeyId,
-          hasSecretKey: !!currentUser.awsSecretAccessKey,
-          hasViewed: currentUser.hasViewedAwsCredentials,
-        });
-
         setAwsCredentials({
           accessKeyId: currentUser.awsAccessKeyId,
           secretAccessKey: currentUser.awsSecretAccessKey,
@@ -266,21 +260,6 @@ function Auth({ theme: _theme }: AuthProps) {
     showCyberModal,
     redirectPath,
   ]);
-
-  useEffect(() => {
-    console.log('auth state check.', {
-      authUser: !!authUser,
-      auth0User: !!auth0User,
-      isLoading,
-      showCyberModal,
-      awsCredentials: !!awsCredentials,
-    });
-  }, [authUser, auth0User, isLoading, showCyberModal, awsCredentials]);
-
-  console.log('auth render state.', {
-    showCyberModal,
-    hasAwsCredentials: !!awsCredentials,
-  });
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -343,7 +322,6 @@ function Auth({ theme: _theme }: AuthProps) {
           login(requestData),
           timeoutPromise,
         ])) as AuthResponse;
-        console.log('login result.', loginResult);
 
         if (
           loginResult &&
@@ -352,7 +330,6 @@ function Auth({ theme: _theme }: AuthProps) {
           loginResult.user.awsSecretAccessKey &&
           !loginResult.user.hasViewedAwsCredentials
         ) {
-          console.log('login: setting aws credentials for modal.');
           setAwsCredentials({
             accessKeyId: loginResult.user.awsAccessKeyId,
             secretAccessKey: loginResult.user.awsSecretAccessKey,
@@ -369,10 +346,8 @@ function Auth({ theme: _theme }: AuthProps) {
           signup(requestData),
           timeoutPromise,
         ])) as AuthResponse;
-        console.log('signup result.', signupResult);
 
         if (signupResult && signupResult.awsCredentials) {
-          console.log('signup: setting aws credentials for modal.');
           setAwsCredentials(signupResult.awsCredentials);
           setShowCyberModal(true);
           setIsLoading(false);
