@@ -9,6 +9,7 @@ import User from '../models/User';
 import type { UserGrade } from '../models/User';
 import { createChallengeUser } from '../services/awsProvision';
 import { sendResetCode } from '../services/emailService';
+import { memberSearchIndex } from '../services/memberSearchIndex';
 import logger from '../config/logger';
 
 const log = logger.child({ module: 'authController' });
@@ -869,7 +870,7 @@ export const getPublicProfile = async (req: Request, res: Response): Promise<voi
 
 export const searchUsers = async (req: Request, res: Response): Promise<void> => {
   try {
-    const q = queryString(req.query.q);
+    const q = queryString(req.query.q).trim();
     const limit = parseInteger(req.query.limit, 10);
 
     if (!q || q.length < 2) {
@@ -880,7 +881,24 @@ export const searchUsers = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const searchRegex = new RegExp(q, 'i');
+    if (q.length > 64) {
+      res.status(400).json({
+        success: false,
+        error: 'Search query cannot exceed 64 characters',
+      });
+      return;
+    }
+
+    if (await memberSearchIndex.isDefinitelyMissing(q)) {
+      res.json({
+        success: true,
+        users: [],
+      });
+      return;
+    }
+
+    const escapedQuery = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const searchRegex = new RegExp(escapedQuery, 'i');
     const searchLimit = Math.min(limit, 20);
 
     const users = await User.find({

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, MouseEvent, SyntheticEvent } from 'react';
 import './styles/Landing.css';
 import { motion } from 'motion/react';
@@ -24,6 +24,10 @@ function Landing({ theme: _theme }: ThemeProps) {
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [showReferralLink, setShowReferralLink] = useState(false);
   const [referralCopied, setReferralCopied] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const referralTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeSearchControllerRef = useRef<AbortController | null>(null);
+  const latestSearchRequestRef = useRef(0);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -73,36 +77,130 @@ function Landing({ theme: _theme }: ThemeProps) {
     fetchRecentUsers();
   }, []);
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim() || searchQuery.length < 2) {
+  const performSearch = useCallback(async (rawQuery: string) => {
+    const query = rawQuery.trim();
+
+    if (query.length < 2) {
       return;
     }
 
+    activeSearchControllerRef.current?.abort();
+    const controller = new AbortController();
+    const requestId = latestSearchRequestRef.current + 1;
+    activeSearchControllerRef.current = controller;
+    latestSearchRequestRef.current = requestId;
+
+    if (referralTimerRef.current) {
+      clearTimeout(referralTimerRef.current);
+      referralTimerRef.current = null;
+    }
+
     setIsSearching(true);
-    setSearchPerformed(true);
+    setSearchPerformed(false);
     setShowReferralLink(false);
 
     try {
-      const response = await authAPI.searchUsers(searchQuery.trim(), 5);
+      const response = await authAPI.searchUsers(query, 5, controller.signal);
+
+      if (requestId !== latestSearchRequestRef.current) {
+        return;
+      }
+
       setSearchResults(response.users || []);
+      setSearchPerformed(true);
 
       if (!response.users || response.users.length === 0) {
-        setTimeout(() => setShowReferralLink(true), 500);
+        referralTimerRef.current = setTimeout(() => {
+          if (requestId === latestSearchRequestRef.current) {
+            setShowReferralLink(true);
+          }
+        }, 500);
       }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return;
+      }
+
+      if (requestId !== latestSearchRequestRef.current) {
+        return;
+      }
+
       console.error('error searching users.', error);
       setSearchResults([]);
-      setTimeout(() => setShowReferralLink(true), 500);
+      setSearchPerformed(true);
+      referralTimerRef.current = setTimeout(() => {
+        if (requestId === latestSearchRequestRef.current) {
+          setShowReferralLink(true);
+        }
+      }, 500);
     } finally {
-      setIsSearching(false);
+      if (requestId === latestSearchRequestRef.current) {
+        setIsSearching(false);
+      }
     }
+  }, []);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
+
+    activeSearchControllerRef.current?.abort();
+    activeSearchControllerRef.current = null;
+    latestSearchRequestRef.current += 1;
+
+    if (referralTimerRef.current) {
+      clearTimeout(referralTimerRef.current);
+      referralTimerRef.current = null;
+    }
+
+    setIsSearching(false);
+    setSearchPerformed(false);
+    setShowReferralLink(false);
+    setReferralCopied(false);
+
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    searchDebounceRef.current = setTimeout(() => {
+      searchDebounceRef.current = null;
+      void performSearch(query);
+    }, 300);
+
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = null;
+      }
+    };
+  }, [performSearch, searchQuery]);
+
+  useEffect(() => {
+    return () => {
+      activeSearchControllerRef.current?.abort();
+      if (referralTimerRef.current) clearTimeout(referralTimerRef.current);
+    };
+  }, []);
+
+  const handleSearch = () => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
+
+    void performSearch(searchQuery);
   };
 
   const handleSearchInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
 
-    if (!value.trim()) {
+    if (value.trim().length < 2) {
       setSearchResults([]);
       setSearchPerformed(false);
       setShowReferralLink(false);
@@ -110,8 +208,9 @@ function Landing({ theme: _theme }: ThemeProps) {
     }
   };
 
-  const handleSearchKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       handleSearch();
     }
   };
@@ -369,13 +468,21 @@ function Landing({ theme: _theme }: ThemeProps) {
             >
               <input
                 type="text"
-                placeholder="Search by name, username, or email..."
+                placeholder="Search by name or username..."
                 value={searchQuery}
                 onChange={handleSearchInputChange}
-                onKeyPress={handleSearchKeyPress}
+                onKeyDown={handleSearchKeyDown}
                 className="search-input"
+                autoComplete="off"
+                aria-label="Search members by name or username"
+                aria-controls="member-search-results"
               />
-              <button className="search-button" onClick={handleSearch} disabled={isSearching}>
+              <button
+                type="button"
+                className="search-button"
+                onClick={handleSearch}
+                disabled={isSearching || searchQuery.trim().length < 2}
+              >
                 {isSearching ? 'Searching...' : 'Search'}
               </button>
             </motion.div>
@@ -415,6 +522,7 @@ function Landing({ theme: _theme }: ThemeProps) {
 
             {searchPerformed && searchResults.length > 0 && (
               <motion.div
+                id="member-search-results"
                 className="search-results-container"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}

@@ -285,6 +285,8 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
   }
 );
 
+userSchema.index({ updatedAt: -1 });
+
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     next();
