@@ -58,6 +58,7 @@ const env = {
 
   MONGODB_URI: mongodbUri,
   JWT_SECRET: jwtSecret,
+  CHALLENGE_SIGNING_SECRET: optionalString('CHALLENGE_SIGNING_SECRET'),
   ADMIN_TOKEN: optionalString('ADMIN_TOKEN'),
 
   S3_ACCESS_KEY_ID: optionalString('S3_ACCESS_KEY_ID'),

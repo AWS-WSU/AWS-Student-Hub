@@ -30,6 +30,12 @@ import {
   sanitizeChallengeSubmissionPayload,
   validateChallengeSubmission,
 } from './challengeValidatorService';
+import {
+  buildCipheredSealPublicState,
+  CIPHERED_SEAL_VALIDATOR_TYPE,
+  getCipheredSealPublicExperience,
+  resolveSubmittedCipheredSealSeed,
+} from './cipheredSealService';
 import { getPrizeversityStatus } from './rewardIntegrationService';
 
 export type ChallengeErrorCode =
@@ -269,6 +275,29 @@ const normalizeValidation = (
   }
 };
 
+const ensureUniqueCipheredSealRoute = async (
+  validation: Record<string, unknown>,
+  challengeId?: string
+): Promise<void> => {
+  if (validation.type !== CIPHERED_SEAL_VALIDATOR_TYPE) return;
+
+  const query: Record<string, unknown> = {
+    'validation.type': CIPHERED_SEAL_VALIDATOR_TYPE,
+    'validation.routeKey': cleanString(validation.routeKey),
+  };
+  if (challengeId) {
+    query._id = { $ne: new Types.ObjectId(challengeId) };
+  }
+
+  if (await Challenge.exists(query)) {
+    throw new ChallengeServiceError(
+      'That Ciphered Seal route is already assigned to another challenge.',
+      'INVALID_CHALLENGE_INPUT',
+      409
+    );
+  }
+};
+
 const normalizeReward = (reward: unknown): IChallengeRewardConfig => {
   if (!isRecord(reward)) {
     return {
@@ -366,6 +395,16 @@ const toRewardPreview = (reward: IChallengeRewardConfig) => ({
   xpMode: reward?.xpMode || 'custom',
 });
 
+const getPublicChallengeExperience = (challenge: IChallengeDocument) => {
+  if (getValidatorType(challenge) !== CIPHERED_SEAL_VALIDATOR_TYPE) return undefined;
+
+  try {
+    return getCipheredSealPublicExperience(challenge.validation);
+  } catch {
+    return undefined;
+  }
+};
+
 const toProgressDto = (progress: IChallengeProgressDocument | null) => {
   if (!progress) {
     return {
@@ -415,6 +454,7 @@ const toPublicChallengeDto = (
   tags: challenge.tags,
   version: challenge.version,
   validationType: getValidatorType(challenge),
+  experience: getPublicChallengeExperience(challenge),
   startsAt: challenge.startsAt,
   endsAt: challenge.endsAt,
   rewardIntegrationInstanceId: getChallengeScopeId(challenge),
@@ -535,6 +575,27 @@ const ensurePublishedChallenge = async (slug: string): Promise<IChallengeDocumen
 
   if (!challenge) {
     throw new ChallengeServiceError('Challenge not found.', 'CHALLENGE_NOT_FOUND', 404);
+  }
+
+  return challenge;
+};
+
+const ensurePublishedCipheredSealChallenge = async (
+  routeKey: string
+): Promise<IChallengeDocument> => {
+  const normalizedRouteKey = cleanString(routeKey);
+  if (!/^\d{4,12}$/.test(normalizedRouteKey)) {
+    throw new ChallengeServiceError('Challenge route not found.', 'CHALLENGE_NOT_FOUND', 404);
+  }
+
+  const challenge = await Challenge.findOne({
+    ...isPublishedNowQuery(),
+    'validation.type': CIPHERED_SEAL_VALIDATOR_TYPE,
+    'validation.routeKey': normalizedRouteKey,
+  });
+
+  if (!challenge) {
+    throw new ChallengeServiceError('Challenge route not found.', 'CHALLENGE_NOT_FOUND', 404);
   }
 
   return challenge;
@@ -723,6 +784,46 @@ export const startChallenge = async (
     challenge: toPublicChallengeDto(challenge),
     progress: toProgressDto(progress),
   };
+};
+
+const getCipheredSealPlayerContext = async (routeKey: string, userId: string) => {
+  const challenge = await ensurePublishedCipheredSealChallenge(routeKey);
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ChallengeServiceError('User not found.', 'INVALID_CHALLENGE_INPUT', 404);
+  }
+
+  ensureUserMatchesChallengeScope(challenge, user);
+  if (challenge.reward?.enabled && !hasRewardIdentity(user)) {
+    throw new ChallengeServiceError(
+      'Link your Prizeversity account before entering this challenge.',
+      'REWARD_LINK_REQUIRED',
+      403
+    );
+  }
+
+  const progress = await getOrCreateProgress(challenge, userId);
+  return { challenge, user, progress };
+};
+
+export const getCipheredSealRouteState = async (routeKey: string, userId: string) => {
+  const { challenge, user, progress } = await getCipheredSealPlayerContext(routeKey, userId);
+
+  return {
+    challenge: toPublicChallengeDto(challenge),
+    progress: toProgressDto(progress),
+    rewardLink: await getRewardLinkSummary(userId, getChallengeScopeId(challenge)),
+    protocol: buildCipheredSealPublicState(challenge, user),
+  };
+};
+
+export const resolveCipheredSealRouteSeed = async (
+  routeKey: string,
+  userId: string,
+  seedNumber: unknown
+) => {
+  const { challenge, user } = await getCipheredSealPlayerContext(routeKey, userId);
+  return resolveSubmittedCipheredSealSeed(challenge, user, seedNumber);
 };
 
 export const submitChallenge = async (
@@ -979,6 +1080,8 @@ export const createAdminChallenge = async (
   const rewardIntegrationInstanceId = await resolveRewardIntegrationInstanceId(
     input.rewardIntegrationInstanceId
   );
+  const validation = normalizeValidation(input.validation, true) as Record<string, unknown>;
+  await ensureUniqueCipheredSealRoute(validation);
   const now = new Date();
 
   const challenge = await Challenge.create({
@@ -1002,7 +1105,7 @@ export const createAdminChallenge = async (
     endsAt,
     maxAttempts: normalizeNumber(input.maxAttempts),
     rewardIntegrationInstanceId: rewardIntegrationInstanceId || null,
-    validation: normalizeValidation(input.validation, true),
+    validation,
     reward: normalizeReward(input.reward),
     createdBy: new Types.ObjectId(adminUserId),
   });
@@ -1043,7 +1146,9 @@ export const updateAdminChallenge = async (
       (await resolveRewardIntegrationInstanceId(input.rewardIntegrationInstanceId)) || null;
   }
   if (input.validation !== undefined) {
-    challenge.validation = normalizeValidation(input.validation, true) as Record<string, unknown>;
+    const validation = normalizeValidation(input.validation, true) as Record<string, unknown>;
+    await ensureUniqueCipheredSealRoute(validation, challengeId);
+    challenge.validation = validation;
     challenge.version += 1;
   }
   if (input.reward !== undefined) {

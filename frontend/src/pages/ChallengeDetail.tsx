@@ -5,8 +5,10 @@ import {
   ArrowLeft,
   CheckCircle2,
   Clock3,
+  Download,
   Link2,
   Lock,
+  ScanSearch,
   Send,
   ShieldCheck,
   Trophy,
@@ -108,6 +110,7 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
 
   const isCompleted = completedStatuses.has(progress?.status || '');
   const isManualReview = challenge?.validationType === 'manual_review';
+  const isCipheredSeal = challenge?.experience?.type === 'ciphered_seal';
   const rewardLocked = Boolean(
     user && challenge?.reward.enabled && rewardLink && !rewardLink.linked
   );
@@ -240,6 +243,33 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
               <div className="challenge-instructions">{challenge.instructions}</div>
             )}
 
+            {isCipheredSeal && challenge.experience && (
+              <div className="ciphered-seal-discovery">
+                <div className="ciphered-seal-artifact">
+                  <img
+                    src={challenge.experience.imagePath}
+                    alt="An unlabeled technical shrine diagram with four seals"
+                  />
+                  <span aria-hidden="true">Artifact 01</span>
+                </div>
+                <div className="ciphered-seal-briefing">
+                  <span>Route discovery</span>
+                  <h3>Inspect the original artifact</h3>
+                  <p>
+                    Download the unmodified file and inspect its image metadata. Its width and
+                    height resolve the numeric application route described in the briefing.
+                  </p>
+                  <a
+                    href={challenge.experience.imagePath}
+                    download="ciphered-seal-map.png"
+                    className="ciphered-seal-download"
+                  >
+                    <Download size={17} aria-hidden="true" /> Download original
+                  </a>
+                </div>
+              </div>
+            )}
+
             <div className="challenge-detail-meta-grid">
               <div>
                 <span>Type</span>
@@ -302,6 +332,20 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
                   {progress.lastValidationMessage ||
                     'An admin will review this submission before rewards are granted.'}
                 </small>
+              </div>
+            ) : isCipheredSeal ? (
+              <div className="challenge-submit-state ciphered-seal-route-state">
+                <ScanSearch size={24} aria-hidden="true" />
+                <p>Discovery stage unlocked</p>
+                <small>
+                  This challenge does not accept a secret here. Resolve the artifact metadata,
+                  then navigate to the resulting <code>/challenge/&lt;route&gt;</code> path.
+                </small>
+                {challenge.experience && (
+                  <a href={challenge.experience.imagePath} download="ciphered-seal-map.png">
+                    <Download size={16} aria-hidden="true" /> Download artifact
+                  </a>
+                )}
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="challenge-submit-form">

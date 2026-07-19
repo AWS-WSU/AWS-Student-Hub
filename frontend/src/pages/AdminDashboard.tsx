@@ -42,7 +42,11 @@ type StatusFilter = UserStatus | '';
 type QueueStats = Record<string, any>;
 type RewardWorkspaceTab = 'overview' | 'challenges' | 'students' | 'settings';
 
-type ChallengeValidationTemplate = 'aws_secret' | 'static_secret' | 'manual_review';
+type ChallengeValidationTemplate =
+  | 'aws_secret'
+  | 'static_secret'
+  | 'manual_review'
+  | 'ciphered_seal';
 
 interface DashboardStats extends AdminStats {
   newsletterSubscribers?: number;
@@ -627,6 +631,9 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
         minLength: 20,
         maxLength: 2000,
         submittedMessage: 'Submission received for review.',
+      },
+      ciphered_seal: {
+        type: 'ciphered_seal',
       },
     };
 

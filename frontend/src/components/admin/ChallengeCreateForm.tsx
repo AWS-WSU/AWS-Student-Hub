@@ -20,7 +20,7 @@ export interface ChallengeFormData {
   rewardXpAmount: string;
 }
 
-type ValidationTemplate = 'aws_secret' | 'static_secret' | 'manual_review';
+type ValidationTemplate = 'aws_secret' | 'static_secret' | 'manual_review' | 'ciphered_seal';
 
 interface ChallengeCreateFormProps {
   form: ChallengeFormData;
@@ -182,6 +182,9 @@ function ChallengeCreateForm({
           </button>
           <button type="button" onClick={() => onApplyTemplate('manual_review')}>
             Manual review
+          </button>
+          <button type="button" onClick={() => onApplyTemplate('ciphered_seal')}>
+            Ciphered seal
           </button>
         </div>
         <textarea

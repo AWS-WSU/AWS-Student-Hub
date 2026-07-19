@@ -791,6 +791,105 @@
   color: var(--text-secondary);
 }
 
+.ciphered-seal-discovery {
+  background: linear-gradient(135deg, #eee9dd, #ded5c1);
+  border: 1px solid rgba(90, 70, 37, 0.28);
+  border-radius: 18px;
+  color: #222522;
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.2fr);
+  margin-top: 1.5rem;
+  overflow: hidden;
+  padding: 1rem;
+  text-align: left;
+}
+
+.ciphered-seal-artifact {
+  background: #d7cfbd;
+  border: 1px solid rgba(44, 42, 35, 0.28);
+  min-height: 220px;
+  overflow: hidden;
+  position: relative;
+}
+
+.ciphered-seal-artifact img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.ciphered-seal-artifact > span {
+  background: rgba(18, 21, 21, 0.84);
+  bottom: 0.65rem;
+  color: #dec28b;
+  font-size: 0.63rem;
+  left: 0.65rem;
+  letter-spacing: 0.14em;
+  padding: 0.35rem 0.55rem;
+  position: absolute;
+  text-transform: uppercase;
+}
+
+.ciphered-seal-briefing {
+  align-self: center;
+  padding: 0.75rem 0.75rem 0.75rem 0;
+}
+
+.ciphered-seal-briefing > span {
+  color: #966923;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.ciphered-seal-briefing h3 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(1.5rem, 3vw, 2.15rem);
+  font-weight: 400;
+  line-height: 1.15;
+  margin: 0.35rem 0 0.7rem;
+}
+
+.ciphered-seal-briefing p {
+  color: #55564f;
+  line-height: 1.65;
+  margin: 0 0 1rem;
+}
+
+.ciphered-seal-download,
+.ciphered-seal-route-state a {
+  align-items: center;
+  background: #202426;
+  border: 1px solid #202426;
+  border-radius: 999px;
+  color: #f2ead8;
+  display: inline-flex;
+  font-size: 0.85rem;
+  gap: 0.5rem;
+  justify-content: center;
+  padding: 0.7rem 1rem;
+}
+
+.ciphered-seal-download:hover,
+.ciphered-seal-route-state a:hover {
+  background: #976c29;
+  border-color: #976c29;
+  color: white;
+}
+
+.ciphered-seal-route-state code {
+  color: var(--accent-color);
+  font-weight: 700;
+}
+
+.ciphered-seal-route-state a {
+  margin-top: 0.35rem;
+  width: 100%;
+}
+
 .challenges-info {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -878,5 +977,13 @@
 
   .challenge-detail-grid {
     grid-template-columns: 1fr;
+  }
+
+  .ciphered-seal-discovery {
+    grid-template-columns: 1fr;
+  }
+
+  .ciphered-seal-briefing {
+    padding: 0.5rem;
   }
 }

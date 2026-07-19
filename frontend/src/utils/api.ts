@@ -13,6 +13,8 @@ import type {
   ChallengeListResponse,
   ChallengeProgressResponse,
   ChallengeSubmitResponse,
+  CipheredSealResolveResponse,
+  CipheredSealRouteStateResponse,
   ChallengeProgressStatus,
   ChallengeStatus,
 } from '../types/challenge';
@@ -516,6 +518,23 @@ export const challengeAPI = {
 
   get: async (slug: string): Promise<ChallengeDetailResponse> => {
     return apiRequest(`/challenges/${encodeURIComponent(slug)}`);
+  },
+
+  getCipheredSealState: async (routeKey: string): Promise<CipheredSealRouteStateResponse> => {
+    return apiRequest(`/challenges/ciphered-seal/route/${encodeURIComponent(routeKey)}`);
+  },
+
+  resolveCipheredSealSeed: async (
+    routeKey: string,
+    seedNumber: number
+  ): Promise<CipheredSealResolveResponse> => {
+    return apiRequest(
+      `/challenges/ciphered-seal/route/${encodeURIComponent(routeKey)}/resolve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ seedNumber }),
+      }
+    );
   },
 
   progress: async (slug: string): Promise<ChallengeProgressResponse> => {

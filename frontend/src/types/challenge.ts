@@ -20,6 +20,11 @@ export interface ChallengeRewardPreview {
   xpMode?: ChallengeXpMode;
 }
 
+export interface CipheredSealExperience {
+  type: 'ciphered_seal';
+  imagePath: string;
+}
+
 export interface ChallengeRewardConfig extends ChallengeRewardPreview {
   activityName?: string;
   description?: string;
@@ -64,6 +69,7 @@ export interface ChallengeListItem {
   tags: string[];
   version: number;
   validationType?: ChallengeValidationType;
+  experience?: CipheredSealExperience;
   startsAt?: string | null;
   endsAt?: string | null;
   rewardIntegrationInstanceId?: string | null;
@@ -108,6 +114,35 @@ export interface ChallengeSubmitResponse {
     status: 'not_required' | 'sent' | 'already_sent' | 'failed';
     emissionId?: string;
     message?: string;
+  };
+}
+
+export type CipheredSealWardCode = '200' | '301' | '403' | '500';
+
+export interface CipheredSealWard {
+  code: CipheredSealWardCode;
+  name: 'Concord' | 'Choice' | 'Discord' | 'Mirror';
+}
+
+export interface CipheredSealRouteStateResponse {
+  challenge: ChallengeDetail;
+  progress: ChallengeProgress;
+  rewardLink: ChallengeRewardLinkSummary;
+  protocol: {
+    identifier: string;
+    routeKey: string;
+    layout: CipheredSealWard[];
+  };
+}
+
+export interface CipheredSealResolveResponse {
+  resolved: boolean;
+  message: string;
+  values?: {
+    r1: number;
+    r2: number;
+    leftSeal: 0 | 1;
+    rightSeal: 0 | 1;
   };
 }
 

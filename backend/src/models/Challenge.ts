@@ -228,6 +228,7 @@ const challengeSchema = new Schema<IChallenge, ChallengeModel>(
 
 challengeSchema.index({ status: 1, startsAt: 1, endsAt: 1 });
 challengeSchema.index({ status: 1, rewardIntegrationInstanceId: 1 });
+challengeSchema.index({ 'validation.type': 1, 'validation.routeKey': 1 });
 
 const Challenge = mongoose.model<IChallenge, ChallengeModel>('Challenge', challengeSchema);
 
