@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { CircleHelp, X } from 'lucide-react';
+import { BookOpen, CircleHelp, X } from 'lucide-react';
 import ChallengeAssignmentForm, {
   type ChallengeAssignmentFormData,
 } from '../components/admin/ChallengeAssignmentForm';
@@ -1063,6 +1063,16 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
         >
           <h1>Admin Dashboard</h1>
           <p>Manage users and monitor your AWS Student Hub</p>
+          <a
+            className="admin-docs-link"
+            href="/docs/"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open the Challenge Operations Handbook"
+          >
+            <BookOpen size={18} aria-hidden="true" />
+            Operations handbook
+          </a>
         </motion.div>
 
         <div className="admin-tabs">
