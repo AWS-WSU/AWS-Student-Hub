@@ -39,6 +39,7 @@ async function seedRobotsTrapChallenge(): Promise<void> {
           'A robots.txt file tells crawlers where not to go. It does not protect private routes. Find the disallowed vault path and submit the flag shown there.',
         instructions:
           'Start at /robots.txt.\nFind the disallowed vault route.\nOpen that route directly and submit the flag value.',
+        source: 'curated',
         status: 'published',
         kind: 'single',
         difficulty: 'easy',
@@ -68,6 +69,7 @@ async function seedRobotsTrapChallenge(): Promise<void> {
       },
       $setOnInsert: {
         version: 1,
+        assignmentMigrationVersion: 1,
         createdBy: owner._id,
       },
     },

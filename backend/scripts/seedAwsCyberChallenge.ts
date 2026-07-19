@@ -39,6 +39,7 @@ async function seedAwsCyberChallenge(): Promise<void> {
           'Configure your AWS credentials, inspect your assigned S3 secret file, and submit the secret value to complete the lab.',
         instructions:
           'S3 bucket: wayne-aws-club-secrets\nSecret path: secrets/{username}.txt\nExpected file format: next_password=<secret>',
+        source: 'curated',
         status: 'published',
         kind: 'single',
         difficulty: 'medium',
@@ -66,6 +67,7 @@ async function seedAwsCyberChallenge(): Promise<void> {
       },
       $setOnInsert: {
         version: 1,
+        assignmentMigrationVersion: 1,
         createdBy: owner._id,
       },
     },

@@ -128,16 +128,11 @@ const attachAwsCredentialsIfLinked = (
   }
 };
 
-const hasCurrentPolicyAcknowledgement = (user: {
+const hasPolicyAcknowledgement = (user: {
   privacyPolicyAcknowledgedAt?: Date | null;
-  privacyPolicyVersion?: string;
   codeOfConductAcknowledgedAt?: Date | null;
 }): boolean => {
-  return Boolean(
-    user.privacyPolicyAcknowledgedAt &&
-    user.codeOfConductAcknowledgedAt &&
-    user.privacyPolicyVersion === CURRENT_POLICY_VERSION
-  );
+  return Boolean(user.privacyPolicyAcknowledgedAt && user.codeOfConductAcknowledgedAt);
 };
 
 const applyPolicyAcknowledgement = (user: {
@@ -386,7 +381,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    if (!hasCurrentPolicyAcknowledgement(user)) {
+    if (!hasPolicyAcknowledgement(user)) {
       if (!acceptedPolicies) {
         res.status(403).json({
           error: 'You must acknowledge the Privacy Policy and WSU conduct expectations.',

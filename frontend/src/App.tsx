@@ -18,6 +18,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import QuickSetup from './pages/QuickSetup';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import VaultTrap from './challenges/robotsTxtTrap/VaultTrap';
+import CipheredSealProtocol from './challenges/cipheredSeal/CipheredSealProtocol';
 import './App.css';
 
 function AppContent() {
@@ -43,6 +44,7 @@ function AppContent() {
           <Route path="/events" element={<Events theme={theme} />} />
           <Route path="/challenges" element={<Challenges theme={theme} />} />
           <Route path="/challenges/:slug" element={<ChallengeDetail theme={theme} />} />
+          <Route path="/challenge/:routeKey" element={<CipheredSealProtocol />} />
           <Route path="/auth" element={<Auth theme={theme} />} />
           <Route path="/setup" element={<QuickSetup theme={theme} />} />
           <Route path="/account" element={<Account theme={theme} />} />

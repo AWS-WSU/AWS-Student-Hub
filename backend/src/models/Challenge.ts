@@ -1,6 +1,7 @@
 import mongoose, { HydratedDocument, Model, Schema, Types } from 'mongoose';
 
 export type ChallengeStatus = 'draft' | 'published' | 'archived';
+export type ChallengeSource = 'curated' | 'custom';
 export type ChallengeKind = 'single' | 'multi_part';
 export type ChallengeDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
 export type ChallengeXpMode = 'none' | 'classroom' | 'custom';
@@ -29,12 +30,14 @@ export interface IChallenge {
   summary: string;
   description: string;
   instructions?: string;
+  source: ChallengeSource;
   status: ChallengeStatus;
   kind: ChallengeKind;
   difficulty: ChallengeDifficulty;
   estimatedMinutes?: number;
   tags: string[];
   version: number;
+  assignmentMigrationVersion?: number;
   publishedAt?: Date | null;
   archivedAt?: Date | null;
   startsAt?: Date | null;
@@ -52,7 +55,7 @@ export interface IChallenge {
 export type IChallengeDocument = HydratedDocument<IChallenge>;
 type ChallengeModel = Model<IChallenge>;
 
-const challengeRewardSchema = new Schema<IChallengeRewardConfig>(
+export const challengeRewardSchema = new Schema<IChallengeRewardConfig>(
   {
     enabled: {
       type: Boolean,
@@ -145,6 +148,12 @@ const challengeSchema = new Schema<IChallenge, ChallengeModel>(
       trim: true,
       maxlength: 10000,
     },
+    source: {
+      type: String,
+      enum: ['curated', 'custom'],
+      default: 'custom',
+      index: true,
+    },
     status: {
       type: String,
       enum: ['draft', 'published', 'archived'],
@@ -174,6 +183,10 @@ const challengeSchema = new Schema<IChallenge, ChallengeModel>(
     version: {
       type: Number,
       default: 1,
+      min: 1,
+    },
+    assignmentMigrationVersion: {
+      type: Number,
       min: 1,
     },
     publishedAt: {
@@ -228,6 +241,7 @@ const challengeSchema = new Schema<IChallenge, ChallengeModel>(
 
 challengeSchema.index({ status: 1, startsAt: 1, endsAt: 1 });
 challengeSchema.index({ status: 1, rewardIntegrationInstanceId: 1 });
+challengeSchema.index({ 'validation.type': 1, 'validation.routeKey': 1 });
 
 const Challenge = mongoose.model<IChallenge, ChallengeModel>('Challenge', challengeSchema);
 

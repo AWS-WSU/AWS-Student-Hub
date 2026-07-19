@@ -5,6 +5,8 @@ export type ChallengeSubmissionStatus = 'accepted' | 'pending_review' | 'rejecte
 export interface IChallengeSubmission {
   userId: Types.ObjectId;
   challengeId: Types.ObjectId;
+  assignmentId?: Types.ObjectId | null;
+  rewardIntegrationInstanceId?: Types.ObjectId | null;
   progressId: Types.ObjectId;
   challengeKey: string;
   validatorType: string;
@@ -31,6 +33,18 @@ const challengeSubmissionSchema = new Schema<IChallengeSubmission, ChallengeSubm
       type: Schema.Types.ObjectId,
       ref: 'Challenge',
       required: true,
+      index: true,
+    },
+    assignmentId: {
+      type: Schema.Types.ObjectId,
+      ref: 'ChallengeAssignment',
+      default: null,
+      index: true,
+    },
+    rewardIntegrationInstanceId: {
+      type: Schema.Types.ObjectId,
+      ref: 'RewardIntegrationInstance',
+      default: null,
       index: true,
     },
     progressId: {
@@ -76,6 +90,7 @@ const challengeSubmissionSchema = new Schema<IChallengeSubmission, ChallengeSubm
 );
 
 challengeSubmissionSchema.index({ userId: 1, challengeId: 1, createdAt: -1 });
+challengeSubmissionSchema.index({ assignmentId: 1, createdAt: -1 });
 challengeSubmissionSchema.index({ progressId: 1, createdAt: -1 });
 
 const ChallengeSubmission = mongoose.model<IChallengeSubmission, ChallengeSubmissionModel>(

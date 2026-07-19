@@ -12,6 +12,8 @@ export type ChallengeProgressStatus =
 export interface IChallengeProgress {
   userId: Types.ObjectId;
   challengeId: Types.ObjectId;
+  assignmentId?: Types.ObjectId | null;
+  rewardIntegrationInstanceId?: Types.ObjectId | null;
   challengeKey: string;
   challengeVersion: number;
   status: ChallengeProgressStatus;
@@ -41,6 +43,18 @@ const challengeProgressSchema = new Schema<IChallengeProgress, ChallengeProgress
       type: Schema.Types.ObjectId,
       ref: 'Challenge',
       required: true,
+      index: true,
+    },
+    assignmentId: {
+      type: Schema.Types.ObjectId,
+      ref: 'ChallengeAssignment',
+      default: null,
+      index: true,
+    },
+    rewardIntegrationInstanceId: {
+      type: Schema.Types.ObjectId,
+      ref: 'RewardIntegrationInstance',
+      default: null,
       index: true,
     },
     challengeKey: {
@@ -105,7 +119,13 @@ const challengeProgressSchema = new Schema<IChallengeProgress, ChallengeProgress
   }
 );
 
-challengeProgressSchema.index({ userId: 1, challengeId: 1 }, { unique: true });
+challengeProgressSchema.index(
+  { userId: 1, assignmentId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { assignmentId: { $type: 'objectId' } },
+  }
+);
 challengeProgressSchema.index({ userId: 1, status: 1 });
 challengeProgressSchema.index({ completionEventId: 1 }, { unique: true, sparse: true });
 

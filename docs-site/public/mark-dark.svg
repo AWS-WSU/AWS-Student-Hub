@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Challenge Operations Handbook">
+  <rect width="48" height="48" rx="14" fill="#e9ede8"/>
+  <path d="M24 9 37 16v16L24 39 11 32V16Z" fill="none" stroke="#17211d" stroke-width="2.5"/>
+  <path d="m17 24 5 5 10-11" fill="none" stroke="#bd6d32" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+</svg>

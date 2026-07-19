@@ -1,13 +1,23 @@
 import { Request, Response } from 'express';
 
+import type { ChallengeDifficulty } from '../models/Challenge';
 import {
   ChallengeServiceError,
+  getCipheredSealRouteState,
   getChallengeProgress,
   getPublishedChallenge,
   listPublishedChallenges,
+  resolveCipheredSealRouteSeed,
   startChallenge,
   submitChallenge,
 } from '../services/challengeService';
+
+const parseChallengeDifficulty = (value: unknown): ChallengeDifficulty | undefined => {
+  if (value === 'easy' || value === 'medium' || value === 'hard' || value === 'expert') {
+    return value;
+  }
+  return undefined;
+};
 
 const getErrorBody = (error: unknown, fallback: string) => {
   if (error instanceof ChallengeServiceError) {
@@ -33,8 +43,7 @@ export const listChallenges = async (req: Request, res: Response): Promise<void>
     const result = await listPublishedChallenges({
       userId: req.user?.id,
       tag: typeof req.query.tag === 'string' ? req.query.tag : undefined,
-      difficulty:
-        typeof req.query.difficulty === 'string' ? (req.query.difficulty as any) : undefined,
+      difficulty: parseChallengeDifficulty(req.query.difficulty),
     });
     res.json(result);
   } catch (error: unknown) {
@@ -48,6 +57,42 @@ export const getChallenge = async (req: Request, res: Response): Promise<void> =
     res.json(result);
   } catch (error: unknown) {
     res.status(getErrorStatus(error, 404)).json(getErrorBody(error, 'Unable to load challenge'));
+  }
+};
+
+export const getCipheredSealState = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const result = await getCipheredSealRouteState(req.params.routeKey, req.user.id);
+    res.json(result);
+  } catch (error: unknown) {
+    res
+      .status(getErrorStatus(error, 404))
+      .json(getErrorBody(error, 'Unable to load Ciphered Seal Protocol'));
+  }
+};
+
+export const resolveCipheredSealSeed = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const result = await resolveCipheredSealRouteSeed(
+      req.params.routeKey,
+      req.user.id,
+      req.body?.seedNumber
+    );
+    res.json(result);
+  } catch (error: unknown) {
+    res
+      .status(getErrorStatus(error, 400))
+      .json(getErrorBody(error, 'Unable to resolve the seal values'));
   }
 };
 

@@ -1,5 +1,4 @@
 import type { ChallengeDifficulty, ChallengeKind } from '../../types/challenge';
-import type { RewardIntegrationInstance } from '../../types/rewardIntegration';
 
 export interface ChallengeFormData {
   key: string;
@@ -14,31 +13,23 @@ export interface ChallengeFormData {
   tags: string;
   maxAttempts: string;
   validationJson: string;
-  rewardIntegrationInstanceId: string;
   rewardEnabled: boolean;
   rewardBits: string;
   rewardXpAmount: string;
 }
 
-type ValidationTemplate = 'aws_secret' | 'static_secret' | 'manual_review';
+type ValidationTemplate = 'static_secret' | 'manual_review';
 
 interface ChallengeCreateFormProps {
   form: ChallengeFormData;
-  rewardInstances: RewardIntegrationInstance[];
   saving: boolean;
   onChange: <K extends keyof ChallengeFormData>(field: K, value: ChallengeFormData[K]) => void;
   onApplyTemplate: (template: ValidationTemplate) => void;
   onSubmit: () => void;
 }
 
-const formatRewardInstanceLabel = (instance: RewardIntegrationInstance): string => {
-  const classroomLabel = instance.classroomName || instance.classroomId;
-  return `${instance.name} (${classroomLabel})`;
-};
-
 function ChallengeCreateForm({
   form,
-  rewardInstances,
   saving,
   onChange,
   onApplyTemplate,
@@ -157,26 +148,8 @@ function ChallengeCreateForm({
       </label>
 
       <label>
-        Reward classroom
-        <select
-          value={form.rewardIntegrationInstanceId}
-          onChange={(event) => onChange('rewardIntegrationInstanceId', event.target.value)}
-        >
-          <option value="">Global / any linked classroom</option>
-          {rewardInstances.map((instance) => (
-            <option key={instance.id} value={instance.id}>
-              {formatRewardInstanceLabel(instance)}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label>
         Validation JSON
         <div className="challenge-validation-templates">
-          <button type="button" onClick={() => onApplyTemplate('aws_secret')}>
-            AWS secret
-          </button>
           <button type="button" onClick={() => onApplyTemplate('static_secret')}>
             Static secret
           </button>

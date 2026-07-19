@@ -192,6 +192,10 @@ export const listSubmissions = async (req: Request, res: Response): Promise<void
       page: Number(req.query.page),
       limit: Number(req.query.limit),
       status: parseSubmissionStatus(req.query.status),
+      rewardIntegrationInstanceId:
+        typeof req.query.rewardIntegrationInstanceId === 'string'
+          ? req.query.rewardIntegrationInstanceId
+          : undefined,
     });
     res.json(result);
   } catch (error: unknown) {

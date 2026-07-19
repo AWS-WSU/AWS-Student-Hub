@@ -1,4 +1,6 @@
 export type ChallengeStatus = 'draft' | 'published' | 'archived';
+export type ChallengeSource = 'curated' | 'custom';
+export type ChallengeAssignmentStatus = 'draft' | 'published' | 'archived';
 export type ChallengeKind = 'single' | 'multi_part';
 export type ChallengeDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
 export type ChallengeProgressStatus =
@@ -20,6 +22,11 @@ export interface ChallengeRewardPreview {
   xpMode?: ChallengeXpMode;
 }
 
+export interface CipheredSealExperience {
+  type: 'ciphered_seal';
+  imagePath: string;
+}
+
 export interface ChallengeRewardConfig extends ChallengeRewardPreview {
   activityName?: string;
   description?: string;
@@ -36,6 +43,8 @@ export interface ChallengeRewardConfig extends ChallengeRewardPreview {
 export interface ChallengeProgress {
   id?: string;
   challengeId?: string;
+  assignmentId?: string | null;
+  rewardIntegrationInstanceId?: string | null;
   challengeKey?: string;
   challengeVersion?: number;
   status: ChallengeProgressStatus;
@@ -52,6 +61,7 @@ export interface ChallengeProgress {
 
 export interface ChallengeListItem {
   id: string;
+  assignmentId?: string | null;
   key: string;
   slug: string;
   title: string;
@@ -64,10 +74,12 @@ export interface ChallengeListItem {
   tags: string[];
   version: number;
   validationType?: ChallengeValidationType;
+  experience?: CipheredSealExperience;
   startsAt?: string | null;
   endsAt?: string | null;
   rewardIntegrationInstanceId?: string | null;
   reward: ChallengeRewardPreview;
+  maxAttempts?: number;
   progress?: ChallengeProgress;
 }
 
@@ -111,7 +123,37 @@ export interface ChallengeSubmitResponse {
   };
 }
 
+export type CipheredSealWardCode = '200' | '301' | '403' | '500';
+
+export interface CipheredSealWard {
+  code: CipheredSealWardCode;
+  name: 'Concord' | 'Choice' | 'Discord' | 'Mirror';
+}
+
+export interface CipheredSealRouteStateResponse {
+  challenge: ChallengeDetail;
+  progress: ChallengeProgress;
+  rewardLink: ChallengeRewardLinkSummary;
+  protocol: {
+    identifier: string;
+    routeKey: string;
+    layout: CipheredSealWard[];
+  };
+}
+
+export interface CipheredSealResolveResponse {
+  resolved: boolean;
+  message: string;
+  values?: {
+    r1: number;
+    r2: number;
+    leftSeal: 0 | 1;
+    rightSeal: 0 | 1;
+  };
+}
+
 export interface AdminChallenge extends ChallengeDetail {
+  source: ChallengeSource;
   status: ChallengeStatus;
   validation: Record<string, unknown>;
   reward: ChallengeRewardConfig;
@@ -135,6 +177,8 @@ export interface AdminChallengeSubmission {
   id: string;
   userId: string;
   challengeId: string;
+  assignmentId?: string | null;
+  rewardIntegrationInstanceId?: string | null;
   progressId: string;
   challengeKey: string;
   validatorType: ChallengeValidationType;
@@ -177,7 +221,6 @@ export interface AdminChallengePayload {
   estimatedMinutes?: number;
   tags?: string[];
   maxAttempts?: number;
-  rewardIntegrationInstanceId?: string | null;
   validation: Record<string, unknown>;
   reward?: Partial<ChallengeRewardConfig>;
 }
@@ -193,4 +236,56 @@ export interface AdminChallengeDeleteResponse {
   challengeId: string;
   progressDeleted: number;
   submissionsDeleted: number;
+}
+
+export interface AdminChallengeAssignmentProgress {
+  total: number;
+  completed: number;
+  pendingReview: number;
+}
+
+export interface AdminChallengeAssignment {
+  id: string;
+  challengeId: string;
+  rewardIntegrationInstanceId: string;
+  challengeVersion: number;
+  status: ChallengeAssignmentStatus;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  maxAttempts?: number;
+  reward: ChallengeRewardConfig;
+  publishedAt?: string | null;
+  archivedAt?: string | null;
+  assignedBy: string;
+  updatedBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  progress: AdminChallengeAssignmentProgress;
+  challenge: AdminChallenge;
+}
+
+export interface AdminChallengeAssignmentPayload {
+  challengeId?: string;
+  status?: ChallengeAssignmentStatus;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  maxAttempts?: number | null;
+  reward?: Partial<ChallengeRewardConfig>;
+}
+
+export interface AdminChallengeAssignmentsResponse {
+  items: AdminChallengeAssignment[];
+}
+
+export interface AdminChallengeAssignmentResponse {
+  message: string;
+  assignment: AdminChallengeAssignment;
+}
+
+export interface AdminChallengeAssignmentRemoveResponse {
+  message: string;
+  removed: boolean;
+  archived: boolean;
+  assignmentId: string;
+  progressCount: number;
 }

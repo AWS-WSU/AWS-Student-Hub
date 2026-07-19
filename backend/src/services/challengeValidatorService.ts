@@ -3,6 +3,14 @@ import crypto from 'crypto';
 import type { IChallengeDocument } from '../models/Challenge';
 import type { IChallengeProgressDocument } from '../models/ChallengeProgress';
 import User, { IUserDocument } from '../models/User';
+import {
+  buildCipheredSealExpectedSequence,
+  CIPHERED_SEAL_VALIDATOR_TYPE,
+  compareCipheredSealSequence,
+  getCipheredSealSuccessMessage,
+  isCipheredSealSequence,
+  normalizeCipheredSealConfig,
+} from './cipheredSealService';
 
 export interface ChallengeValidatorContext {
   user: IUserDocument;
@@ -247,6 +255,16 @@ const buildStaticSecretHash = (secret: string, config: StaticSecretValidationCon
   return hashSecret(normalizeSecret(secret, config));
 };
 
+const getCipheredSealConfig = (config: Record<string, unknown>) => {
+  try {
+    return normalizeCipheredSealConfig(config);
+  } catch (error: unknown) {
+    throw new ChallengeValidatorError(
+      error instanceof Error ? error.message : 'Invalid Ciphered Seal validator configuration.'
+    );
+  }
+};
+
 const getExpectedSecret = async (
   config: AwsSecretValidationConfig,
   context: ChallengeValidatorContext
@@ -424,6 +442,50 @@ const manualReviewValidator: ChallengeValidator = {
   },
 };
 
+const cipheredSealValidator: ChallengeValidator = {
+  type: CIPHERED_SEAL_VALIDATOR_TYPE,
+
+  async validate(rawConfig, rawPayload, context) {
+    getCipheredSealConfig(rawConfig);
+    const sequence = isRecord(rawPayload) ? rawPayload.sequence : undefined;
+
+    if (!isCipheredSealSequence(sequence)) {
+      return {
+        accepted: false,
+        outcome: 'rejected',
+        message: 'Invoke each of the four wards exactly once before submitting.',
+      };
+    }
+
+    const expectedSequence = buildCipheredSealExpectedSequence(context.challenge, context.user);
+    const accepted = compareCipheredSealSequence(sequence, expectedSequence);
+
+    return {
+      accepted,
+      outcome: accepted ? 'accepted' : 'rejected',
+      message: accepted
+        ? getCipheredSealSuccessMessage(rawConfig)
+        : 'The shrine rejected that invocation order. Recheck the ward states and visible order.',
+      publicDetails: {
+        invokedWardCount: sequence.length,
+      },
+      privateDetails: {
+        personalizedLayout: true,
+        challengeVersion: context.challenge.version,
+      },
+    };
+  },
+
+  sanitizePayload(payload) {
+    const sequence = isRecord(payload) && Array.isArray(payload.sequence) ? payload.sequence : [];
+    return {
+      submitted: sequence.length > 0,
+      invokedWardCount: sequence.length,
+      sequence: '[redacted]',
+    };
+  },
+};
+
 export const registerChallengeValidator = (validator: ChallengeValidator): void => {
   validators.set(validator.type, validator);
 };
@@ -515,6 +577,10 @@ export const prepareChallengeValidationConfigForStorage = (
     return { ...normalizeAwsSecretConfig({ ...config, type }) };
   }
 
+  if (type === CIPHERED_SEAL_VALIDATOR_TYPE) {
+    return { ...getCipheredSealConfig({ ...config, type }) };
+  }
+
   getChallengeValidator(type);
   return {
     ...config,
@@ -525,3 +591,4 @@ export const prepareChallengeValidationConfigForStorage = (
 registerChallengeValidator(awsSecretValidator);
 registerChallengeValidator(staticSecretValidator);
 registerChallengeValidator(manualReviewValidator);
+registerChallengeValidator(cipheredSealValidator);

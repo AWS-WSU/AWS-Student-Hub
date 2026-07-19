@@ -8,6 +8,7 @@ import Challenge, {
   IChallengeDocument,
   IChallengeRewardConfig,
 } from '../models/Challenge';
+import ChallengeAssignment, { IChallengeAssignmentDocument } from '../models/ChallengeAssignment';
 import ChallengeProgress, {
   ChallengeProgressStatus,
   IChallengeProgressDocument,
@@ -30,6 +31,12 @@ import {
   sanitizeChallengeSubmissionPayload,
   validateChallengeSubmission,
 } from './challengeValidatorService';
+import {
+  buildCipheredSealPublicState,
+  CIPHERED_SEAL_VALIDATOR_TYPE,
+  getCipheredSealPublicExperience,
+  resolveSubmittedCipheredSealSeed,
+} from './cipheredSealService';
 import { getPrizeversityStatus } from './rewardIntegrationService';
 
 export type ChallengeErrorCode =
@@ -40,6 +47,8 @@ export type ChallengeErrorCode =
   | 'VALIDATION_FAILED'
   | 'VALIDATOR_ERROR'
   | 'CHALLENGE_DELETE_BLOCKED'
+  | 'CHALLENGE_ASSIGNMENT_NOT_FOUND'
+  | 'CHALLENGE_ASSIGNMENT_EXISTS'
   | 'SUBMISSION_NOT_FOUND'
   | 'SUBMISSION_NOT_REVIEWABLE'
   | 'INVALID_CHALLENGE_INPUT';
@@ -121,7 +130,6 @@ interface ChallengeMutationInput {
   startsAt?: string | Date | null;
   endsAt?: string | Date | null;
   maxAttempts?: number | null;
-  rewardIntegrationInstanceId?: string | null;
   validation?: Record<string, unknown>;
   reward?: Partial<IChallengeRewardConfig>;
 }
@@ -130,6 +138,7 @@ const challengeStatuses: ChallengeStatus[] = ['draft', 'published', 'archived'];
 const challengeKinds: ChallengeKind[] = ['single', 'multi_part'];
 const challengeDifficulties: ChallengeDifficulty[] = ['easy', 'medium', 'hard', 'expert'];
 const xpModes: ChallengeXpMode[] = ['none', 'classroom', 'custom'];
+const customChallengeValidatorTypes = new Set(['static_secret', 'manual_review']);
 const completedStatuses: ChallengeProgressStatus[] = [
   'completed',
   'reward_pending',
@@ -194,44 +203,8 @@ const normalizeNumber = (value: unknown): number | undefined => {
   return Number.isFinite(numberValue) ? numberValue : undefined;
 };
 
-const getChallengeScopeId = (challenge: IChallengeDocument): string | null => {
-  return challenge.rewardIntegrationInstanceId?.toString() || null;
-};
-
-const getLinkedRewardInstanceId = (user?: IUserDocument | null): string | null => {
-  return user?.rewardIntegrationInstanceId?.toString() || null;
-};
-
-const resolveRewardIntegrationInstanceId = async (
-  value: string | null | undefined
-): Promise<Types.ObjectId | null | undefined> => {
-  if (value === undefined) return undefined;
-
-  const cleanedValue = cleanString(value);
-  if (!cleanedValue) return null;
-
-  if (!Types.ObjectId.isValid(cleanedValue)) {
-    throw new ChallengeServiceError(
-      'Reward integration instance was not found.',
-      'INVALID_CHALLENGE_INPUT',
-      400
-    );
-  }
-
-  const instance = await RewardIntegrationInstance.exists({
-    _id: new Types.ObjectId(cleanedValue),
-    active: true,
-  });
-
-  if (!instance) {
-    throw new ChallengeServiceError(
-      'Reward integration instance was not found.',
-      'INVALID_CHALLENGE_INPUT',
-      400
-    );
-  }
-
-  return new Types.ObjectId(cleanedValue);
+const getAssignmentScopeId = (assignment?: IChallengeAssignmentDocument | null): string | null => {
+  return assignment?.rewardIntegrationInstanceId?.toString() || null;
 };
 
 const normalizeValidation = (
@@ -266,6 +239,29 @@ const normalizeValidation = (
       throw new ChallengeServiceError(error.message, 'INVALID_CHALLENGE_INPUT', 400);
     }
     throw error;
+  }
+};
+
+const ensureUniqueCipheredSealRoute = async (
+  validation: Record<string, unknown>,
+  challengeId?: string
+): Promise<void> => {
+  if (validation.type !== CIPHERED_SEAL_VALIDATOR_TYPE) return;
+
+  const query: Record<string, unknown> = {
+    'validation.type': CIPHERED_SEAL_VALIDATOR_TYPE,
+    'validation.routeKey': cleanString(validation.routeKey),
+  };
+  if (challengeId) {
+    query._id = { $ne: new Types.ObjectId(challengeId) };
+  }
+
+  if (await Challenge.exists(query)) {
+    throw new ChallengeServiceError(
+      'That Ciphered Seal route is already assigned to another challenge.',
+      'INVALID_CHALLENGE_INPUT',
+      409
+    );
   }
 };
 
@@ -321,36 +317,13 @@ const normalizeExistingReward = (
   });
 };
 
-const isPublishedNowQuery = () => {
+const isPublishedAssignmentNowQuery = () => {
   const now = new Date();
   return {
     status: 'published',
     $and: [
       { $or: [{ startsAt: null }, { startsAt: { $exists: false } }, { startsAt: { $lte: now } }] },
       { $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] },
-    ],
-  };
-};
-
-const appendAndClause = (query: Record<string, unknown>, clause: Record<string, unknown>): void => {
-  const existingClauses = Array.isArray(query.$and) ? query.$and : [];
-  query.$and = [...existingClauses, clause];
-};
-
-const getVisibilityScopeClause = (rewardIntegrationInstanceId?: string | null) => {
-  const globalChallengeClauses: Record<string, unknown>[] = [
-    { rewardIntegrationInstanceId: null },
-    { rewardIntegrationInstanceId: { $exists: false } },
-  ];
-
-  if (!rewardIntegrationInstanceId || !Types.ObjectId.isValid(rewardIntegrationInstanceId)) {
-    return { $or: globalChallengeClauses };
-  }
-
-  return {
-    $or: [
-      ...globalChallengeClauses,
-      { rewardIntegrationInstanceId: new Types.ObjectId(rewardIntegrationInstanceId) },
     ],
   };
 };
@@ -366,11 +339,23 @@ const toRewardPreview = (reward: IChallengeRewardConfig) => ({
   xpMode: reward?.xpMode || 'custom',
 });
 
+const getPublicChallengeExperience = (challenge: IChallengeDocument) => {
+  if (getValidatorType(challenge) !== CIPHERED_SEAL_VALIDATOR_TYPE) return undefined;
+
+  try {
+    return getCipheredSealPublicExperience(challenge.validation);
+  } catch {
+    return undefined;
+  }
+};
+
 const toProgressDto = (progress: IChallengeProgressDocument | null) => {
   if (!progress) {
     return {
       status: 'not_started' as ChallengeProgressStatus,
       attemptCount: 0,
+      assignmentId: null,
+      rewardIntegrationInstanceId: null,
       startedAt: null,
       lastSubmittedAt: null,
       completedAt: null,
@@ -383,6 +368,8 @@ const toProgressDto = (progress: IChallengeProgressDocument | null) => {
   return {
     id: String(progress._id),
     challengeId: String(progress.challengeId),
+    assignmentId: progress.assignmentId?.toString() || null,
+    rewardIntegrationInstanceId: progress.rewardIntegrationInstanceId?.toString() || null,
     challengeKey: progress.challengeKey,
     challengeVersion: progress.challengeVersion,
     status: progress.status,
@@ -400,9 +387,11 @@ const toProgressDto = (progress: IChallengeProgressDocument | null) => {
 
 const toPublicChallengeDto = (
   challenge: IChallengeDocument,
+  assignment?: IChallengeAssignmentDocument | null,
   progress?: IChallengeProgressDocument | null
 ) => ({
   id: String(challenge._id),
+  assignmentId: assignment?._id.toString() || null,
   key: challenge.key,
   slug: challenge.slug,
   title: challenge.title,
@@ -415,15 +404,18 @@ const toPublicChallengeDto = (
   tags: challenge.tags,
   version: challenge.version,
   validationType: getValidatorType(challenge),
-  startsAt: challenge.startsAt,
-  endsAt: challenge.endsAt,
-  rewardIntegrationInstanceId: getChallengeScopeId(challenge),
-  reward: toRewardPreview(challenge.reward),
+  experience: getPublicChallengeExperience(challenge),
+  startsAt: assignment ? assignment.startsAt : challenge.startsAt,
+  endsAt: assignment ? assignment.endsAt : challenge.endsAt,
+  maxAttempts: assignment ? assignment.maxAttempts : challenge.maxAttempts,
+  rewardIntegrationInstanceId: getAssignmentScopeId(assignment),
+  reward: toRewardPreview(assignment ? assignment.reward : challenge.reward),
   progress: progress === undefined ? undefined : toProgressDto(progress),
 });
 
-const toAdminChallengeDto = (challenge: IChallengeDocument) => ({
-  ...toPublicChallengeDto(challenge),
+export const toAdminChallengeDto = (challenge: IChallengeDocument) => ({
+  ...toPublicChallengeDto(challenge, null),
+  source: challenge.source || 'custom',
   status: challenge.status,
   validation: challenge.validation,
   reward: challenge.reward,
@@ -440,6 +432,8 @@ const toSubmissionDto = (submission: IChallengeSubmissionDocument) => ({
   id: String(submission._id),
   userId: submission.userId?.toString(),
   challengeId: submission.challengeId?.toString(),
+  assignmentId: submission.assignmentId?.toString() || null,
+  rewardIntegrationInstanceId: submission.rewardIntegrationInstanceId?.toString() || null,
   progressId: submission.progressId?.toString(),
   challengeKey: submission.challengeKey,
   validatorType: submission.validatorType,
@@ -481,63 +475,113 @@ const getRewardLinkSummary = async (
   };
 };
 
-const ensureChallengeScopeAccess = async (
-  challenge: IChallengeDocument,
-  userId?: string
-): Promise<IUserDocument | null> => {
-  const requiredInstanceId = getChallengeScopeId(challenge);
-  if (!requiredInstanceId) return null;
+interface AssignedChallengeContext {
+  challenge: IChallengeDocument;
+  assignment: IChallengeAssignmentDocument;
+  user: IUserDocument;
+}
 
+const ensureLinkedChallengeUser = async (userId?: string): Promise<IUserDocument> => {
   if (!userId || !Types.ObjectId.isValid(userId)) {
     throw new ChallengeServiceError(
-      'Link your Prizeversity classroom account before opening this challenge.',
+      'Link your Prizeversity classroom account before opening challenges.',
       'REWARD_LINK_REQUIRED',
-      403,
-      { rewardIntegrationInstanceId: requiredInstanceId }
+      403
     );
   }
 
   const user = await User.findById(userId);
-  if (!user || getLinkedRewardInstanceId(user) !== requiredInstanceId) {
+  if (!user) {
+    throw new ChallengeServiceError('User not found.', 'INVALID_CHALLENGE_INPUT', 404);
+  }
+  if (!user.rewardIntegrationInstanceId) {
     throw new ChallengeServiceError(
-      'This challenge belongs to a different Prizeversity classroom. Link the matching classroom account to continue.',
+      'Link your Prizeversity classroom account before opening challenges.',
       'REWARD_LINK_REQUIRED',
-      403,
-      { rewardIntegrationInstanceId: requiredInstanceId }
+      403
     );
   }
-
+  const activeInstance = await RewardIntegrationInstance.exists({
+    _id: user.rewardIntegrationInstanceId,
+    active: true,
+  });
+  if (!activeInstance) {
+    throw new ChallengeServiceError(
+      'Your linked Prizeversity classroom is not currently active.',
+      'REWARD_LINK_REQUIRED',
+      403
+    );
+  }
   return user;
 };
 
-const ensureUserMatchesChallengeScope = (
-  challenge: IChallengeDocument,
-  user: IUserDocument
-): void => {
-  const requiredInstanceId = getChallengeScopeId(challenge);
-  if (!requiredInstanceId) return;
-
-  if (getLinkedRewardInstanceId(user) !== requiredInstanceId) {
-    throw new ChallengeServiceError(
-      'This challenge belongs to a different Prizeversity classroom. Link the matching classroom account to continue.',
-      'REWARD_LINK_REQUIRED',
-      403,
-      { rewardIntegrationInstanceId: requiredInstanceId }
-    );
-  }
+const findActiveAssignment = async (
+  challengeId: Types.ObjectId,
+  rewardIntegrationInstanceId: Types.ObjectId
+): Promise<IChallengeAssignmentDocument | null> => {
+  return ChallengeAssignment.findOne({
+    challengeId,
+    rewardIntegrationInstanceId,
+    ...isPublishedAssignmentNowQuery(),
+  });
 };
 
-const ensurePublishedChallenge = async (slug: string): Promise<IChallengeDocument> => {
+const ensureAssignedChallenge = async (
+  slug: string,
+  userId?: string
+): Promise<AssignedChallengeContext> => {
+  const user = await ensureLinkedChallengeUser(userId);
   const challenge = await Challenge.findOne({
     slug: slugify(slug),
-    ...isPublishedNowQuery(),
+    status: 'published',
   });
-
   if (!challenge) {
     throw new ChallengeServiceError('Challenge not found.', 'CHALLENGE_NOT_FOUND', 404);
   }
 
-  return challenge;
+  const assignment = await findActiveAssignment(
+    challenge._id,
+    user.rewardIntegrationInstanceId as Types.ObjectId
+  );
+  if (!assignment) {
+    throw new ChallengeServiceError(
+      'This challenge is not available in your classroom.',
+      'CHALLENGE_NOT_FOUND',
+      404
+    );
+  }
+  return { challenge, assignment, user };
+};
+
+const ensureAssignedCipheredSealChallenge = async (
+  routeKey: string,
+  userId: string
+): Promise<AssignedChallengeContext> => {
+  const normalizedRouteKey = cleanString(routeKey);
+  if (!/^\d{4,12}$/.test(normalizedRouteKey)) {
+    throw new ChallengeServiceError('Challenge route not found.', 'CHALLENGE_NOT_FOUND', 404);
+  }
+
+  const user = await ensureLinkedChallengeUser(userId);
+  const challenge = await Challenge.findOne({
+    status: 'published',
+    'validation.type': CIPHERED_SEAL_VALIDATOR_TYPE,
+    'validation.routeKey': normalizedRouteKey,
+  });
+
+  if (!challenge) {
+    throw new ChallengeServiceError('Challenge route not found.', 'CHALLENGE_NOT_FOUND', 404);
+  }
+
+  const assignment = await findActiveAssignment(
+    challenge._id,
+    user.rewardIntegrationInstanceId as Types.ObjectId
+  );
+  if (!assignment) {
+    throw new ChallengeServiceError('Challenge route not found.', 'CHALLENGE_NOT_FOUND', 404);
+  }
+
+  return { challenge, assignment, user };
 };
 
 const ensureChallengeById = async (challengeId: string): Promise<IChallengeDocument> => {
@@ -555,18 +599,21 @@ const ensureChallengeById = async (challengeId: string): Promise<IChallengeDocum
 
 const getOrCreateProgress = async (
   challenge: IChallengeDocument,
+  assignment: IChallengeAssignmentDocument,
   userId: string
 ): Promise<IChallengeProgressDocument> => {
   const userObjectId = new Types.ObjectId(userId);
   let progress = await ChallengeProgress.findOne({
     userId: userObjectId,
-    challengeId: challenge._id,
+    assignmentId: assignment._id,
   });
 
   if (!progress) {
     progress = await ChallengeProgress.create({
       userId: userObjectId,
       challengeId: challenge._id,
+      assignmentId: assignment._id,
+      rewardIntegrationInstanceId: assignment.rewardIntegrationInstanceId,
       challengeKey: challenge.key,
       challengeVersion: challenge.version,
       status: 'in_progress',
@@ -597,17 +644,19 @@ const normalizePagination = (page?: number, limit?: number) => {
 
 const completeChallengeProgress = async (
   challenge: IChallengeDocument,
+  assignment: IChallengeAssignmentDocument,
   user: IUserDocument,
   progress: IChallengeProgressDocument
 ): Promise<RewardGrantResult> => {
   const completedAt = new Date();
-  progress.status = challenge.reward?.enabled ? 'reward_pending' : 'completed';
+  progress.status = assignment.reward?.enabled ? 'reward_pending' : 'completed';
   progress.completedAt = progress.completedAt || completedAt;
   progress.completionEventId =
-    progress.completionEventId || `challenge-completed:${String(user._id)}:${challenge.key}`;
+    progress.completionEventId ||
+    `challenge-completed:${String(user._id)}:${assignment._id.toString()}`;
   await progress.save();
 
-  const event = buildChallengeCompletionEvent(user, challenge, progress);
+  const event = buildChallengeCompletionEvent(user, challenge, assignment, progress);
   const reward = await grantChallengeCompletionReward(event, user);
 
   if (reward.status === 'sent' || reward.status === 'already_sent') {
@@ -630,37 +679,66 @@ export const listPublishedChallenges = async (
   challenges: ReturnType<typeof toPublicChallengeDto>[];
   rewardLink: RewardLinkSummary;
 }> => {
-  const query: Record<string, unknown> = isPublishedNowQuery();
   const user =
     options.userId && Types.ObjectId.isValid(options.userId)
       ? await User.findById(options.userId)
       : null;
 
-  appendAndClause(query, getVisibilityScopeClause(getLinkedRewardInstanceId(user)));
+  if (!user?.rewardIntegrationInstanceId) {
+    return {
+      challenges: [],
+      rewardLink: await getRewardLinkSummary(options.userId),
+    };
+  }
 
-  if (options.tag) query.tags = cleanString(options.tag).toLowerCase();
+  const activeInstance = await RewardIntegrationInstance.exists({
+    _id: user.rewardIntegrationInstanceId,
+    active: true,
+  });
+  if (!activeInstance) {
+    return {
+      challenges: [],
+      rewardLink: await getRewardLinkSummary(options.userId),
+    };
+  }
+
+  const assignments = await ChallengeAssignment.find({
+    rewardIntegrationInstanceId: user.rewardIntegrationInstanceId,
+    ...isPublishedAssignmentNowQuery(),
+  }).sort({ publishedAt: -1, createdAt: -1 });
+  const challengeQuery: Record<string, unknown> = {
+    _id: { $in: assignments.map((assignment) => assignment.challengeId) },
+    status: 'published',
+  };
+  if (options.tag) challengeQuery.tags = cleanString(options.tag).toLowerCase();
   if (options.difficulty && challengeDifficulties.includes(options.difficulty)) {
-    query.difficulty = options.difficulty;
+    challengeQuery.difficulty = options.difficulty;
   }
 
-  const challenges = await Challenge.find(query).sort({ publishedAt: -1, createdAt: -1 });
-  const progressByChallengeId = new Map<string, IChallengeProgressDocument>();
-
-  if (user && challenges.length) {
-    const progressRecords = await ChallengeProgress.find({
-      userId: user._id,
-      challengeId: { $in: challenges.map((challenge) => challenge._id) },
-    });
-
-    progressRecords.forEach((progress) => {
-      progressByChallengeId.set(progress.challengeId.toString(), progress);
-    });
-  }
+  const challenges = await Challenge.find(challengeQuery);
+  const challengeById = new Map(
+    challenges.map((challenge) => [challenge._id.toString(), challenge])
+  );
+  const visibleAssignments = assignments.filter((assignment) =>
+    challengeById.has(assignment.challengeId.toString())
+  );
+  const progressRecords = await ChallengeProgress.find({
+    userId: user._id,
+    assignmentId: { $in: visibleAssignments.map((assignment) => assignment._id) },
+  });
+  const progressByAssignmentId = new Map(
+    progressRecords.map((progress) => [progress.assignmentId?.toString(), progress])
+  );
 
   return {
-    challenges: challenges.map((challenge) =>
-      toPublicChallengeDto(challenge, progressByChallengeId.get(String(challenge._id)) || null)
-    ),
+    challenges: visibleAssignments.map((assignment) => {
+      const challenge = challengeById.get(assignment.challengeId.toString()) as IChallengeDocument;
+      return toPublicChallengeDto(
+        challenge,
+        assignment,
+        progressByAssignmentId.get(assignment._id.toString()) || null
+      );
+    }),
     rewardLink: await getRewardLinkSummary(options.userId),
   };
 };
@@ -672,19 +750,15 @@ export const getPublishedChallenge = async (
   challenge: ReturnType<typeof toPublicChallengeDto>;
   rewardLink: RewardLinkSummary;
 }> => {
-  const challenge = await ensurePublishedChallenge(slug);
-  await ensureChallengeScopeAccess(challenge, userId);
-  const progress =
-    userId && Types.ObjectId.isValid(userId)
-      ? await ChallengeProgress.findOne({
-          userId: new Types.ObjectId(userId),
-          challengeId: challenge._id,
-        })
-      : null;
+  const { challenge, assignment } = await ensureAssignedChallenge(slug, userId);
+  const progress = await ChallengeProgress.findOne({
+    userId: new Types.ObjectId(userId as string),
+    assignmentId: assignment._id,
+  });
 
   return {
-    challenge: toPublicChallengeDto(challenge, userId ? progress || null : undefined),
-    rewardLink: await getRewardLinkSummary(userId, getChallengeScopeId(challenge)),
+    challenge: toPublicChallengeDto(challenge, assignment, progress || null),
+    rewardLink: await getRewardLinkSummary(userId, getAssignmentScopeId(assignment)),
   };
 };
 
@@ -695,15 +769,14 @@ export const getChallengeProgress = async (
   challenge: ReturnType<typeof toPublicChallengeDto>;
   progress: ReturnType<typeof toProgressDto>;
 }> => {
-  const challenge = await ensurePublishedChallenge(slug);
-  await ensureChallengeScopeAccess(challenge, userId);
+  const { challenge, assignment } = await ensureAssignedChallenge(slug, userId);
   const progress = await ChallengeProgress.findOne({
     userId: new Types.ObjectId(userId),
-    challengeId: challenge._id,
+    assignmentId: assignment._id,
   });
 
   return {
-    challenge: toPublicChallengeDto(challenge),
+    challenge: toPublicChallengeDto(challenge, assignment),
     progress: toProgressDto(progress),
   };
 };
@@ -715,14 +788,53 @@ export const startChallenge = async (
   challenge: ReturnType<typeof toPublicChallengeDto>;
   progress: ReturnType<typeof toProgressDto>;
 }> => {
-  const challenge = await ensurePublishedChallenge(slug);
-  await ensureChallengeScopeAccess(challenge, userId);
-  const progress = await getOrCreateProgress(challenge, userId);
+  const { challenge, assignment } = await ensureAssignedChallenge(slug, userId);
+  const progress = await getOrCreateProgress(challenge, assignment, userId);
 
   return {
-    challenge: toPublicChallengeDto(challenge),
+    challenge: toPublicChallengeDto(challenge, assignment),
     progress: toProgressDto(progress),
   };
+};
+
+const getCipheredSealPlayerContext = async (routeKey: string, userId: string) => {
+  const { challenge, assignment, user } = await ensureAssignedCipheredSealChallenge(
+    routeKey,
+    userId
+  );
+  if (assignment.reward?.enabled && !hasRewardIdentity(user)) {
+    throw new ChallengeServiceError(
+      'Link your Prizeversity account before entering this challenge.',
+      'REWARD_LINK_REQUIRED',
+      403
+    );
+  }
+
+  const progress = await getOrCreateProgress(challenge, assignment, userId);
+  return { challenge, assignment, user, progress };
+};
+
+export const getCipheredSealRouteState = async (routeKey: string, userId: string) => {
+  const { challenge, assignment, user, progress } = await getCipheredSealPlayerContext(
+    routeKey,
+    userId
+  );
+
+  return {
+    challenge: toPublicChallengeDto(challenge, assignment),
+    progress: toProgressDto(progress),
+    rewardLink: await getRewardLinkSummary(userId, getAssignmentScopeId(assignment)),
+    protocol: buildCipheredSealPublicState(challenge, user),
+  };
+};
+
+export const resolveCipheredSealRouteSeed = async (
+  routeKey: string,
+  userId: string,
+  seedNumber: unknown
+) => {
+  const { challenge, user } = await getCipheredSealPlayerContext(routeKey, userId);
+  return resolveSubmittedCipheredSealSeed(challenge, user, seedNumber);
 };
 
 export const submitChallenge = async (
@@ -730,15 +842,9 @@ export const submitChallenge = async (
   userId: string,
   payload: unknown
 ): Promise<ChallengeSubmitResult> => {
-  const challenge = await ensurePublishedChallenge(slug);
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new ChallengeServiceError('User not found.', 'INVALID_CHALLENGE_INPUT', 404);
-  }
+  const { challenge, assignment, user } = await ensureAssignedChallenge(slug, userId);
 
-  ensureUserMatchesChallengeScope(challenge, user);
-
-  if (challenge.reward?.enabled && !hasRewardIdentity(user)) {
+  if (assignment.reward?.enabled && !hasRewardIdentity(user)) {
     throw new ChallengeServiceError(
       'Link your Prizeversity account before completing rewardable challenges.',
       'REWARD_LINK_REQUIRED',
@@ -746,7 +852,7 @@ export const submitChallenge = async (
     );
   }
 
-  const progress = await getOrCreateProgress(challenge, userId);
+  const progress = await getOrCreateProgress(challenge, assignment, userId);
 
   if (completedStatuses.includes(progress.status)) {
     return {
@@ -754,7 +860,7 @@ export const submitChallenge = async (
       completed: true,
       message: 'Challenge is already completed.',
       progress: toProgressDto(progress),
-      reward: challenge.reward?.enabled
+      reward: assignment.reward?.enabled
         ? {
             status:
               progress.status === 'reward_sent'
@@ -768,7 +874,7 @@ export const submitChallenge = async (
     };
   }
 
-  if (challenge.maxAttempts && progress.attemptCount >= challenge.maxAttempts) {
+  if (assignment.maxAttempts && progress.attemptCount >= assignment.maxAttempts) {
     throw new ChallengeServiceError(
       'Maximum challenge attempts reached.',
       'MAX_ATTEMPTS_REACHED',
@@ -798,6 +904,8 @@ export const submitChallenge = async (
     await ChallengeSubmission.create({
       userId: new Types.ObjectId(userId),
       challengeId: challenge._id,
+      assignmentId: assignment._id,
+      rewardIntegrationInstanceId: assignment.rewardIntegrationInstanceId,
       progressId: progress._id,
       challengeKey: challenge.key,
       validatorType: getValidatorType(challenge),
@@ -825,6 +933,8 @@ export const submitChallenge = async (
     await ChallengeSubmission.create({
       userId: new Types.ObjectId(userId),
       challengeId: challenge._id,
+      assignmentId: assignment._id,
+      rewardIntegrationInstanceId: assignment.rewardIntegrationInstanceId,
       progressId: progress._id,
       challengeKey: challenge.key,
       validatorType: getValidatorType(challenge),
@@ -853,6 +963,8 @@ export const submitChallenge = async (
     await ChallengeSubmission.create({
       userId: new Types.ObjectId(userId),
       challengeId: challenge._id,
+      assignmentId: assignment._id,
+      rewardIntegrationInstanceId: assignment.rewardIntegrationInstanceId,
       progressId: progress._id,
       challengeKey: challenge.key,
       validatorType: getValidatorType(challenge),
@@ -878,6 +990,8 @@ export const submitChallenge = async (
   await ChallengeSubmission.create({
     userId: new Types.ObjectId(userId),
     challengeId: challenge._id,
+    assignmentId: assignment._id,
+    rewardIntegrationInstanceId: assignment.rewardIntegrationInstanceId,
     progressId: progress._id,
     challengeKey: challenge.key,
     validatorType: getValidatorType(challenge),
@@ -891,7 +1005,7 @@ export const submitChallenge = async (
     message: validationResult.message,
   });
 
-  const reward = await completeChallengeProgress(challenge, user, progress);
+  const reward = await completeChallengeProgress(challenge, assignment, user, progress);
 
   return {
     accepted: true,
@@ -976,9 +1090,15 @@ export const createAdminChallenge = async (
     : 'draft';
   const startsAt = parseDate(input.startsAt);
   const endsAt = parseDate(input.endsAt);
-  const rewardIntegrationInstanceId = await resolveRewardIntegrationInstanceId(
-    input.rewardIntegrationInstanceId
-  );
+  const validation = normalizeValidation(input.validation, true) as Record<string, unknown>;
+  if (!customChallengeValidatorTypes.has(cleanString(validation.type))) {
+    throw new ChallengeServiceError(
+      'Custom challenges must use static_secret or manual_review validation.',
+      'INVALID_CHALLENGE_INPUT',
+      400
+    );
+  }
+  await ensureUniqueCipheredSealRoute(validation);
   const now = new Date();
 
   const challenge = await Challenge.create({
@@ -988,6 +1108,7 @@ export const createAdminChallenge = async (
     summary,
     description,
     instructions: cleanString(input.instructions) || undefined,
+    source: 'custom',
     status,
     kind: challengeKinds.includes(input.kind as ChallengeKind) ? input.kind : 'single',
     difficulty: challengeDifficulties.includes(input.difficulty as ChallengeDifficulty)
@@ -996,13 +1117,14 @@ export const createAdminChallenge = async (
     estimatedMinutes: normalizeNumber(input.estimatedMinutes),
     tags: normalizeTags(input.tags),
     version: 1,
+    assignmentMigrationVersion: 1,
     publishedAt: status === 'published' ? now : null,
     archivedAt: status === 'archived' ? now : null,
     startsAt,
     endsAt,
     maxAttempts: normalizeNumber(input.maxAttempts),
-    rewardIntegrationInstanceId: rewardIntegrationInstanceId || null,
-    validation: normalizeValidation(input.validation, true),
+    rewardIntegrationInstanceId: null,
+    validation,
     reward: normalizeReward(input.reward),
     createdBy: new Types.ObjectId(adminUserId),
   });
@@ -1038,12 +1160,10 @@ export const updateAdminChallenge = async (
   if (input.maxAttempts !== undefined) {
     challenge.maxAttempts = normalizeNumber(input.maxAttempts) || undefined;
   }
-  if (input.rewardIntegrationInstanceId !== undefined) {
-    challenge.rewardIntegrationInstanceId =
-      (await resolveRewardIntegrationInstanceId(input.rewardIntegrationInstanceId)) || null;
-  }
   if (input.validation !== undefined) {
-    challenge.validation = normalizeValidation(input.validation, true) as Record<string, unknown>;
+    const validation = normalizeValidation(input.validation, true) as Record<string, unknown>;
+    await ensureUniqueCipheredSealRoute(validation, challengeId);
+    challenge.validation = validation;
     challenge.version += 1;
   }
   if (input.reward !== undefined) {
@@ -1091,12 +1211,31 @@ export const deleteAdminChallenge = async (
 }> => {
   const challenge = await ensureChallengeById(challengeId);
 
+  if (challenge.source === 'curated') {
+    throw new ChallengeServiceError(
+      'Curated catalog challenges cannot be deleted.',
+      'CHALLENGE_DELETE_BLOCKED',
+      409,
+      { source: challenge.source }
+    );
+  }
+
   if (challenge.status === 'published') {
     throw new ChallengeServiceError(
       'Archive the challenge before deleting it.',
       'CHALLENGE_DELETE_BLOCKED',
       409,
       { status: challenge.status }
+    );
+  }
+
+  const assignmentCount = await ChallengeAssignment.countDocuments({ challengeId: challenge._id });
+  if (assignmentCount > 0) {
+    throw new ChallengeServiceError(
+      'Remove this challenge from every classroom before deleting it from the catalog.',
+      'CHALLENGE_DELETE_BLOCKED',
+      409,
+      { assignmentCount }
     );
   }
 
@@ -1117,13 +1256,28 @@ export const deleteAdminChallenge = async (
 
 export const listAdminChallengeSubmissions = async (
   challengeId: string,
-  options: { page?: number; limit?: number; status?: ChallengeSubmissionStatus } = {}
+  options: {
+    page?: number;
+    limit?: number;
+    status?: ChallengeSubmissionStatus;
+    rewardIntegrationInstanceId?: string;
+  } = {}
 ): Promise<ListResult<ReturnType<typeof toSubmissionDto>>> => {
   const challenge = await ensureChallengeById(challengeId);
   const { page, limit, skip } = normalizePagination(options.page, options.limit);
   const query: Record<string, unknown> = { challengeId: challenge._id };
 
   if (options.status) query.status = options.status;
+  if (options.rewardIntegrationInstanceId) {
+    if (!Types.ObjectId.isValid(options.rewardIntegrationInstanceId)) {
+      throw new ChallengeServiceError(
+        'Reward integration instance was not found.',
+        'INVALID_CHALLENGE_INPUT',
+        404
+      );
+    }
+    query.rewardIntegrationInstanceId = new Types.ObjectId(options.rewardIntegrationInstanceId);
+  }
 
   const [items, total] = await Promise.all([
     ChallengeSubmission.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
@@ -1191,6 +1345,18 @@ export const approveAdminChallengeSubmission = async (
     );
   }
 
+  const assignmentId = submission.assignmentId || progress.assignmentId;
+  const assignment = assignmentId
+    ? await ChallengeAssignment.findOne({ _id: assignmentId, challengeId: challenge._id })
+    : null;
+  if (!assignment) {
+    throw new ChallengeServiceError(
+      'The classroom assignment for this submission was not found.',
+      'CHALLENGE_ASSIGNMENT_NOT_FOUND',
+      409
+    );
+  }
+
   const message = cleanString(reviewMessage) || 'Manual review approved.';
   submission.status = 'accepted';
   submission.message = message;
@@ -1205,7 +1371,7 @@ export const approveAdminChallengeSubmission = async (
   await submission.save();
 
   progress.lastValidationMessage = message;
-  const reward = await completeChallengeProgress(challenge, submittedUser, progress);
+  const reward = await completeChallengeProgress(challenge, assignment, submittedUser, progress);
 
   return {
     message,

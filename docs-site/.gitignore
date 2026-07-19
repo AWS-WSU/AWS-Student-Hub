@@ -1,0 +1,5 @@
+.vitepress/cache/
+.vitepress/dist/
+test-results/
+playwright-report/
+.auth/

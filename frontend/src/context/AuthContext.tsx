@@ -9,6 +9,7 @@ import type {
   ProfileUpdatePayload,
   SignupPayload,
 } from '../types/auth';
+import { PolicyAcknowledgementRequiredError } from '../types/auth';
 import type { User } from '../types/user';
 
 interface JwtPayload {
@@ -20,6 +21,13 @@ interface JwtPayload {
 
 interface AuthProviderProps {
   children: ReactNode;
+}
+
+interface LoginErrorPayload {
+  error?: string;
+  acknowledgementRequired?: boolean;
+  policyVersion?: string;
+  errors?: Array<{ msg?: string }>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -325,11 +333,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       });
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: 'Network error' }));
+        const data = (await response
+          .json()
+          .catch(() => ({ error: 'Network error' }))) as LoginErrorPayload;
 
         if (data.errors && Array.isArray(data.errors)) {
           const errorMessages = data.errors.map((err: { msg?: string }) => err.msg).join('. ');
           throw new Error(errorMessages);
+        }
+
+        if (data.acknowledgementRequired) {
+          throw new PolicyAcknowledgementRequiredError(
+            data.error || 'Policy acknowledgement is required.',
+            data.policyVersion
+          );
         }
 
         throw new Error(data.error || `HTTP ${response.status}: Login failed`);
