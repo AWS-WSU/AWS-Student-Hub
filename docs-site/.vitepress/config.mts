@@ -58,14 +58,14 @@ export default defineConfig({
     lineNumbers: true,
   },
   head: [
+    ['link', { rel: 'icon', type: 'image/png', href: '/docs/aws-student-builder-group-logo.png' }],
     ['meta', { name: 'theme-color', content: '#17211d' }],
     ['meta', { name: 'color-scheme', content: 'light dark' }],
   ],
   themeConfig: {
     logo: {
-      light: '/mark-light.svg',
-      dark: '/mark-dark.svg',
-      alt: 'AWS Student Hub documentation',
+      src: '/aws-student-builder-group-logo.png',
+      alt: 'AWS Student Builder Group',
     },
     nav: [
       { text: 'Teacher guide', link: '/guide/system-overview', activeMatch: '^/guide/' },

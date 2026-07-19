@@ -268,8 +268,8 @@ function PublicProfile({ theme }: ThemeProps) {
               <p className="user-bio">{profile.bio}</p>
             ) : (
               <p className="default-bio">
-                {profile.fullName} is an active member of the Wayne State University AWS Cloud
-                Computing Club.
+                {profile.fullName} is an active member of the Wayne State University AWS Student
+                Builder Group.
                 {profile.stats.daysSinceJoin < 30
                   ? ' They recently joined our community'
                   : ' They have been part of our community'}
@@ -350,7 +350,7 @@ function PublicProfile({ theme }: ThemeProps) {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                Join the Club
+                Join the Group
               </motion.button>
             </div>
           )}

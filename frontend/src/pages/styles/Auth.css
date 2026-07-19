@@ -20,7 +20,9 @@
 }
 
 .auth-logo {
+  width: 40px;
   height: 40px;
+  object-fit: contain;
   margin-bottom: 1.25rem;
   opacity: 0.9;
 }

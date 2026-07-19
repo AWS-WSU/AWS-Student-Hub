@@ -273,7 +273,9 @@ function Challenges({ theme: _theme }: ThemeProps) {
 
                   <div className="challenge-card-footer">
                     <span className="challenge-type">
-                      {challenge.tags.length ? challenge.tags.slice(0, 2).join(' / ') : 'AWS Club'}
+                      {challenge.tags.length
+                        ? challenge.tags.slice(0, 2).join(' / ')
+                        : 'AWS Student Builder Group'}
                     </span>
                     <button
                       type="button"

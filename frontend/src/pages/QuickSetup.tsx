@@ -44,7 +44,7 @@ interface ProfileSetupFormData {
   programmingLanguages: string[];
 }
 
-function QuickSetup({ theme }: ThemeProps) {
+function QuickSetup({ theme: _theme }: ThemeProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState<File | null>(null);
@@ -214,7 +214,7 @@ function QuickSetup({ theme }: ThemeProps) {
           <UserCircle size={24} aria-hidden="true" /> Welcome,{' '}
           {user?.fullName?.split(' ')[0] || 'there'}!
         </h2>
-        <p>Let's complete your profile to get the most out of AWS Club</p>
+        <p>Let's complete your profile to get the most out of AWS Student Builder Group</p>
       </div>
 
       <div className="current-info">
@@ -394,10 +394,7 @@ function QuickSetup({ theme }: ThemeProps) {
       <div className="setup-modal">
         <div className="setup-header">
           <div className="logo">
-            <img
-              src={theme === 'light' ? '/aws-logo-dark.svg' : '/aws-logo-light.svg'}
-              alt="AWS Logo"
-            />
+            <img src="/aws-student-builder-group-logo.png" alt="AWS Student Builder Group" />
           </div>
           <div className="progress-bar">
             <div className="progress-steps">

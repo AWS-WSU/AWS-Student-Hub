@@ -194,9 +194,9 @@ export const sendEventNotification = async (
   }
 
   const mailOptions = {
-    from: `"AWS Cloud Club @ WSU" <${env.SMTP_USER}>`,
+    from: `"AWS Student Builder Group @ WSU" <${env.SMTP_USER}>`,
     to: email,
-    subject: `🚀 New Event: ${event.title} - AWS Cloud Club`,
+    subject: `🚀 New Event: ${event.title} - AWS Student Builder Group`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -397,7 +397,7 @@ export const sendEventNotification = async (
       <body>
         <div class="email-wrapper">
           <div class="header">
-            <h1>☁️ AWS Cloud Club</h1>
+            <h1>☁️ AWS Student Builder Group</h1>
             <p>Wayne State University</p>
           </div>
 
@@ -478,14 +478,14 @@ export const sendEventNotification = async (
           </div>
 
           <div class="footer">
-            <p>AWS Cloud Club @ Wayne State University</p>
+            <p>AWS Student Builder Group @ Wayne State University</p>
             <div class="social-links">
               <a href="https://discord.gg/KaQdmjGp">Discord</a> •
               <a href="https://www.instagram.com/awscloudclub.wsu">Instagram</a> •
               <a href="https://github.com/awsccwsu">GitHub</a>
             </div>
             <p class="unsubscribe">
-              You're receiving this because you're a registered member of AWS Cloud Club.<br>
+              You're receiving this because you're a registered member of AWS Student Builder Group.<br>
               Questions? Reply to this email or reach out on Discord.
             </p>
           </div>

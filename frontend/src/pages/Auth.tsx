@@ -186,7 +186,7 @@ const PasswordInput = ({
   );
 };
 
-function Auth({ theme }: AuthProps) {
+function Auth({ theme: _theme }: AuthProps) {
   const [searchParams] = useSearchParams();
   const [isLogin, setIsLogin] = useState<boolean>(searchParams.get('mode') !== 'signup');
   const redirectPath = searchParams.get('redirect') || '/';
@@ -537,8 +537,8 @@ function Auth({ theme }: AuthProps) {
       >
         <div className="auth-header">
           <motion.img
-            src={theme === 'light' ? '/aws-logo-dark.svg' : '/aws-logo-light.svg'}
-            alt="AWS Logo"
+            src="/aws-student-builder-group-logo.png"
+            alt="AWS Student Builder Group"
             className="auth-logo"
             initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
@@ -549,7 +549,7 @@ function Auth({ theme }: AuthProps) {
             {forgotPasswordStep === 'verify-email' && 'Verify Email'}
             {forgotPasswordStep === 'verify-code' && 'Enter Reset Code'}
             {forgotPasswordStep === 'reset-password' && 'New Password'}
-            {!forgotPasswordStep && 'Welcome to AWS Club'}
+            {!forgotPasswordStep && 'Welcome to AWS Student Builder Group'}
           </h1>
           <p>
             {forgotPasswordStep === 'forgot-password' && 'Enter your email or username'}
@@ -908,7 +908,7 @@ function Auth({ theme }: AuthProps) {
                   />
                   <span>
                     I acknowledge the <Link to="/privacy">Privacy Policy</Link> and agree to follow
-                    applicable Wayne State University conduct policies while using club spaces,
+                    applicable Wayne State University conduct policies while using group spaces,
                     challenges, events, and communications.
                   </span>
                 </motion.label>
