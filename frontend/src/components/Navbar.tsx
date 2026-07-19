@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { SyntheticEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { LayoutDashboard } from 'lucide-react';
 import './styles/Navbar.css';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAuth } from '../context/AuthContext';
@@ -291,12 +292,7 @@ function Navbar({ theme, toggleTheme }: LayoutProps) {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <img
-                        src={theme === 'dark' ? '/aws-light.svg' : '/aws.svg'}
-                        alt="Admin Dashboard"
-                        className="login-icon"
-                        style={{ filter: theme === 'dark' ? 'invert(100%)' : 'invert(0%)' }}
-                      />
+                      <LayoutDashboard className="login-icon" aria-hidden="true" />
                       Admin Dashboard
                     </motion.button>
                   )}

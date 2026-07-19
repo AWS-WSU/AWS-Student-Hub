@@ -240,7 +240,7 @@
 .prizeversity-card,
 .account-credentials-section,
 .profile-stats .stat-card,
-.academic-details,
+.academic-info,
 .programming-skills,
 .profile-bio,
 .privacy-card,
@@ -258,6 +258,13 @@
   border-radius: var(--radius-lg);
   background: var(--card-bg);
   box-shadow: var(--shadow-sm);
+}
+
+.academic-details {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .about-card,
