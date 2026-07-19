@@ -370,7 +370,12 @@ function CipheredSealProtocol() {
             <strong>{ritualMessage}</strong>
           </div>
           <div className="seal-sequence-actions">
-            <button type="button" className="seal-reset-button" onClick={resetRitual} disabled={submitting}>
+            <button
+              type="button"
+              className="seal-reset-button"
+              onClick={resetRitual}
+              disabled={submitting}
+            >
               <RotateCcw size={16} aria-hidden="true" /> Reset ritual
             </button>
             <button

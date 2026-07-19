@@ -34,6 +34,16 @@ export interface SignupPayload {
   acceptedPolicies?: boolean;
 }
 
+export class PolicyAcknowledgementRequiredError extends Error {
+  readonly policyVersion?: string;
+
+  constructor(message: string, policyVersion?: string) {
+    super(message);
+    this.name = 'PolicyAcknowledgementRequiredError';
+    this.policyVersion = policyVersion;
+  }
+}
+
 export interface AuthContextValue {
   user: User | null;
   loading: boolean;

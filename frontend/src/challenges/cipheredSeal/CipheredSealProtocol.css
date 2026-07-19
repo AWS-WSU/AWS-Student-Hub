@@ -269,9 +269,7 @@
 
 .seal-console-panel,
 .seal-sequence-console {
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.035), transparent 42%),
-    #171b1d;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.035), transparent 42%), #171b1d;
   border: 1px solid #0a0d0e;
   box-shadow:
     inset 0 0 0 2px #282b2a,
@@ -475,7 +473,11 @@
   --ward-color: var(--seal-brass-light);
   aspect-ratio: 1.4 / 1;
   background:
-    radial-gradient(circle at 50% 64%, color-mix(in srgb, var(--ward-color) 12%, transparent), transparent 47%),
+    radial-gradient(
+      circle at 50% 64%,
+      color-mix(in srgb, var(--ward-color) 12%, transparent),
+      transparent 47%
+    ),
     linear-gradient(145deg, #1b1f20, #0f1214);
   border: 1px solid color-mix(in srgb, var(--ward-color) 68%, #171b1d);
   border-radius: 2px;
@@ -523,7 +525,11 @@
 
 .seal-ward.invoked {
   background:
-    radial-gradient(circle at 50% 64%, color-mix(in srgb, var(--ward-color) 30%, transparent), transparent 54%),
+    radial-gradient(
+      circle at 50% 64%,
+      color-mix(in srgb, var(--ward-color) 30%, transparent),
+      transparent 54%
+    ),
     #15191a;
 }
 
@@ -749,8 +755,7 @@
 
 .seal-reward-modal {
   background:
-    radial-gradient(circle at 50% 0, rgba(210, 173, 104, 0.2), transparent 45%),
-    var(--seal-paper);
+    radial-gradient(circle at 50% 0, rgba(210, 173, 104, 0.2), transparent 45%), var(--seal-paper);
   border: 1px solid var(--seal-brass);
   box-shadow:
     inset 0 0 0 6px var(--seal-paper),

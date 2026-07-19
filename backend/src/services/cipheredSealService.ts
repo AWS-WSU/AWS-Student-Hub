@@ -165,10 +165,7 @@ export const buildCipheredSealLayout = (
   );
 };
 
-const getWardActivity = (
-  code: CipheredSealWardCode,
-  values: CipheredSealResolvedValues
-): 0 | 1 => {
+const getWardActivity = (code: CipheredSealWardCode, values: CipheredSealResolvedValues): 0 | 1 => {
   const { leftSeal, rightSeal } = values;
   if (code === '200') return (leftSeal & rightSeal) as 0 | 1;
   if (code === '301') return (leftSeal | rightSeal) as 0 | 1;
@@ -219,7 +216,8 @@ export const resolveSubmittedCipheredSealSeed = (
   if (seedNumber !== expectedSeed) {
     return {
       resolved: false,
-      message: 'The shrine did not recognize that SeedNumber. Revisit how the script orders symbols.',
+      message:
+        'The shrine did not recognize that SeedNumber. Revisit how the script orders symbols.',
     };
   }
 

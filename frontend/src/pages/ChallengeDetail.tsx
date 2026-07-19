@@ -338,8 +338,8 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
                 <ScanSearch size={24} aria-hidden="true" />
                 <p>Discovery stage unlocked</p>
                 <small>
-                  This challenge does not accept a secret here. Resolve the artifact metadata,
-                  then navigate to the resulting <code>/challenge/&lt;route&gt;</code> path.
+                  This challenge does not accept a secret here. Resolve the artifact metadata, then
+                  navigate to the resulting <code>/challenge/&lt;route&gt;</code> path.
                 </small>
                 {challenge.experience && (
                   <a href={challenge.experience.imagePath} download="ciphered-seal-map.png">

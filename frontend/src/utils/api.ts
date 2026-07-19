@@ -528,13 +528,10 @@ export const challengeAPI = {
     routeKey: string,
     seedNumber: number
   ): Promise<CipheredSealResolveResponse> => {
-    return apiRequest(
-      `/challenges/ciphered-seal/route/${encodeURIComponent(routeKey)}/resolve`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ seedNumber }),
-      }
-    );
+    return apiRequest(`/challenges/ciphered-seal/route/${encodeURIComponent(routeKey)}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify({ seedNumber }),
+    });
   },
 
   progress: async (slug: string): Promise<ChallengeProgressResponse> => {

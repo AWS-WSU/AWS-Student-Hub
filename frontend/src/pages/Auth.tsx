@@ -9,6 +9,7 @@ import { authAPI } from '../utils/api';
 import { ArrowLeft, Check, Circle } from 'lucide-react';
 import CyberChallengeModal from '../components/CyberChallengeModal';
 import './styles/Auth.css';
+import { PolicyAcknowledgementRequiredError } from '../types/auth';
 import type { AuthResponse, AwsCredentials } from '../types/auth';
 import type { Theme } from '../types/ui';
 import type { User } from '../types/user';
@@ -192,6 +193,8 @@ function Auth({ theme }: AuthProps) {
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showPasswordRequirements, setShowPasswordRequirements] = useState<boolean>(false);
+  const [policyAcknowledgementRequired, setPolicyAcknowledgementRequired] =
+    useState<boolean>(false);
   const [forgotPasswordStep, setForgotPasswordStep] = useState<ForgotPasswordStep>(null);
   const [resetData, setResetData] = useState<ResetData>(initialResetData);
   const [formData, setFormData] = useState<AuthFormData>({
@@ -281,11 +284,15 @@ function Auth({ theme }: AuthProps) {
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
+    if (name === 'email' && policyAcknowledgementRequired) {
+      setPolicyAcknowledgementRequired(false);
+    }
     setFormData(
       (prev) =>
         ({
           ...prev,
           [name]: type === 'checkbox' ? checked : value,
+          ...(name === 'email' && policyAcknowledgementRequired ? { acceptedPolicies: false } : {}),
         }) as AuthFormData
     );
     setError('');
@@ -320,7 +327,7 @@ function Auth({ theme }: AuthProps) {
         throw new Error('Passwords do not match');
       }
 
-      if (!formData.acceptedPolicies) {
+      if ((!isLogin || policyAcknowledgementRequired) && !formData.acceptedPolicies) {
         throw new Error('You must acknowledge the Privacy Policy and WSU conduct expectations.');
       }
 
@@ -376,7 +383,12 @@ function Auth({ theme }: AuthProps) {
         navigate(redirectPath, { replace: true });
       }
     } catch (err) {
-      setError(getErrorMessage(err, 'Authentication failed'));
+      if (err instanceof PolicyAcknowledgementRequiredError) {
+        setPolicyAcknowledgementRequired(true);
+        setError('Please acknowledge the current Privacy Policy once to continue.');
+      } else {
+        setError(getErrorMessage(err, 'Authentication failed'));
+      }
       setIsLoading(false);
     }
   };
@@ -477,7 +489,7 @@ function Auth({ theme }: AuthProps) {
 
   const handleSocialLogin = async () => {
     try {
-      if (!formData.acceptedPolicies) {
+      if (!isLogin && !formData.acceptedPolicies) {
         setError('You must acknowledge the Privacy Policy and WSU conduct expectations.');
         return;
       }
@@ -554,6 +566,8 @@ function Auth({ theme }: AuthProps) {
               className={isLogin ? 'active' : ''}
               onClick={() => {
                 setIsLogin(true);
+                setPolicyAcknowledgementRequired(false);
+                setFormData((prev) => ({ ...prev, acceptedPolicies: false }));
                 setError('');
               }}
             >
@@ -563,6 +577,8 @@ function Auth({ theme }: AuthProps) {
               className={!isLogin ? 'active' : ''}
               onClick={() => {
                 setIsLogin(false);
+                setPolicyAcknowledgementRequired(false);
+                setFormData((prev) => ({ ...prev, acceptedPolicies: false }));
                 setError('');
               }}
             >
@@ -876,21 +892,27 @@ function Auth({ theme }: AuthProps) {
                 )}
               </div>
 
-              <label className="policy-acknowledgement">
-                <input
-                  type="checkbox"
-                  name="acceptedPolicies"
-                  checked={formData.acceptedPolicies}
-                  onChange={handleInputChange}
-                  className="remember-me-checkbox"
-                  required
-                />
-                <span>
-                  I acknowledge the <Link to="/privacy">Privacy Policy</Link> and agree to follow
-                  applicable Wayne State University conduct policies while using club spaces,
-                  challenges, events, and communications.
-                </span>
-              </label>
+              {(!isLogin || policyAcknowledgementRequired) && (
+                <motion.label
+                  className="policy-acknowledgement"
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <input
+                    type="checkbox"
+                    name="acceptedPolicies"
+                    checked={formData.acceptedPolicies}
+                    onChange={handleInputChange}
+                    className="remember-me-checkbox"
+                    required
+                  />
+                  <span>
+                    I acknowledge the <Link to="/privacy">Privacy Policy</Link> and agree to follow
+                    applicable Wayne State University conduct policies while using club spaces,
+                    challenges, events, and communications.
+                  </span>
+                </motion.label>
+              )}
 
               <motion.button
                 type="submit"
@@ -925,10 +947,12 @@ function Auth({ theme }: AuthProps) {
                 Continue with Google
               </motion.button>
             </div>
-            <p className="auth-policy-note">
-              By continuing, you acknowledge the <Link to="/privacy">Privacy Policy</Link> and
-              applicable Wayne State University conduct expectations.
-            </p>
+            {!isLogin && (
+              <p className="auth-policy-note">
+                By continuing, you acknowledge the <Link to="/privacy">Privacy Policy</Link> and
+                applicable Wayne State University conduct expectations.
+              </p>
+            )}
 
             <motion.button
               className="back-home"
