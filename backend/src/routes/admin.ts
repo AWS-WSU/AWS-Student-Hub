@@ -2,6 +2,7 @@ import express from 'express';
 
 import * as adminController from '../controllers/adminController';
 import * as challengeAdminController from '../controllers/challengeAdminController';
+import * as challengeAssignmentAdminController from '../controllers/challengeAssignmentAdminController';
 import * as rewardIntegrationAdminController from '../controllers/rewardIntegrationAdminController';
 import { canManageUser, requireAdmin, requireModerator } from '../middleware/adminAuth';
 
@@ -60,6 +61,26 @@ router.post(
 );
 router.get('/reward-integrations', requireAdmin, rewardIntegrationAdminController.listInstances);
 router.post('/reward-integrations', requireAdmin, rewardIntegrationAdminController.createInstance);
+router.get(
+  '/reward-integrations/:instanceId/challenge-assignments',
+  requireAdmin,
+  challengeAssignmentAdminController.listAssignments
+);
+router.post(
+  '/reward-integrations/:instanceId/challenge-assignments',
+  requireAdmin,
+  challengeAssignmentAdminController.createAssignment
+);
+router.patch(
+  '/reward-integrations/:instanceId/challenge-assignments/:assignmentId',
+  requireAdmin,
+  challengeAssignmentAdminController.updateAssignment
+);
+router.delete(
+  '/reward-integrations/:instanceId/challenge-assignments/:assignmentId',
+  requireAdmin,
+  challengeAssignmentAdminController.removeAssignment
+);
 router.get(
   '/reward-integrations/:instanceId/members',
   requireAdmin,

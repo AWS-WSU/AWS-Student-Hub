@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 
 import type { IChallengeDocument, IChallengeRewardConfig } from '../models/Challenge';
+import type { IChallengeAssignmentDocument } from '../models/ChallengeAssignment';
 import type { IChallengeProgressDocument } from '../models/ChallengeProgress';
 import RewardIntegrationEmission from '../models/RewardIntegrationEmission';
 import type { IUserDocument } from '../models/User';
@@ -38,19 +39,20 @@ export class ChallengeRewardError extends Error {
 export const buildChallengeCompletionEvent = (
   user: IUserDocument,
   challenge: IChallengeDocument,
+  assignment: IChallengeAssignmentDocument,
   progress: IChallengeProgressDocument
 ): ChallengeCompletionEvent => {
   const completedAt = progress.completedAt || new Date();
   return {
-    eventId: `challenge-completed:${String(user._id)}:${challenge.key}`,
+    eventId: `challenge-completed:${String(user._id)}:${assignment._id.toString()}`,
     userId: user._id,
     challengeId: challenge._id,
     challengeKey: challenge.key,
     challengeTitle: challenge.title,
     progressId: progress._id,
     completedAt,
-    rewardIntegrationInstanceId: challenge.rewardIntegrationInstanceId?.toString() || null,
-    reward: challenge.reward,
+    rewardIntegrationInstanceId: assignment.rewardIntegrationInstanceId.toString(),
+    reward: assignment.reward,
   };
 };
 

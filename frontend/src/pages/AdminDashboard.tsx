@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { CircleHelp, X } from 'lucide-react';
+import ChallengeAssignmentForm, {
+  type ChallengeAssignmentFormData,
+} from '../components/admin/ChallengeAssignmentForm';
+import ChallengeCatalogPicker from '../components/admin/ChallengeCatalogPicker';
 import ChallengeCreateForm, {
   type ChallengeFormData,
 } from '../components/admin/ChallengeCreateForm';
@@ -15,6 +19,8 @@ import './styles/AdminDashboard.css';
 import type { AdminStats, AdminUser, EmailQueueEntry } from '../types/admin';
 import type {
   AdminChallenge,
+  AdminChallengeAssignment,
+  AdminChallengeAssignmentPayload,
   AdminChallengePayload,
   AdminChallengeSubmission,
   ChallengeStatus,
@@ -42,11 +48,7 @@ type StatusFilter = UserStatus | '';
 type QueueStats = Record<string, any>;
 type RewardWorkspaceTab = 'overview' | 'challenges' | 'students' | 'settings';
 
-type ChallengeValidationTemplate =
-  | 'aws_secret'
-  | 'static_secret'
-  | 'manual_review'
-  | 'ciphered_seal';
+type ChallengeValidationTemplate = 'static_secret' | 'manual_review';
 
 interface DashboardStats extends AdminStats {
   newsletterSubscribers?: number;
@@ -79,32 +81,40 @@ const emptyRewardForm: RewardIntegrationFormData = {
 };
 
 const emptyChallengeForm: ChallengeFormData = {
-  key: 'aws_cloud_security_lab',
-  slug: 'aws-cloud-security-lab',
-  title: 'AWS Cloud Security Lab',
-  summary: 'Use your assigned AWS workspace to retrieve the next challenge secret.',
-  description:
-    'Configure your AWS credentials, inspect your assigned S3 secret file, and submit the secret value to complete the lab.',
-  instructions:
-    'S3 bucket: wayne-aws-club-secrets\nSecret path: secrets/{username}.txt\nExpected file format: next_password=<secret>',
+  key: '',
+  slug: '',
+  title: '',
+  summary: '',
+  description: '',
+  instructions: '',
   kind: 'single',
-  difficulty: 'medium',
-  estimatedMinutes: '20',
-  tags: 'aws,s3,security',
+  difficulty: 'easy',
+  estimatedMinutes: '',
+  tags: '',
   maxAttempts: '',
   validationJson: JSON.stringify(
     {
-      type: 'aws_secret',
-      source: 'user_next_challenge_password',
-      acceptedPrefixes: ['next_password='],
+      type: 'static_secret',
+      expectedValue: 'replace-with-secret-answer',
+      trimSubmission: true,
+      caseSensitive: true,
     },
     null,
     2
   ),
-  rewardIntegrationInstanceId: '',
   rewardEnabled: true,
-  rewardBits: '50',
-  rewardXpAmount: '30',
+  rewardBits: '25',
+  rewardXpAmount: '15',
+};
+
+const emptyAssignmentForm: ChallengeAssignmentFormData = {
+  status: 'draft',
+  startsAt: '',
+  endsAt: '',
+  maxAttempts: '',
+  rewardEnabled: true,
+  rewardBits: '0',
+  rewardXpAmount: '0',
 };
 
 const getErrorMessage = (err: unknown, fallback: string): string =>
@@ -134,10 +144,14 @@ const formatSubmissionPreview = (submission: AdminChallengeSubmission): string =
   return values.length ? values.join('\n') : 'No preview available.';
 };
 
-const formatRewardInstanceLabel = (instance: RewardIntegrationInstance): string => {
-  const classroomLabel = instance.classroomName || instance.classroomId;
-  return `${instance.name} (${classroomLabel})`;
+const toDateTimeInput = (value?: string | null): string => {
+  if (!value) return '';
+  const date = new Date(value);
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 };
+
+const toIsoDate = (value: string): string | null => (value ? new Date(value).toISOString() : null);
 
 const DashBoardIcon = ({ className }: IconProps) => (
   <img
@@ -246,6 +260,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
 
   // Challenge admin state
   const [adminChallenges, setAdminChallenges] = useState<AdminChallenge[]>([]);
+  const [assignableChallenges, setAssignableChallenges] = useState<AdminChallenge[]>([]);
   const [challengeForm, setChallengeForm] = useState<ChallengeFormData>(emptyChallengeForm);
   const [challengeLoading, setChallengeLoading] = useState<boolean>(false);
   const [challengeSaving, setChallengeSaving] = useState<boolean>(false);
@@ -253,24 +268,33 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   const [updatingChallengeId, setUpdatingChallengeId] = useState<string | null>(null);
   const [challengeToDelete, setChallengeToDelete] = useState<AdminChallenge | null>(null);
   const [reviewChallenge, setReviewChallenge] = useState<AdminChallenge | null>(null);
+  const [reviewRewardInstanceId, setReviewRewardInstanceId] = useState<string | null>(null);
   const [manualReviewSubmissions, setManualReviewSubmissions] = useState<
     AdminChallengeSubmission[]
   >([]);
   const [reviewLoading, setReviewLoading] = useState<boolean>(false);
   const [reviewingSubmissionId, setReviewingSubmissionId] = useState<string | null>(null);
   const [showChallengeCreateModal, setShowChallengeCreateModal] = useState<boolean>(false);
+  const [challengeAssignments, setChallengeAssignments] = useState<AdminChallengeAssignment[]>([]);
+  const [challengeAssignmentsLoading, setChallengeAssignmentsLoading] = useState<boolean>(false);
+  const [assignmentSaving, setAssignmentSaving] = useState<boolean>(false);
+  const [showCatalogPicker, setShowCatalogPicker] = useState<boolean>(false);
+  const [assignmentChallenge, setAssignmentChallenge] = useState<AdminChallenge | null>(null);
+  const [editingAssignment, setEditingAssignment] = useState<AdminChallengeAssignment | null>(null);
+  const [assignmentForm, setAssignmentForm] =
+    useState<ChallengeAssignmentFormData>(emptyAssignmentForm);
+  const [assignmentToRemove, setAssignmentToRemove] = useState<AdminChallengeAssignment | null>(
+    null
+  );
 
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
-  const activeRewardInstances = rewardInstances.filter(
-    (instance) => instance.active && instance.source === 'database'
-  );
   const selectedRewardInstance = rewardInstances.find(
     (instance) => instance.id === selectedRewardInstanceId
   );
-  const selectedInstanceChallenges = adminChallenges.filter(
-    (challenge) => challenge.rewardIntegrationInstanceId === selectedRewardInstanceId
+  const assignedChallengeIds = new Set(
+    challengeAssignments.map((assignment) => assignment.challengeId)
   );
   const filteredRewardMembers = rewardMembers.filter((member) => {
     const query = rewardMemberSearch.trim().toLowerCase();
@@ -279,13 +303,6 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(query));
   });
-  const getChallengeRewardScopeLabel = (challenge: AdminChallenge): string => {
-    if (!challenge.rewardIntegrationInstanceId) return 'Global';
-    const instance = rewardInstances.find(
-      (rewardInstance) => rewardInstance.id === challenge.rewardIntegrationInstanceId
-    );
-    return instance ? formatRewardInstanceLabel(instance) : 'Unknown classroom';
-  };
 
   useEffect(() => {
     if (authLoading) {
@@ -420,11 +437,49 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
     }
   }, [challengeStatusFilter]);
 
+  const loadAssignableChallenges = useCallback(async () => {
+    try {
+      const response = await adminAPI.listChallenges('published', '', 1, 100);
+      setAssignableChallenges(response.items || []);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to load the published challenge catalog'));
+    }
+  }, []);
+
   useEffect(() => {
     if (activeTab === 'challenges' || activeTab === 'rewards') {
       loadAdminChallenges();
     }
   }, [activeTab, loadAdminChallenges]);
+
+  useEffect(() => {
+    if (activeTab === 'rewards') loadAssignableChallenges();
+  }, [activeTab, loadAssignableChallenges]);
+
+  const loadChallengeAssignments = useCallback(async (instanceId: string) => {
+    if (!instanceId) {
+      setChallengeAssignments([]);
+      return;
+    }
+    setChallengeAssignmentsLoading(true);
+    setChallengeAssignments([]);
+    try {
+      const response = await adminAPI.listChallengeAssignments(instanceId);
+      setChallengeAssignments(response.items || []);
+      setError('');
+    } catch (err) {
+      setChallengeAssignments([]);
+      setError(getErrorMessage(err, 'Failed to load classroom challenge assignments'));
+    } finally {
+      setChallengeAssignmentsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'rewards' && selectedRewardInstanceId) {
+      loadChallengeAssignments(selectedRewardInstanceId);
+    }
+  }, [activeTab, selectedRewardInstanceId, loadChallengeAssignments]);
 
   useEffect(() => {
     if (!selectedRewardInstance) return;
@@ -598,8 +653,8 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
     }
   };
 
-  const openChallengeCreateModal = (rewardIntegrationInstanceId = '') => {
-    setChallengeForm({ ...emptyChallengeForm, rewardIntegrationInstanceId });
+  const openChallengeCreateModal = () => {
+    setChallengeForm({ ...emptyChallengeForm });
     setShowChallengeCreateModal(true);
   };
 
@@ -615,11 +670,6 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
 
   const applyChallengeValidationTemplate = (template: ChallengeValidationTemplate) => {
     const templates: Record<ChallengeValidationTemplate, Record<string, unknown>> = {
-      aws_secret: {
-        type: 'aws_secret',
-        source: 'user_next_challenge_password',
-        acceptedPrefixes: ['next_password='],
-      },
       static_secret: {
         type: 'static_secret',
         expectedValue: 'replace-with-secret-answer',
@@ -631,9 +681,6 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
         minLength: 20,
         maxLength: 2000,
         submittedMessage: 'Submission received for review.',
-      },
-      ciphered_seal: {
-        type: 'ciphered_seal',
       },
     };
 
@@ -660,7 +707,6 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
         .map((tag) => tag.trim())
         .filter(Boolean),
       maxAttempts: Number(challengeForm.maxAttempts) || undefined,
-      rewardIntegrationInstanceId: challengeForm.rewardIntegrationInstanceId || null,
       validation,
       reward: {
         enabled: challengeForm.rewardEnabled,
@@ -690,10 +736,136 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       setChallengeForm(emptyChallengeForm);
       setShowChallengeCreateModal(false);
       loadAdminChallenges();
+      loadAssignableChallenges();
     } catch (err) {
       showToast(getErrorMessage(err, 'Failed to create challenge'), 'error');
     } finally {
       setChallengeSaving(false);
+    }
+  };
+
+  const openAssignmentEditor = (
+    challenge: AdminChallenge,
+    assignment: AdminChallengeAssignment | null = null
+  ) => {
+    const reward = assignment?.reward || challenge.reward;
+    setAssignmentChallenge(challenge);
+    setEditingAssignment(assignment);
+    setAssignmentForm({
+      status: assignment?.status || 'draft',
+      startsAt: toDateTimeInput(assignment?.startsAt),
+      endsAt: toDateTimeInput(assignment?.endsAt),
+      maxAttempts: String(assignment?.maxAttempts || challenge.maxAttempts || ''),
+      rewardEnabled: reward.enabled,
+      rewardBits: String(reward.bits || 0),
+      rewardXpAmount: String(reward.xpAmount || 0),
+    });
+    setShowCatalogPicker(false);
+  };
+
+  const handleAssignmentFieldChange = <K extends keyof ChallengeAssignmentFormData>(
+    field: K,
+    value: ChallengeAssignmentFormData[K]
+  ) => {
+    setAssignmentForm((previous) => ({ ...previous, [field]: value }));
+  };
+
+  const buildAssignmentPayload = (): AdminChallengeAssignmentPayload => ({
+    challengeId: editingAssignment ? undefined : assignmentChallenge?.id,
+    status: assignmentForm.status,
+    startsAt: toIsoDate(assignmentForm.startsAt),
+    endsAt: toIsoDate(assignmentForm.endsAt),
+    maxAttempts: assignmentForm.maxAttempts ? Number(assignmentForm.maxAttempts) : null,
+    reward: {
+      enabled: assignmentForm.rewardEnabled,
+      bits: Number(assignmentForm.rewardBits) || 0,
+      xpMode: Number(assignmentForm.rewardXpAmount) > 0 ? 'custom' : 'none',
+      xpAmount: Number(assignmentForm.rewardXpAmount) || 0,
+      activityName: assignmentChallenge?.title,
+      description: assignmentChallenge ? `Completed ${assignmentChallenge.title}` : undefined,
+    },
+  });
+
+  const closeAssignmentEditor = () => {
+    if (assignmentSaving) return;
+    setAssignmentChallenge(null);
+    setEditingAssignment(null);
+    setAssignmentForm(emptyAssignmentForm);
+  };
+
+  const handleSaveAssignment = async () => {
+    if (!selectedRewardInstanceId || !assignmentChallenge) return;
+    if (
+      assignmentForm.startsAt &&
+      assignmentForm.endsAt &&
+      new Date(assignmentForm.startsAt) >= new Date(assignmentForm.endsAt)
+    ) {
+      showToast('The assignment close date must be after its open date', 'error');
+      return;
+    }
+
+    setAssignmentSaving(true);
+    try {
+      if (editingAssignment) {
+        await adminAPI.updateChallengeAssignment(
+          selectedRewardInstanceId,
+          editingAssignment.id,
+          buildAssignmentPayload()
+        );
+        showToast('Classroom challenge updated', 'success');
+      } else {
+        await adminAPI.createChallengeAssignment(
+          selectedRewardInstanceId,
+          buildAssignmentPayload()
+        );
+        showToast('Challenge added to classroom', 'success');
+      }
+      setAssignmentChallenge(null);
+      setEditingAssignment(null);
+      setAssignmentForm(emptyAssignmentForm);
+      await loadChallengeAssignments(selectedRewardInstanceId);
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to save classroom challenge'), 'error');
+    } finally {
+      setAssignmentSaving(false);
+    }
+  };
+
+  const handleAssignmentStatus = async (
+    assignment: AdminChallengeAssignment,
+    status: AdminChallengeAssignment['status']
+  ) => {
+    if (!selectedRewardInstanceId) return;
+    setUpdatingChallengeId(assignment.id);
+    try {
+      await adminAPI.updateChallengeAssignment(selectedRewardInstanceId, assignment.id, { status });
+      showToast(
+        status === 'published' ? 'Challenge published to this classroom' : 'Assignment archived',
+        'success'
+      );
+      await loadChallengeAssignments(selectedRewardInstanceId);
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to update classroom challenge'), 'error');
+    } finally {
+      setUpdatingChallengeId(null);
+    }
+  };
+
+  const handleConfirmRemoveAssignment = async () => {
+    if (!selectedRewardInstanceId || !assignmentToRemove) return;
+    setUpdatingChallengeId(assignmentToRemove.id);
+    try {
+      const result = await adminAPI.removeChallengeAssignment(
+        selectedRewardInstanceId,
+        assignmentToRemove.id
+      );
+      showToast(result.message, 'success');
+      setAssignmentToRemove(null);
+      await loadChallengeAssignments(selectedRewardInstanceId);
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to remove classroom challenge'), 'error');
+    } finally {
+      setUpdatingChallengeId(null);
     }
   };
 
@@ -703,6 +875,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       await adminAPI.publishChallenge(challengeId);
       showToast('Challenge published', 'success');
       loadAdminChallenges();
+      loadAssignableChallenges();
     } catch (err) {
       showToast(getErrorMessage(err, 'Failed to publish challenge'), 'error');
     } finally {
@@ -716,6 +889,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       await adminAPI.archiveChallenge(challengeId);
       showToast('Challenge archived', 'success');
       loadAdminChallenges();
+      loadAssignableChallenges();
     } catch (err) {
       showToast(getErrorMessage(err, 'Failed to archive challenge'), 'error');
     } finally {
@@ -744,6 +918,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       );
       setChallengeToDelete(null);
       loadAdminChallenges();
+      loadAssignableChallenges();
     } catch (err) {
       showToast(getErrorMessage(err, 'Failed to delete challenge'), 'error');
     } finally {
@@ -751,15 +926,20 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
     }
   };
 
-  const loadManualReviewSubmissions = async (challenge: AdminChallenge) => {
+  const loadManualReviewSubmissions = async (
+    challenge: AdminChallenge,
+    rewardIntegrationInstanceId: string | null = null
+  ) => {
     setReviewChallenge(challenge);
+    setReviewRewardInstanceId(rewardIntegrationInstanceId);
     setReviewLoading(true);
     try {
       const response = await adminAPI.listChallengeSubmissions(
         challenge.id,
         'pending_review',
         1,
-        50
+        50,
+        rewardIntegrationInstanceId || undefined
       );
       setManualReviewSubmissions(response.items || []);
       showToast(`Loaded ${response.items?.length || 0} pending submissions`, 'success');
@@ -786,7 +966,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
         showToast('Submission rejected', 'success');
       }
 
-      await loadManualReviewSubmissions(reviewChallenge);
+      await loadManualReviewSubmissions(reviewChallenge, reviewRewardInstanceId);
       loadAdminChallenges();
     } catch (err) {
       showToast(getErrorMessage(err, `Failed to ${decision} submission`), 'error');
@@ -1188,15 +1368,18 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                   <div className="admin-section-title-row">
                     <div>
                       <span>Catalog</span>
-                      <h2>Challenge records</h2>
-                      <p>Publish, archive, and inspect the current challenge catalog.</p>
+                      <h2>Challenge catalog</h2>
+                      <p>
+                        Manage reusable challenge definitions. Classroom access and rewards are
+                        configured from each instance.
+                      </p>
                     </div>
                     <button
                       type="button"
                       className="create-reward-instance-btn"
                       onClick={() => openChallengeCreateModal()}
                     >
-                      New challenge
+                      Create custom challenge
                     </button>
                   </div>
                 </div>
@@ -1230,7 +1413,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                           <span data-active={challenge.status === 'published'}>
                             {challenge.status}
                           </span>
-                          <span>{getChallengeValidationType(challenge)}</span>
+                          <span data-source={challenge.source}>{challenge.source}</span>
                         </div>
                         <h3>{challenge.title}</h3>
                         <p>{challenge.summary}</p>
@@ -1255,8 +1438,8 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                             <strong>{challenge.maxAttempts || 'Unlimited'}</strong>
                           </div>
                           <div>
-                            <span>Classroom</span>
-                            <strong>{getChallengeRewardScopeLabel(challenge)}</strong>
+                            <span>Validator</span>
+                            <strong>{getChallengeValidationType(challenge)}</strong>
                           </div>
                         </div>
 
@@ -1297,12 +1480,15 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                             onClick={() => handleDeleteChallenge(challenge)}
                             disabled={
                               updatingChallengeId === challenge.id ||
-                              challenge.status === 'published'
+                              challenge.status === 'published' ||
+                              challenge.source === 'curated'
                             }
                             title={
-                              challenge.status === 'published'
-                                ? 'Archive this challenge before deleting it.'
-                                : 'Delete this challenge and its related records.'
+                              challenge.source === 'curated'
+                                ? 'Curated challenges are maintained in source control and cannot be deleted here.'
+                                : challenge.status === 'published'
+                                  ? 'Archive this challenge before deleting it.'
+                                  : 'Delete this custom catalog challenge.'
                             }
                           >
                             Delete
@@ -1319,7 +1505,16 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                   <div className="reward-admin-heading">
                     <span>Manual review</span>
                     <h2>{reviewChallenge.title}</h2>
-                    <p>Approve or reject pending proof submissions for this challenge.</p>
+                    <p>
+                      Approve or reject pending proof submissions
+                      {reviewRewardInstanceId
+                        ? ` for ${
+                            rewardInstances.find(
+                              (instance) => instance.id === reviewRewardInstanceId
+                            )?.name || 'this classroom'
+                          }.`
+                        : ' across all classrooms.'}
+                    </p>
                   </div>
 
                   {reviewLoading ? (
@@ -1420,9 +1615,6 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                   </div>
                   <div className="instance-directory-list">
                     {rewardInstances.map((instance) => {
-                      const challengeCount = adminChallenges.filter(
-                        (challenge) => challenge.rewardIntegrationInstanceId === instance.id
-                      ).length;
                       return (
                         <button
                           type="button"
@@ -1446,7 +1638,8 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                             <strong>{instance.name}</strong>
                             <small>{instance.classroomName || instance.classroomId}</small>
                             <em>
-                              {instance.lastUserCount ?? 0} students · {challengeCount} challenges
+                              {instance.lastUserCount ?? 0} students ·{' '}
+                              {instance.active ? 'active' : 'inactive'}
                             </em>
                           </span>
                           <span
@@ -1540,12 +1733,12 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                             <span>Live challenges</span>
                             <strong>
                               {
-                                selectedInstanceChallenges.filter(
-                                  (challenge) => challenge.status === 'published'
+                                challengeAssignments.filter(
+                                  (assignment) => assignment.status === 'published'
                                 ).length
                               }
                             </strong>
-                            <small>{selectedInstanceChallenges.length} assigned total</small>
+                            <small>{challengeAssignments.length} assigned total</small>
                           </article>
                           <article>
                             <span>API key</span>
@@ -1589,16 +1782,16 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                             <span>Quick actions</span>
                             <button
                               type="button"
-                              onClick={() => openChallengeCreateModal(selectedRewardInstance.id)}
+                              onClick={() => setShowCatalogPicker(true)}
                               disabled={!selectedRewardInstance.active}
                               title={
                                 selectedRewardInstance.active
                                   ? undefined
-                                  : 'Activate this instance before creating scoped challenges.'
+                                  : 'Activate this instance before assigning challenges.'
                               }
                             >
-                              Create a classroom challenge
-                              <small>Scope a new challenge to this instance</small>
+                              Add from challenge catalog
+                              <small>Configure a reusable challenge for this class</small>
                             </button>
                             <button type="button" onClick={() => setRewardWorkspaceTab('students')}>
                               Review student roster
@@ -1613,68 +1806,146 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                       <div className="instance-challenges-panel">
                         <div className="instance-panel-heading">
                           <div>
-                            <span>Classroom catalog</span>
-                            <h3>Assigned challenges</h3>
-                            <p>
-                              Published records are available to students linked to this instance.
-                            </p>
+                            <span>Classroom delivery</span>
+                            <h3>Challenge assignments</h3>
+                            <p>Publish catalog challenges with settings specific to this class.</p>
                           </div>
                           <button
                             type="button"
                             className="create-reward-instance-btn"
-                            onClick={() => openChallengeCreateModal(selectedRewardInstance.id)}
+                            onClick={() => setShowCatalogPicker(true)}
                             disabled={!selectedRewardInstance.active}
                           >
-                            New challenge
+                            Add from catalog
                           </button>
                         </div>
-                        {selectedInstanceChallenges.length === 0 ? (
+                        {challengeAssignmentsLoading ? (
+                          <div className="loading-users">Loading challenge assignments...</div>
+                        ) : challengeAssignments.length === 0 ? (
                           <div className="empty-reward-instances">
-                            No challenges are scoped to this classroom yet.
+                            No catalog challenges are assigned to this classroom yet.
                           </div>
                         ) : (
                           <div className="instance-challenge-list">
-                            {selectedInstanceChallenges.map((challenge) => (
-                              <article key={challenge.id}>
+                            {challengeAssignments.map((assignment) => (
+                              <article key={assignment.id}>
                                 <div>
-                                  <span data-status={challenge.status}>{challenge.status}</span>
-                                  <h4>{challenge.title}</h4>
-                                  <p>{challenge.summary}</p>
-                                  <small>
-                                    {challenge.reward.bits} bits · {challenge.reward.xpAmount || 0}{' '}
-                                    XP · {challenge.maxAttempts || 'Unlimited'} attempts
-                                  </small>
+                                  <div className="assignment-card-topline">
+                                    <span data-status={assignment.status}>{assignment.status}</span>
+                                    <span data-source={assignment.challenge.source}>
+                                      {assignment.challenge.source}
+                                    </span>
+                                    {assignment.challenge.status !== 'published' && (
+                                      <span className="assignment-definition-unavailable">
+                                        catalog {assignment.challenge.status}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <h4>{assignment.challenge.title}</h4>
+                                  <p>{assignment.challenge.summary}</p>
+                                  <div className="assignment-card-meta">
+                                    <span>
+                                      <strong>{assignment.reward.bits}</strong> bits
+                                    </span>
+                                    <span>
+                                      <strong>{assignment.reward.xpAmount || 0}</strong> XP
+                                    </span>
+                                    <span>
+                                      <strong>{assignment.maxAttempts || 'Unlimited'}</strong>{' '}
+                                      attempts
+                                    </span>
+                                    <span>
+                                      <strong>{assignment.progress.completed}</strong> completed
+                                    </span>
+                                    {assignment.progress.pendingReview > 0 && (
+                                      <span className="assignment-review-count">
+                                        <strong>{assignment.progress.pendingReview}</strong>{' '}
+                                        awaiting review
+                                      </span>
+                                    )}
+                                  </div>
+                                  {(assignment.startsAt || assignment.endsAt) && (
+                                    <small className="assignment-window">
+                                      {assignment.startsAt
+                                        ? `Opens ${new Date(assignment.startsAt).toLocaleString()}`
+                                        : 'Open now'}
+                                      {' · '}
+                                      {assignment.endsAt
+                                        ? `Closes ${new Date(assignment.endsAt).toLocaleString()}`
+                                        : 'No deadline'}
+                                    </small>
+                                  )}
                                 </div>
                                 <div className="reward-instance-actions">
-                                  {challenge.status !== 'published' && (
+                                  {assignment.challenge.validationType === 'manual_review' &&
+                                    assignment.progress.pendingReview > 0 && (
+                                      <button
+                                        type="button"
+                                        className="action-btn role-btn"
+                                        onClick={() => {
+                                          setActiveTab('challenges');
+                                          loadManualReviewSubmissions(
+                                            assignment.challenge,
+                                            selectedRewardInstance.id
+                                          );
+                                        }}
+                                      >
+                                        Review ({assignment.progress.pendingReview})
+                                      </button>
+                                    )}
+                                  <button
+                                    type="button"
+                                    className="action-btn assignment-edit-btn"
+                                    onClick={() =>
+                                      openAssignmentEditor(assignment.challenge, assignment)
+                                    }
+                                    disabled={updatingChallengeId === assignment.id}
+                                  >
+                                    Edit
+                                  </button>
+                                  {assignment.status !== 'published' && (
                                     <button
                                       type="button"
                                       className="action-btn role-btn"
-                                      onClick={() => handlePublishChallenge(challenge.id)}
-                                      disabled={updatingChallengeId === challenge.id}
+                                      onClick={() =>
+                                        handleAssignmentStatus(assignment, 'published')
+                                      }
+                                      disabled={
+                                        updatingChallengeId === assignment.id ||
+                                        assignment.challenge.status !== 'published'
+                                      }
+                                      title={
+                                        assignment.challenge.status === 'published'
+                                          ? undefined
+                                          : 'Publish the catalog challenge before publishing this assignment.'
+                                      }
                                     >
                                       Publish
                                     </button>
                                   )}
-                                  {challenge.status !== 'archived' && (
+                                  {assignment.status !== 'archived' && (
                                     <button
                                       type="button"
                                       className="action-btn ban-btn"
-                                      onClick={() => handleArchiveChallenge(challenge.id)}
-                                      disabled={updatingChallengeId === challenge.id}
+                                      onClick={() => handleAssignmentStatus(assignment, 'archived')}
+                                      disabled={updatingChallengeId === assignment.id}
                                     >
                                       Archive
                                     </button>
                                   )}
+                                  <button
+                                    type="button"
+                                    className="action-btn delete-btn"
+                                    onClick={() => setAssignmentToRemove(assignment)}
+                                    disabled={updatingChallengeId === assignment.id}
+                                  >
+                                    Remove
+                                  </button>
                                 </div>
                               </article>
                             ))}
                           </div>
                         )}
-                        <p className="instance-global-note">
-                          Global challenges remain available to every linked classroom and are
-                          managed from the Challenges tab.
-                        </p>
                       </div>
                     )}
 
@@ -1992,9 +2263,10 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
             <header className="admin-editor-header">
               <div>
                 <span className="modal-eyebrow">Challenge authoring</span>
-                <h3>Create challenge</h3>
+                <h3>Create a custom catalog challenge</h3>
                 <p>
-                  Configure validation, rewards, and the classroom that can access this challenge.
+                  Define reusable content and defaults. Assign it to classrooms after publishing it
+                  to the catalog.
                 </p>
               </div>
               <button
@@ -2009,12 +2281,78 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
             </header>
             <ChallengeCreateForm
               form={challengeForm}
-              rewardInstances={activeRewardInstances}
               saving={challengeSaving}
               onChange={handleChallengeFieldChange}
               onApplyTemplate={applyChallengeValidationTemplate}
               onSubmit={handleCreateChallenge}
             />
+          </div>
+        </div>
+      )}
+
+      {showCatalogPicker && selectedRewardInstance && (
+        <ChallengeCatalogPicker
+          challenges={assignableChallenges}
+          assignedChallengeIds={assignedChallengeIds}
+          onSelect={(challenge) => openAssignmentEditor(challenge)}
+          onClose={() => setShowCatalogPicker(false)}
+        />
+      )}
+
+      {assignmentChallenge && (
+        <ChallengeAssignmentForm
+          challenge={assignmentChallenge}
+          form={assignmentForm}
+          editing={Boolean(editingAssignment)}
+          saving={assignmentSaving}
+          onChange={handleAssignmentFieldChange}
+          onSubmit={handleSaveAssignment}
+          onClose={closeAssignmentEditor}
+        />
+      )}
+
+      {assignmentToRemove && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            if (updatingChallengeId !== assignmentToRemove.id) setAssignmentToRemove(null);
+          }}
+        >
+          <div
+            className="modal-content challenge-delete-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <span className="modal-eyebrow">Remove classroom assignment</span>
+            <h3>{assignmentToRemove.challenge.title}</h3>
+            <p>
+              This removes the challenge from this classroom only. The reusable catalog challenge is
+              not changed.
+            </p>
+            {assignmentToRemove.progress.total > 0 && (
+              <p className="assignment-preservation-note">
+                {assignmentToRemove.progress.total} student progress record
+                {assignmentToRemove.progress.total === 1 ? '' : 's'} will be preserved, so this
+                assignment will be archived instead of deleted.
+              </p>
+            )}
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={() => setAssignmentToRemove(null)}
+                disabled={updatingChallengeId === assignmentToRemove.id}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="delete-btn"
+                onClick={handleConfirmRemoveAssignment}
+                disabled={updatingChallengeId === assignmentToRemove.id}
+              >
+                {updatingChallengeId === assignmentToRemove.id ? 'Removing...' : 'Remove'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -16,7 +16,8 @@
     "create-superuser": "tsx scripts/createSuperuser.ts",
     "seed-aws-cyber-challenge": "tsx scripts/seedAwsCyberChallenge.ts",
     "seed-robots-trap-challenge": "tsx scripts/challenges/seedRobotsTrapChallenge.ts",
-    "seed-ciphered-seal-challenge": "tsx scripts/challenges/seedCipheredSealChallenge.ts"
+    "seed-ciphered-seal-challenge": "tsx scripts/challenges/seedCipheredSealChallenge.ts",
+    "migrate-challenge-catalog": "tsx scripts/challenges/migrateChallengeCatalogAssignments.ts"
   },
   "dependencies": {
     "@aws-sdk/client-iam": "^3.1050.0",

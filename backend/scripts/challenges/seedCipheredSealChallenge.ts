@@ -52,6 +52,7 @@ async function seedCipheredSealChallenge(): Promise<void> {
           'The protocol begins with an image artifact. Inspect its original metadata to discover the shrine route, then use your assigned identifier, the Seal Calculator, and the Lore Book to determine the correct ward invocation.',
         instructions:
           'Download the original artifact and inspect its pixel width and height. Multiply those measurements to produce the numeric route key, then navigate to /challenge/<route-key>. At the shrine, use your displayed ID to resolve the seal state. The script has order, not just shape.',
+        source: 'curated',
         status: 'published',
         kind: 'multi_part',
         difficulty: 'hard',
@@ -86,6 +87,7 @@ async function seedCipheredSealChallenge(): Promise<void> {
       },
       $setOnInsert: {
         version: 1,
+        assignmentMigrationVersion: 1,
         createdBy: owner._id,
       },
     },

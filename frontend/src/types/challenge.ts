@@ -1,4 +1,6 @@
 export type ChallengeStatus = 'draft' | 'published' | 'archived';
+export type ChallengeSource = 'curated' | 'custom';
+export type ChallengeAssignmentStatus = 'draft' | 'published' | 'archived';
 export type ChallengeKind = 'single' | 'multi_part';
 export type ChallengeDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
 export type ChallengeProgressStatus =
@@ -41,6 +43,8 @@ export interface ChallengeRewardConfig extends ChallengeRewardPreview {
 export interface ChallengeProgress {
   id?: string;
   challengeId?: string;
+  assignmentId?: string | null;
+  rewardIntegrationInstanceId?: string | null;
   challengeKey?: string;
   challengeVersion?: number;
   status: ChallengeProgressStatus;
@@ -57,6 +61,7 @@ export interface ChallengeProgress {
 
 export interface ChallengeListItem {
   id: string;
+  assignmentId?: string | null;
   key: string;
   slug: string;
   title: string;
@@ -74,6 +79,7 @@ export interface ChallengeListItem {
   endsAt?: string | null;
   rewardIntegrationInstanceId?: string | null;
   reward: ChallengeRewardPreview;
+  maxAttempts?: number;
   progress?: ChallengeProgress;
 }
 
@@ -147,6 +153,7 @@ export interface CipheredSealResolveResponse {
 }
 
 export interface AdminChallenge extends ChallengeDetail {
+  source: ChallengeSource;
   status: ChallengeStatus;
   validation: Record<string, unknown>;
   reward: ChallengeRewardConfig;
@@ -170,6 +177,8 @@ export interface AdminChallengeSubmission {
   id: string;
   userId: string;
   challengeId: string;
+  assignmentId?: string | null;
+  rewardIntegrationInstanceId?: string | null;
   progressId: string;
   challengeKey: string;
   validatorType: ChallengeValidationType;
@@ -212,7 +221,6 @@ export interface AdminChallengePayload {
   estimatedMinutes?: number;
   tags?: string[];
   maxAttempts?: number;
-  rewardIntegrationInstanceId?: string | null;
   validation: Record<string, unknown>;
   reward?: Partial<ChallengeRewardConfig>;
 }
@@ -228,4 +236,56 @@ export interface AdminChallengeDeleteResponse {
   challengeId: string;
   progressDeleted: number;
   submissionsDeleted: number;
+}
+
+export interface AdminChallengeAssignmentProgress {
+  total: number;
+  completed: number;
+  pendingReview: number;
+}
+
+export interface AdminChallengeAssignment {
+  id: string;
+  challengeId: string;
+  rewardIntegrationInstanceId: string;
+  challengeVersion: number;
+  status: ChallengeAssignmentStatus;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  maxAttempts?: number;
+  reward: ChallengeRewardConfig;
+  publishedAt?: string | null;
+  archivedAt?: string | null;
+  assignedBy: string;
+  updatedBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  progress: AdminChallengeAssignmentProgress;
+  challenge: AdminChallenge;
+}
+
+export interface AdminChallengeAssignmentPayload {
+  challengeId?: string;
+  status?: ChallengeAssignmentStatus;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  maxAttempts?: number | null;
+  reward?: Partial<ChallengeRewardConfig>;
+}
+
+export interface AdminChallengeAssignmentsResponse {
+  items: AdminChallengeAssignment[];
+}
+
+export interface AdminChallengeAssignmentResponse {
+  message: string;
+  assignment: AdminChallengeAssignment;
+}
+
+export interface AdminChallengeAssignmentRemoveResponse {
+  message: string;
+  removed: boolean;
+  archived: boolean;
+  assignmentId: string;
+  progressCount: number;
 }

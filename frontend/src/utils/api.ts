@@ -2,6 +2,10 @@ import type { AdminStats, EmailQueueEntry } from '../types/admin';
 import type { ApiResponse } from '../types/api';
 import type { AuthResponse, LoginCredentials, SignupPayload } from '../types/auth';
 import type {
+  AdminChallengeAssignmentPayload,
+  AdminChallengeAssignmentRemoveResponse,
+  AdminChallengeAssignmentResponse,
+  AdminChallengeAssignmentsResponse,
   AdminChallengeDeleteResponse,
   AdminChallengeListResponse,
   AdminChallengePayload,
@@ -793,6 +797,46 @@ export const adminAPI = {
     });
   },
 
+  listChallengeAssignments: async (
+    instanceId: string
+  ): Promise<AdminChallengeAssignmentsResponse> => {
+    return apiRequest(`/admin/reward-integrations/${instanceId}/challenge-assignments`);
+  },
+
+  createChallengeAssignment: async (
+    instanceId: string,
+    payload: AdminChallengeAssignmentPayload
+  ): Promise<AdminChallengeAssignmentResponse> => {
+    return apiRequest(`/admin/reward-integrations/${instanceId}/challenge-assignments`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateChallengeAssignment: async (
+    instanceId: string,
+    assignmentId: string,
+    payload: AdminChallengeAssignmentPayload
+  ): Promise<AdminChallengeAssignmentResponse> => {
+    return apiRequest(
+      `/admin/reward-integrations/${instanceId}/challenge-assignments/${assignmentId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      }
+    );
+  },
+
+  removeChallengeAssignment: async (
+    instanceId: string,
+    assignmentId: string
+  ): Promise<AdminChallengeAssignmentRemoveResponse> => {
+    return apiRequest(
+      `/admin/reward-integrations/${instanceId}/challenge-assignments/${assignmentId}`,
+      { method: 'DELETE' }
+    );
+  },
+
   listChallenges: async (
     status?: ChallengeStatus,
     search = '',
@@ -847,12 +891,14 @@ export const adminAPI = {
     challengeId: string,
     status?: ChallengeSubmissionStatus,
     page = 1,
-    limit = 25
+    limit = 25,
+    rewardIntegrationInstanceId?: string
   ): Promise<AdminChallengeSubmissionsResponse> => {
     const params = new URLSearchParams({
       page: String(page),
       limit: String(limit),
       ...(status && { status }),
+      ...(rewardIntegrationInstanceId && { rewardIntegrationInstanceId }),
     });
     return apiRequest(`/admin/challenges/${challengeId}/submissions?${params}`);
   },

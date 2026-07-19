@@ -27,6 +27,10 @@ Relevant files:
 
 The Lambda deploy workflow still owns backend deployment. The frontend Vercel deployment should point at the deployed backend API through `VITE_API_URL`.
 
+### Challenge catalog migration
+
+Deployments upgrading from the legacy challenge scope model must run `bun run migrate-challenge-catalog` once with the target environment's `MONGODB_URI`. Run it before exposing the upgraded API to students. The migration is versioned and safe to rerun; newly created catalog definitions are not auto-assigned.
+
 ## Package manager
 
 Deployments use Bun. Use the checked-in `bun.lock` files for reproducible installs.
