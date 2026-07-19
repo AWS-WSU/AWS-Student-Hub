@@ -51,6 +51,7 @@ const developerSidebar = [
 export default defineConfig({
   title: 'Challenge Operations Handbook',
   description: 'Teacher and developer documentation for AWS Student Hub challenges',
+  base: '/docs/',
   cleanUrls: true,
   lastUpdated: true,
   markdown: {

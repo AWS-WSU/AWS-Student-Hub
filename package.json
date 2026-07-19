@@ -8,6 +8,7 @@
     "dev:backend": "bun run --cwd backend dev",
     "dev:docs": "bun run --cwd docs-site dev",
     "build": "bun run --cwd frontend build && bun run --cwd backend build",
+    "build:vercel": "bun run scripts/buildVercel.mjs",
     "build:docs": "bun run --cwd docs-site build",
     "typecheck": "bun run --cwd frontend typecheck && bun run --cwd backend typecheck",
     "typecheck:docs": "bun run --cwd docs-site typecheck",

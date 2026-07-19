@@ -70,7 +70,11 @@ Seeding creates or updates definitions only. Teachers still assign those definit
 
 ## Documentation site
 
-The handbook is an independent VitePress build:
+The handbook is built with VitePress and published under `/docs` in the main
+Vercel deployment. Its VitePress base path is `/docs/`, so internal links and
+assets remain valid at `https://wayneaws.dev/docs/`.
+
+For a local standalone build:
 
 ```bash
 bun install --cwd docs-site
@@ -83,7 +87,11 @@ Static output is written to:
 docs-site/.vitepress/dist
 ```
 
-Deploy that directory to a dedicated documentation host such as `docs.wayneaws.dev`, or configure the existing edge/router to serve it under `/docs`. A dedicated host keeps documentation release and visual design independent from the student application.
+The production build uses the repository-root Vercel configuration. It builds
+the frontend, builds the handbook, and copies the handbook into
+`frontend/dist/docs`. Set the Vercel project root directory to the repository
+root so Vercel uses `vercel.json` and `build:vercel`; do not leave it set to
+`frontend/`.
 
 ## Production verification
 

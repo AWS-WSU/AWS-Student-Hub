@@ -1,0 +1,8 @@
+{
+  "buildCommand": "bun run build:vercel",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
+    { "source": "/docs", "destination": "/docs/index.html" },
+    { "source": "/(.*)", "destination": "/" }
+  ]
+}
