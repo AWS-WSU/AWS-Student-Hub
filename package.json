@@ -6,10 +6,14 @@
     "dev": "concurrently --names frontend,backend --prefix-colors cyan,green --prefix \"[{name}]\" \"bun run --silent --cwd frontend dev\" \"bun run --silent --cwd backend dev\"",
     "dev:frontend": "bun run --cwd frontend dev",
     "dev:backend": "bun run --cwd backend dev",
+    "dev:docs": "bun run --cwd docs-site dev",
     "build": "bun run --cwd frontend build && bun run --cwd backend build",
+    "build:docs": "bun run --cwd docs-site build",
     "typecheck": "bun run --cwd frontend typecheck && bun run --cwd backend typecheck",
-    "format": "prettier --write \"frontend/src/**/*.{js,jsx,ts,tsx,css}\" \"backend/**/*.{js,ts}\" --ignore-path .prettierignore",
-    "format:check": "prettier --check \"frontend/src/**/*.{js,jsx,ts,tsx,css}\" \"backend/**/*.{js,ts}\" --ignore-path .prettierignore",
+    "typecheck:docs": "bun run --cwd docs-site typecheck",
+    "capture:docs": "bun run --cwd docs-site capture",
+    "format": "prettier --write \"frontend/src/**/*.{js,jsx,ts,tsx,css}\" \"backend/**/*.{js,ts}\" \"docs-site/**/*.{ts,mts,css,md}\" --ignore-path .prettierignore",
+    "format:check": "prettier --check \"frontend/src/**/*.{js,jsx,ts,tsx,css}\" \"backend/**/*.{js,ts}\" \"docs-site/**/*.{ts,mts,css,md}\" --ignore-path .prettierignore",
     "lint": "bun run --cwd frontend lint && bun run --cwd backend lint"
   },
   "devDependencies": {

@@ -1,5 +1,9 @@
 # Challenge catalog and classroom assignments
 
+For the complete teacher and developer handbook, see the standalone
+[`docs-site`](../docs-site/index.md), beginning with the
+[system overview](../docs-site/guide/system-overview.md).
+
 Challenge definitions and classroom delivery are separate concerns.
 
 ## Catalog definitions

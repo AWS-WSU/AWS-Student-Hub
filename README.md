@@ -34,10 +34,18 @@
 
 ## Docs
 
+- [Challenge Operations Handbook](docs-site/index.md)
 - [Development setup](docs/development.md)
 - [Database setup](docs/dbSetup.md)
 - [Deployment notes](docs/deployment.md)
 - [Contributing](CONTRIBUTING.md)
+
+Run the standalone teacher and developer handbook locally with:
+
+```bash
+bun install --cwd docs-site
+bun run dev:docs
+```
 
 ## Quick start
 

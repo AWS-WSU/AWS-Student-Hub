@@ -18,6 +18,9 @@ jobs:
       - name: Install backend deps
         run: cd backend && bun install --frozen-lockfile --ignore-scripts
 
+      - name: Install docs deps
+        run: cd docs-site && bun install --frozen-lockfile
+
       - name: Check formatting
         run: bun run format:check
 
@@ -27,5 +30,11 @@ jobs:
       - name: Lint backend
         run: cd backend && bun run lint
 
+      - name: Check docs types
+        run: cd docs-site && bun run typecheck
+
       - name: Check frontend build
         run: cd frontend && bun run build
+
+      - name: Check docs build
+        run: cd docs-site && bun run build
