@@ -58,3 +58,24 @@ export interface RewardIntegrationInstancePayload {
   scopes?: string[];
   active?: boolean;
 }
+
+export interface RewardIntegrationClassroomMember {
+  userId: string;
+  shortId?: string;
+  name: string;
+  email?: string;
+  role: string;
+  balance: number;
+  level: number;
+  xp: number;
+  joinedDate?: string | null;
+  lastAccessed?: string | null;
+  linkedAwsAccount: boolean;
+  awsUserId?: string;
+}
+
+export interface RewardIntegrationClassroomMembersResponse {
+  classroomId: string;
+  classroomName?: string;
+  users: RewardIntegrationClassroomMember[];
+}

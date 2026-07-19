@@ -8,7 +8,7 @@ import RewardIntegrationLinkVerification from '../models/RewardIntegrationLinkVe
 import RewardIntegrationInstance, {
   IRewardIntegrationInstanceDocument,
 } from '../models/RewardIntegrationInstance';
-import type { IUserDocument } from '../models/User';
+import User, { type IUserDocument } from '../models/User';
 import { sendPrizeversityLinkCode } from './emailService';
 
 const log = logger.child({ module: 'reward-integration-service' });
@@ -101,6 +101,32 @@ interface PrizeversityClassroomUser {
   lastName?: string;
   email?: string;
   role?: string;
+  balance?: number;
+  level?: number;
+  xp?: number;
+  joinedDate?: string | null;
+  lastAccessed?: string | null;
+}
+
+export interface RewardIntegrationClassroomMember {
+  userId: string;
+  shortId?: string;
+  name: string;
+  email?: string;
+  role: string;
+  balance: number;
+  level: number;
+  xp: number;
+  joinedDate?: string | null;
+  lastAccessed?: string | null;
+  linkedAwsAccount: boolean;
+  awsUserId?: string;
+}
+
+export interface RewardIntegrationClassroomMembersResult {
+  classroomId: string;
+  classroomName?: string;
+  users: RewardIntegrationClassroomMember[];
 }
 
 interface PrizeversityUsersMatchResponse {
@@ -426,7 +452,8 @@ export const listActiveRewardIntegrationInstances = async (): Promise<
   if (publicInstances.length === 0) {
     const envInstance = getEnvironmentInstance();
     if (envInstance) {
-      const { apiKey: _apiKey, ...publicEnvInstance } = envInstance;
+      const publicEnvInstance = { ...envInstance };
+      Reflect.deleteProperty(publicEnvInstance, 'apiKey');
       publicInstances.push(publicEnvInstance);
     }
   }
@@ -659,6 +686,53 @@ export const testRewardIntegrationInstance = async (
     await instance.save();
     throw error;
   }
+};
+
+export const listRewardIntegrationInstanceMembers = async (
+  instanceId: string
+): Promise<RewardIntegrationClassroomMembersResult> => {
+  if (!Types.ObjectId.isValid(instanceId)) {
+    throw new PrizeversityError('Invalid integration instance ID.');
+  }
+
+  const instance = await RewardIntegrationInstance.findById(instanceId).select('+apiKey');
+  if (!instance) throw new PrizeversityError('Integration instance not found.');
+
+  const response = await usersList(toConfig(instance));
+  const linkedUsers = await User.find({
+    rewardIntegrationInstanceId: instance._id,
+    prizeversityUserId: { $in: (response.users || []).map((member) => String(member.userId)) },
+  })
+    .select('_id prizeversityUserId')
+    .lean();
+  const awsUserByPrizeversityId = new Map(
+    linkedUsers.map((linkedUser) => [String(linkedUser.prizeversityUserId), String(linkedUser._id)])
+  );
+
+  return {
+    classroomId: response.classroomId || instance.classroomId,
+    classroomName: response.className || instance.classroomName,
+    users: (response.users || []).map((member) => {
+      const awsUserId = awsUserByPrizeversityId.get(String(member.userId));
+      return {
+        userId: String(member.userId),
+        shortId: member.shortId,
+        name:
+          member.name ||
+          `${member.firstName || ''} ${member.lastName || ''}`.trim() ||
+          'Unnamed user',
+        email: member.email,
+        role: member.role || 'student',
+        balance: Number(member.balance) || 0,
+        level: Number(member.level) || 1,
+        xp: Number(member.xp) || 0,
+        joinedDate: member.joinedDate,
+        lastAccessed: member.lastAccessed,
+        linkedAwsAccount: Boolean(awsUserId),
+        ...(awsUserId ? { awsUserId } : {}),
+      };
+    }),
+  };
 };
 
 export const deactivateRewardIntegrationInstance = async (

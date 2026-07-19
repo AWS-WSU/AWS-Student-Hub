@@ -20,6 +20,7 @@ import type { Event as FrontendEvent, EventFormPayload } from '../types/event';
 import type {
   RewardIntegrationInstance,
   RewardIntegrationInstancePayload,
+  RewardIntegrationClassroomMembersResponse,
   RewardIntegrationLinkResponse,
   RewardIntegrationStatusResponse,
 } from '../types/rewardIntegration';
@@ -735,6 +736,12 @@ export const adminAPI = {
 
   listRewardIntegrations: async (): Promise<RewardIntegrationInstancesResponse> => {
     return apiRequest('/admin/reward-integrations');
+  },
+
+  listRewardIntegrationMembers: async (
+    instanceId: string
+  ): Promise<RewardIntegrationClassroomMembersResponse> => {
+    return apiRequest(`/admin/reward-integrations/${instanceId}/members`);
   },
 
   createRewardIntegration: async (

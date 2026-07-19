@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import {
   createRewardIntegrationInstance,
   deactivateRewardIntegrationInstance,
+  listRewardIntegrationInstanceMembers,
   listRewardIntegrationInstances,
   testRewardIntegrationInstance,
   updateRewardIntegrationInstance,
@@ -41,6 +42,17 @@ export const createInstance = async (req: Request, res: Response): Promise<void>
   } catch (error: unknown) {
     res.status(400).json({
       error: getErrorMessage(error, 'Unable to create reward integration instance'),
+    });
+  }
+};
+
+export const listInstanceMembers = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const result = await listRewardIntegrationInstanceMembers(req.params.instanceId);
+    res.json(result);
+  } catch (error: unknown) {
+    res.status(400).json({
+      error: getErrorMessage(error, 'Unable to list classroom members'),
     });
   }
 };

@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
+import { CircleHelp, X } from 'lucide-react';
+import ChallengeCreateForm, {
+  type ChallengeFormData,
+} from '../components/admin/ChallengeCreateForm';
+import RewardInstanceForm, {
+  type RewardIntegrationFormData,
+} from '../components/admin/RewardInstanceForm';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { adminAPI } from '../utils/api';
@@ -10,12 +17,11 @@ import type {
   AdminChallenge,
   AdminChallengePayload,
   AdminChallengeSubmission,
-  ChallengeDifficulty,
-  ChallengeKind,
   ChallengeStatus,
   ChallengeValidationType,
 } from '../types/challenge';
 import type {
+  RewardIntegrationClassroomMember,
   RewardIntegrationInstance,
   RewardIntegrationInstancePayload,
 } from '../types/rewardIntegration';
@@ -34,35 +40,7 @@ type AdminTab = 'dashboard' | 'users' | 'queue' | 'rewards' | 'challenges';
 type RoleFilter = UserRole | '';
 type StatusFilter = UserStatus | '';
 type QueueStats = Record<string, any>;
-
-interface RewardIntegrationFormData {
-  name: string;
-  description: string;
-  apiBaseUrl: string;
-  apiKey: string;
-  classroomId: string;
-  classroomName: string;
-  scopes: string;
-}
-
-interface ChallengeFormData {
-  key: string;
-  slug: string;
-  title: string;
-  summary: string;
-  description: string;
-  instructions: string;
-  kind: ChallengeKind;
-  difficulty: ChallengeDifficulty;
-  estimatedMinutes: string;
-  tags: string;
-  maxAttempts: string;
-  validationJson: string;
-  rewardIntegrationInstanceId: string;
-  rewardEnabled: boolean;
-  rewardBits: string;
-  rewardXpAmount: string;
-}
+type RewardWorkspaceTab = 'overview' | 'challenges' | 'students' | 'settings';
 
 type ChallengeValidationTemplate = 'aws_secret' | 'static_secret' | 'manual_review';
 
@@ -252,6 +230,15 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   const [rewardLoading, setRewardLoading] = useState<boolean>(false);
   const [rewardSaving, setRewardSaving] = useState<boolean>(false);
   const [testingRewardId, setTestingRewardId] = useState<string | null>(null);
+  const [showRewardCreateModal, setShowRewardCreateModal] = useState<boolean>(false);
+  const [selectedRewardInstanceId, setSelectedRewardInstanceId] = useState<string>('');
+  const [rewardWorkspaceTab, setRewardWorkspaceTab] = useState<RewardWorkspaceTab>('overview');
+  const [rewardMembers, setRewardMembers] = useState<RewardIntegrationClassroomMember[]>([]);
+  const [rewardMembersLoading, setRewardMembersLoading] = useState<boolean>(false);
+  const [rewardMemberSearch, setRewardMemberSearch] = useState<string>('');
+  const [rewardSettingsForm, setRewardSettingsForm] =
+    useState<RewardIntegrationFormData>(emptyRewardForm);
+  const [rewardSettingsSaving, setRewardSettingsSaving] = useState<boolean>(false);
 
   // Challenge admin state
   const [adminChallenges, setAdminChallenges] = useState<AdminChallenge[]>([]);
@@ -267,6 +254,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   >([]);
   const [reviewLoading, setReviewLoading] = useState<boolean>(false);
   const [reviewingSubmissionId, setReviewingSubmissionId] = useState<string | null>(null);
+  const [showChallengeCreateModal, setShowChallengeCreateModal] = useState<boolean>(false);
 
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -274,6 +262,19 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   const activeRewardInstances = rewardInstances.filter(
     (instance) => instance.active && instance.source === 'database'
   );
+  const selectedRewardInstance = rewardInstances.find(
+    (instance) => instance.id === selectedRewardInstanceId
+  );
+  const selectedInstanceChallenges = adminChallenges.filter(
+    (challenge) => challenge.rewardIntegrationInstanceId === selectedRewardInstanceId
+  );
+  const filteredRewardMembers = rewardMembers.filter((member) => {
+    const query = rewardMemberSearch.trim().toLowerCase();
+    if (!query) return true;
+    return [member.name, member.email, member.shortId, member.userId]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(query));
+  });
   const getChallengeRewardScopeLabel = (challenge: AdminChallenge): string => {
     if (!challenge.rewardIntegrationInstanceId) return 'Global';
     const instance = rewardInstances.find(
@@ -382,7 +383,12 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
     setRewardLoading(true);
     try {
       const response = await adminAPI.listRewardIntegrations();
-      setRewardInstances(response.instances || []);
+      const instances = response.instances || [];
+      setRewardInstances(instances);
+      setSelectedRewardInstanceId((currentId) => {
+        if (instances.some((instance) => instance.id === currentId)) return currentId;
+        return instances[0]?.id || '';
+      });
       setError('');
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to load reward integrations'));
@@ -411,10 +417,44 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   }, [challengeStatusFilter]);
 
   useEffect(() => {
-    if (activeTab === 'challenges') {
+    if (activeTab === 'challenges' || activeTab === 'rewards') {
       loadAdminChallenges();
     }
   }, [activeTab, loadAdminChallenges]);
+
+  useEffect(() => {
+    if (!selectedRewardInstance) return;
+    setRewardSettingsForm({
+      name: selectedRewardInstance.name,
+      description: selectedRewardInstance.description || '',
+      apiBaseUrl: selectedRewardInstance.apiBaseUrl,
+      apiKey: '',
+      classroomId: selectedRewardInstance.classroomId,
+      classroomName: selectedRewardInstance.classroomName || '',
+      scopes: selectedRewardInstance.scopes.join(','),
+    });
+  }, [selectedRewardInstance]);
+
+  const loadRewardMembers = useCallback(async (instanceId: string) => {
+    if (!instanceId) return;
+    setRewardMembersLoading(true);
+    try {
+      const response = await adminAPI.listRewardIntegrationMembers(instanceId);
+      setRewardMembers(response.users || []);
+      setError('');
+    } catch (err) {
+      setRewardMembers([]);
+      setError(getErrorMessage(err, 'Failed to load classroom members'));
+    } finally {
+      setRewardMembersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'rewards' && rewardWorkspaceTab === 'students' && selectedRewardInstanceId) {
+      loadRewardMembers(selectedRewardInstanceId);
+    }
+  }, [activeTab, rewardWorkspaceTab, selectedRewardInstanceId, loadRewardMembers]);
 
   const handleRetryEmail = async (queueId: string) => {
     if (!queueId) {
@@ -480,10 +520,13 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
 
     setRewardSaving(true);
     try {
-      await adminAPI.createRewardIntegration(payload);
+      const response = await adminAPI.createRewardIntegration(payload);
       showToast('Reward integration instance created', 'success');
       setRewardForm(emptyRewardForm);
-      loadRewardIntegrations();
+      setShowRewardCreateModal(false);
+      setSelectedRewardInstanceId(response.instance.id);
+      setRewardWorkspaceTab('overview');
+      await loadRewardIntegrations();
     } catch (err) {
       showToast(getErrorMessage(err, 'Failed to create reward integration'), 'error');
     } finally {
@@ -518,6 +561,42 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
     } catch (err) {
       showToast(getErrorMessage(err, 'Failed to update reward integration'), 'error');
     }
+  };
+
+  const handleRewardSettingsFieldChange = (
+    field: keyof RewardIntegrationFormData,
+    value: string
+  ) => {
+    setRewardSettingsForm((previous) => ({ ...previous, [field]: value }));
+  };
+
+  const handleSaveRewardSettings = async () => {
+    if (!selectedRewardInstance) return;
+    setRewardSettingsSaving(true);
+    try {
+      const payload: Partial<RewardIntegrationInstancePayload> = {
+        name: cleanPastedRewardValue(rewardSettingsForm.name),
+        description: cleanPastedRewardValue(rewardSettingsForm.description),
+        apiBaseUrl: cleanPastedRewardValue(rewardSettingsForm.apiBaseUrl),
+        classroomId: cleanPastedRewardValue(rewardSettingsForm.classroomId),
+        classroomName: cleanPastedRewardValue(rewardSettingsForm.classroomName),
+        scopes: rewardSettingsForm.scopes.split(',').map(cleanPastedRewardValue).filter(Boolean),
+      };
+      const apiKey = cleanPastedRewardValue(rewardSettingsForm.apiKey);
+      if (apiKey) payload.apiKey = apiKey;
+      await adminAPI.updateRewardIntegration(selectedRewardInstance.id, payload);
+      showToast('Instance settings saved', 'success');
+      await loadRewardIntegrations();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to save instance settings'), 'error');
+    } finally {
+      setRewardSettingsSaving(false);
+    }
+  };
+
+  const openChallengeCreateModal = (rewardIntegrationInstanceId = '') => {
+    setChallengeForm({ ...emptyChallengeForm, rewardIntegrationInstanceId });
+    setShowChallengeCreateModal(true);
   };
 
   const handleChallengeFieldChange = <K extends keyof ChallengeFormData>(
@@ -602,6 +681,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       await adminAPI.createChallenge(buildChallengePayload());
       showToast('Challenge created', 'success');
       setChallengeForm(emptyChallengeForm);
+      setShowChallengeCreateModal(false);
       loadAdminChallenges();
     } catch (err) {
       showToast(getErrorMessage(err, 'Failed to create challenge'), 'error');
@@ -1095,232 +1175,23 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="reward-admin-grid">
+            <div className="challenge-catalog-layout">
               <section className="reward-admin-panel">
                 <div className="reward-admin-heading">
-                  <span>Authoring</span>
-                  <h2>Create challenge</h2>
-                  <p>
-                    Create provider-neutral challenges. The default config migrates the existing AWS
-                    Cyber Challenge into the new validator/reward flow.
-                  </p>
-                </div>
-
-                <div className="reward-form">
-                  <label>
-                    Title
-                    <input
-                      type="text"
-                      value={challengeForm.title}
-                      onChange={(e) => handleChallengeFieldChange('title', e.target.value)}
-                    />
-                  </label>
-
-                  <div className="challenge-admin-two-col">
-                    <label>
-                      Key
-                      <input
-                        type="text"
-                        value={challengeForm.key}
-                        onChange={(e) => handleChallengeFieldChange('key', e.target.value)}
-                      />
-                    </label>
-                    <label>
-                      Slug
-                      <input
-                        type="text"
-                        value={challengeForm.slug}
-                        onChange={(e) => handleChallengeFieldChange('slug', e.target.value)}
-                      />
-                    </label>
-                  </div>
-
-                  <label>
-                    Summary
-                    <input
-                      type="text"
-                      value={challengeForm.summary}
-                      onChange={(e) => handleChallengeFieldChange('summary', e.target.value)}
-                    />
-                  </label>
-
-                  <label>
-                    Description
-                    <textarea
-                      value={challengeForm.description}
-                      onChange={(e) => handleChallengeFieldChange('description', e.target.value)}
-                    />
-                  </label>
-
-                  <label>
-                    Instructions
-                    <textarea
-                      value={challengeForm.instructions}
-                      onChange={(e) => handleChallengeFieldChange('instructions', e.target.value)}
-                    />
-                  </label>
-
-                  <div className="challenge-admin-two-col">
-                    <label>
-                      Kind
-                      <select
-                        value={challengeForm.kind}
-                        onChange={(e) =>
-                          handleChallengeFieldChange('kind', e.target.value as ChallengeKind)
-                        }
-                      >
-                        <option value="single">Single goal</option>
-                        <option value="multi_part">Multi-part</option>
-                      </select>
-                    </label>
-                    <label>
-                      Difficulty
-                      <select
-                        value={challengeForm.difficulty}
-                        onChange={(e) =>
-                          handleChallengeFieldChange(
-                            'difficulty',
-                            e.target.value as ChallengeDifficulty
-                          )
-                        }
-                      >
-                        <option value="easy">Easy</option>
-                        <option value="medium">Medium</option>
-                        <option value="hard">Hard</option>
-                        <option value="expert">Expert</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  <div className="challenge-admin-two-col">
-                    <label>
-                      Estimated minutes
-                      <input
-                        type="number"
-                        min="1"
-                        value={challengeForm.estimatedMinutes}
-                        onChange={(e) =>
-                          handleChallengeFieldChange('estimatedMinutes', e.target.value)
-                        }
-                      />
-                    </label>
-                    <label>
-                      Max attempts
-                      <input
-                        type="number"
-                        min="1"
-                        value={challengeForm.maxAttempts}
-                        onChange={(e) => handleChallengeFieldChange('maxAttempts', e.target.value)}
-                        placeholder="Unlimited"
-                      />
-                    </label>
-                  </div>
-
-                  <label>
-                    Tags
-                    <input
-                      type="text"
-                      value={challengeForm.tags}
-                      onChange={(e) => handleChallengeFieldChange('tags', e.target.value)}
-                      placeholder="aws,s3,security"
-                    />
-                  </label>
-
-                  <label>
-                    Reward classroom
-                    <select
-                      value={challengeForm.rewardIntegrationInstanceId}
-                      onChange={(e) =>
-                        handleChallengeFieldChange('rewardIntegrationInstanceId', e.target.value)
-                      }
-                    >
-                      <option value="">Global / any linked classroom</option>
-                      {activeRewardInstances.map((instance) => (
-                        <option key={instance.id} value={instance.id}>
-                          {formatRewardInstanceLabel(instance)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label>
-                    Validation JSON
-                    <div className="challenge-validation-templates">
-                      <button
-                        type="button"
-                        onClick={() => applyChallengeValidationTemplate('aws_secret')}
-                      >
-                        AWS secret
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => applyChallengeValidationTemplate('static_secret')}
-                      >
-                        Static secret
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => applyChallengeValidationTemplate('manual_review')}
-                      >
-                        Manual review
-                      </button>
+                  <div className="admin-section-title-row">
+                    <div>
+                      <span>Catalog</span>
+                      <h2>Challenge records</h2>
+                      <p>Publish, archive, and inspect the current challenge catalog.</p>
                     </div>
-                    <textarea
-                      value={challengeForm.validationJson}
-                      onChange={(e) => handleChallengeFieldChange('validationJson', e.target.value)}
-                    />
-                  </label>
-
-                  <div className="challenge-admin-two-col">
-                    <label>
-                      Reward bits
-                      <input
-                        type="number"
-                        min="0"
-                        value={challengeForm.rewardBits}
-                        onChange={(e) => handleChallengeFieldChange('rewardBits', e.target.value)}
-                      />
-                    </label>
-                    <label>
-                      Reward XP
-                      <input
-                        type="number"
-                        min="0"
-                        value={challengeForm.rewardXpAmount}
-                        onChange={(e) =>
-                          handleChallengeFieldChange('rewardXpAmount', e.target.value)
-                        }
-                      />
-                    </label>
+                    <button
+                      type="button"
+                      className="create-reward-instance-btn"
+                      onClick={() => openChallengeCreateModal()}
+                    >
+                      New challenge
+                    </button>
                   </div>
-
-                  <label className="challenge-admin-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={challengeForm.rewardEnabled}
-                      onChange={(e) =>
-                        handleChallengeFieldChange('rewardEnabled', e.target.checked)
-                      }
-                    />
-                    Reward enabled
-                  </label>
-
-                  <button
-                    type="button"
-                    className="create-reward-instance-btn"
-                    onClick={handleCreateChallenge}
-                    disabled={challengeSaving}
-                  >
-                    {challengeSaving ? 'Creating...' : 'Create challenge'}
-                  </button>
-                </div>
-              </section>
-
-              <section className="reward-admin-panel">
-                <div className="reward-admin-heading">
-                  <span>Catalog</span>
-                  <h2>Challenge records</h2>
-                  <p>Publish, archive, and inspect the current challenge catalog.</p>
                 </div>
 
                 <div className="challenge-admin-actions">
@@ -1498,174 +1369,424 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="reward-admin-grid">
-              <section className="reward-admin-panel">
-                <div className="reward-admin-heading">
-                  <span>New instance</span>
-                  <h2>Prizeversity classroom</h2>
-                  <p>
-                    Store a Prizeversity integration API key scoped to one classroom. AWS Student
-                    Hub uses this server-side key for account linking and challenge rewards.
-                  </p>
-                </div>
+            <div className="instance-manager-heading">
+              <div>
+                <span>Prizeversity operations</span>
+                <h2>Classroom instances</h2>
+                <p>Manage each classroom's students, challenge catalog, and reward connection.</p>
+              </div>
+              <button
+                type="button"
+                className="create-reward-instance-btn"
+                onClick={() => {
+                  setRewardForm(emptyRewardForm);
+                  setShowRewardCreateModal(true);
+                }}
+              >
+                New instance
+              </button>
+            </div>
 
-                <div className="reward-form">
-                  <label>
-                    Instance name
-                    <input
-                      type="text"
-                      value={rewardForm.name}
-                      onChange={(e) => handleRewardFieldChange('name', e.target.value)}
-                      placeholder="Cyber Challenge Section A"
-                    />
-                  </label>
-
-                  <label>
-                    Classroom ID
-                    <input
-                      type="text"
-                      value={rewardForm.classroomId}
-                      onChange={(e) => handleRewardFieldChange('classroomId', e.target.value)}
-                      placeholder="68e169fa349b208d3db7b129"
-                    />
-                  </label>
-
-                  <label>
-                    API key
-                    <input
-                      type="password"
-                      value={rewardForm.apiKey}
-                      onChange={(e) => handleRewardFieldChange('apiKey', e.target.value)}
-                      placeholder="pvk_..."
-                    />
-                  </label>
-
-                  <label>
-                    Prizeversity base URL
-                    <input
-                      type="url"
-                      value={rewardForm.apiBaseUrl}
-                      onChange={(e) => handleRewardFieldChange('apiBaseUrl', e.target.value)}
-                      placeholder="https://prizeversity.com"
-                    />
-                  </label>
-
-                  <label>
-                    Classroom label
-                    <input
-                      type="text"
-                      value={rewardForm.classroomName}
-                      onChange={(e) => handleRewardFieldChange('classroomName', e.target.value)}
-                      placeholder="Optional; verified value will replace this when available"
-                    />
-                  </label>
-
-                  <label>
-                    Expected scopes
-                    <input
-                      type="text"
-                      value={rewardForm.scopes}
-                      onChange={(e) => handleRewardFieldChange('scopes', e.target.value)}
-                    />
-                  </label>
-
-                  <label>
-                    Description
-                    <textarea
-                      value={rewardForm.description}
-                      onChange={(e) => handleRewardFieldChange('description', e.target.value)}
-                      placeholder="Who should use this classroom integration?"
-                    />
-                  </label>
-
-                  <button
-                    type="button"
-                    className="create-reward-instance-btn"
-                    onClick={handleCreateRewardIntegration}
-                    disabled={rewardSaving}
-                  >
-                    {rewardSaving ? 'Verifying...' : 'Create and verify instance'}
-                  </button>
-                </div>
+            {rewardLoading ? (
+              <div className="reward-admin-panel loading-users">Loading reward integrations...</div>
+            ) : rewardInstances.length === 0 ? (
+              <section className="reward-admin-panel instance-empty-state">
+                <span>No classrooms connected</span>
+                <h2>Create your first Prizeversity instance</h2>
+                <p>
+                  Connect one classroom API key to begin assigning challenges and linking students.
+                </p>
+                <button
+                  type="button"
+                  className="create-reward-instance-btn"
+                  onClick={() => setShowRewardCreateModal(true)}
+                >
+                  New instance
+                </button>
               </section>
-
-              <section className="reward-admin-panel">
-                <div className="reward-admin-heading">
-                  <span>Configured</span>
-                  <h2>Reward instances</h2>
-                  <p>
-                    Active instances appear on user account linking. API keys are never returned to
-                    the browser after creation.
-                  </p>
-                </div>
-
-                {rewardLoading ? (
-                  <div className="loading-users">Loading reward integrations...</div>
-                ) : rewardInstances.length === 0 ? (
-                  <div className="empty-reward-instances">
-                    No reward integration instances have been created yet.
+            ) : (
+              <div className="instance-manager-shell">
+                <aside className="instance-directory" aria-label="Reward instances">
+                  <div className="instance-directory-label">
+                    <span>Instances</span>
+                    <strong>{rewardInstances.length}</strong>
                   </div>
-                ) : (
-                  <div className="reward-instance-list">
-                    {rewardInstances.map((instance) => (
-                      <article key={instance.id} className="reward-instance-card">
-                        <div className="reward-instance-topline">
-                          <span data-active={instance.active}>
-                            {instance.active ? 'Active' : 'Inactive'}
+                  <div className="instance-directory-list">
+                    {rewardInstances.map((instance) => {
+                      const challengeCount = adminChallenges.filter(
+                        (challenge) => challenge.rewardIntegrationInstanceId === instance.id
+                      ).length;
+                      return (
+                        <button
+                          type="button"
+                          key={instance.id}
+                          className={`instance-directory-item ${
+                            selectedRewardInstanceId === instance.id ? 'active' : ''
+                          }`}
+                          onClick={() => {
+                            setSelectedRewardInstanceId(instance.id);
+                            setRewardWorkspaceTab('overview');
+                            setRewardMemberSearch('');
+                          }}
+                        >
+                          <span className="instance-monogram">
+                            {(instance.classroomName || instance.name)
+                              .trim()
+                              .charAt(0)
+                              .toUpperCase()}
                           </span>
-                          <span>{instance.lastVerificationStatus || 'untested'}</span>
-                        </div>
-                        <h3>{instance.name}</h3>
-                        <p>{instance.description || 'No description provided.'}</p>
+                          <span className="instance-directory-copy">
+                            <strong>{instance.name}</strong>
+                            <small>{instance.classroomName || instance.classroomId}</small>
+                            <em>
+                              {instance.lastUserCount ?? 0} students · {challengeCount} challenges
+                            </em>
+                          </span>
+                          <span
+                            className={`instance-status-dot ${instance.active ? 'active' : ''}`}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </aside>
 
-                        <div className="reward-instance-meta">
-                          <div>
-                            <span>Classroom</span>
-                            <strong>{instance.classroomName || instance.classroomId}</strong>
-                          </div>
-                          <div>
-                            <span>Classroom ID</span>
-                            <strong>{instance.classroomId}</strong>
-                          </div>
-                          <div>
+                {selectedRewardInstance && (
+                  <section className="instance-workspace">
+                    <header className="instance-workspace-header">
+                      <div>
+                        <div className="instance-workspace-status">
+                          <span data-active={selectedRewardInstance.active}>
+                            {selectedRewardInstance.active ? 'Active' : 'Inactive'}
+                          </span>
+                          <span>{selectedRewardInstance.lastVerificationStatus || 'untested'}</span>
+                        </div>
+                        <h2>{selectedRewardInstance.name}</h2>
+                        <p>
+                          {selectedRewardInstance.classroomName ||
+                            selectedRewardInstance.classroomId}
+                        </p>
+                      </div>
+                      <div className="connection-check-control">
+                        <button
+                          type="button"
+                          className="instance-test-btn"
+                          onClick={() => handleTestRewardIntegration(selectedRewardInstance.id)}
+                          disabled={testingRewardId === selectedRewardInstance.id}
+                          aria-describedby="connection-check-help"
+                        >
+                          {testingRewardId === selectedRewardInstance.id
+                            ? 'Checking...'
+                            : 'Check connection'}
+                        </button>
+                        <button
+                          type="button"
+                          className="connection-help-trigger"
+                          aria-label="What does Check connection do?"
+                          aria-describedby="connection-check-help"
+                        >
+                          <CircleHelp size={18} aria-hidden="true" />
+                        </button>
+                        <span
+                          id="connection-check-help"
+                          className="connection-check-tooltip"
+                          role="tooltip"
+                        >
+                          Uses the stored API key to request this classroom&apos;s current roster
+                          from Prizeversity. A successful check refreshes the classroom name,
+                          student count, verification status, and timestamp. It does not send
+                          rewards.
+                        </span>
+                      </div>
+                    </header>
+
+                    <nav className="instance-workspace-tabs" aria-label="Instance management">
+                      {(
+                        ['overview', 'challenges', 'students', 'settings'] as RewardWorkspaceTab[]
+                      ).map((workspaceTab) => (
+                        <button
+                          type="button"
+                          key={workspaceTab}
+                          className={rewardWorkspaceTab === workspaceTab ? 'active' : ''}
+                          onClick={() => setRewardWorkspaceTab(workspaceTab)}
+                        >
+                          {workspaceTab}
+                        </button>
+                      ))}
+                    </nav>
+
+                    {selectedRewardInstance.lastVerificationError && (
+                      <div className="reward-instance-error">
+                        {selectedRewardInstance.lastVerificationError}
+                      </div>
+                    )}
+
+                    {rewardWorkspaceTab === 'overview' && (
+                      <div className="instance-overview">
+                        <div className="instance-stat-grid">
+                          <article>
+                            <span>Students</span>
+                            <strong>{selectedRewardInstance.lastUserCount ?? '—'}</strong>
+                            <small>Last verified roster</small>
+                          </article>
+                          <article>
+                            <span>Live challenges</span>
+                            <strong>
+                              {
+                                selectedInstanceChallenges.filter(
+                                  (challenge) => challenge.status === 'published'
+                                ).length
+                              }
+                            </strong>
+                            <small>{selectedInstanceChallenges.length} assigned total</small>
+                          </article>
+                          <article>
                             <span>API key</span>
-                            <strong>{instance.apiKeyPreview || 'Stored'}</strong>
-                          </div>
-                          <div>
-                            <span>Users seen</span>
-                            <strong>{instance.lastUserCount ?? 'Not tested'}</strong>
-                          </div>
+                            <strong className="instance-key-preview">
+                              {selectedRewardInstance.apiKeyPreview || 'Stored'}
+                            </strong>
+                          </article>
+                          <article>
+                            <span>Last checked</span>
+                            <strong className="instance-date-value">
+                              {selectedRewardInstance.lastVerifiedAt
+                                ? new Date(
+                                    selectedRewardInstance.lastVerifiedAt
+                                  ).toLocaleDateString()
+                                : 'Never'}
+                            </strong>
+                            <small>
+                              {selectedRewardInstance.lastVerificationStatus || 'Untested'}
+                            </small>
+                          </article>
                         </div>
 
-                        {instance.lastVerificationError && (
-                          <div className="reward-instance-error">
-                            {instance.lastVerificationError}
+                        <div className="instance-overview-grid">
+                          <article className="instance-info-card">
+                            <span>Instance purpose</span>
+                            <p>
+                              {selectedRewardInstance.description || 'No description provided.'}
+                            </p>
+                            <dl>
+                              <div>
+                                <dt>Classroom ID</dt>
+                                <dd>{selectedRewardInstance.classroomId}</dd>
+                              </div>
+                              <div>
+                                <dt>Scopes</dt>
+                                <dd>{selectedRewardInstance.scopes.join(' · ')}</dd>
+                              </div>
+                            </dl>
+                          </article>
+                          <article className="instance-quick-actions">
+                            <span>Quick actions</span>
+                            <button
+                              type="button"
+                              onClick={() => openChallengeCreateModal(selectedRewardInstance.id)}
+                              disabled={!selectedRewardInstance.active}
+                              title={
+                                selectedRewardInstance.active
+                                  ? undefined
+                                  : 'Activate this instance before creating scoped challenges.'
+                              }
+                            >
+                              Create a classroom challenge
+                              <small>Scope a new challenge to this instance</small>
+                            </button>
+                            <button type="button" onClick={() => setRewardWorkspaceTab('students')}>
+                              Review student roster
+                              <small>View balances, XP, and account links</small>
+                            </button>
+                          </article>
+                        </div>
+                      </div>
+                    )}
+
+                    {rewardWorkspaceTab === 'challenges' && (
+                      <div className="instance-challenges-panel">
+                        <div className="instance-panel-heading">
+                          <div>
+                            <span>Classroom catalog</span>
+                            <h3>Assigned challenges</h3>
+                            <p>
+                              Published records are available to students linked to this instance.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            className="create-reward-instance-btn"
+                            onClick={() => openChallengeCreateModal(selectedRewardInstance.id)}
+                            disabled={!selectedRewardInstance.active}
+                          >
+                            New challenge
+                          </button>
+                        </div>
+                        {selectedInstanceChallenges.length === 0 ? (
+                          <div className="empty-reward-instances">
+                            No challenges are scoped to this classroom yet.
+                          </div>
+                        ) : (
+                          <div className="instance-challenge-list">
+                            {selectedInstanceChallenges.map((challenge) => (
+                              <article key={challenge.id}>
+                                <div>
+                                  <span data-status={challenge.status}>{challenge.status}</span>
+                                  <h4>{challenge.title}</h4>
+                                  <p>{challenge.summary}</p>
+                                  <small>
+                                    {challenge.reward.bits} bits · {challenge.reward.xpAmount || 0}{' '}
+                                    XP · {challenge.maxAttempts || 'Unlimited'} attempts
+                                  </small>
+                                </div>
+                                <div className="reward-instance-actions">
+                                  {challenge.status !== 'published' && (
+                                    <button
+                                      type="button"
+                                      className="action-btn role-btn"
+                                      onClick={() => handlePublishChallenge(challenge.id)}
+                                      disabled={updatingChallengeId === challenge.id}
+                                    >
+                                      Publish
+                                    </button>
+                                  )}
+                                  {challenge.status !== 'archived' && (
+                                    <button
+                                      type="button"
+                                      className="action-btn ban-btn"
+                                      onClick={() => handleArchiveChallenge(challenge.id)}
+                                      disabled={updatingChallengeId === challenge.id}
+                                    >
+                                      Archive
+                                    </button>
+                                  )}
+                                </div>
+                              </article>
+                            ))}
                           </div>
                         )}
+                        <p className="instance-global-note">
+                          Global challenges remain available to every linked classroom and are
+                          managed from the Challenges tab.
+                        </p>
+                      </div>
+                    )}
 
-                        <div className="reward-instance-actions">
+                    {rewardWorkspaceTab === 'students' && (
+                      <div className="instance-students-panel">
+                        <div className="instance-panel-heading">
+                          <div>
+                            <span>Prizeversity roster</span>
+                            <h3>Students</h3>
+                            <p>
+                              Balances and XP are read-only here and remain managed by Prizeversity.
+                            </p>
+                          </div>
                           <button
                             type="button"
-                            className="action-btn role-btn"
-                            onClick={() => handleTestRewardIntegration(instance.id)}
-                            disabled={testingRewardId === instance.id}
+                            className="instance-test-btn"
+                            onClick={() => loadRewardMembers(selectedRewardInstance.id)}
+                            disabled={rewardMembersLoading}
                           >
-                            {testingRewardId === instance.id ? 'Testing...' : 'Test'}
-                          </button>
-                          <button
-                            type="button"
-                            className={`action-btn ${instance.active ? 'ban-btn' : 'unban-btn'}`}
-                            onClick={() => handleToggleRewardIntegration(instance)}
-                          >
-                            {instance.active ? 'Deactivate' : 'Activate'}
+                            Refresh roster
                           </button>
                         </div>
-                      </article>
-                    ))}
-                  </div>
+                        <input
+                          className="instance-member-search"
+                          type="search"
+                          value={rewardMemberSearch}
+                          onChange={(event) => setRewardMemberSearch(event.target.value)}
+                          placeholder="Search by name, email, or short ID"
+                        />
+                        {rewardMembersLoading ? (
+                          <div className="loading-users">Loading classroom roster...</div>
+                        ) : filteredRewardMembers.length === 0 ? (
+                          <div className="empty-reward-instances">
+                            No matching classroom members.
+                          </div>
+                        ) : (
+                          <div className="instance-member-table">
+                            <div className="instance-member-row instance-member-header">
+                              <span>Member</span>
+                              <span>Role</span>
+                              <span>Bits</span>
+                              <span>Level / XP</span>
+                              <span>AWS link</span>
+                            </div>
+                            {filteredRewardMembers.map((member) => (
+                              <div className="instance-member-row" key={member.userId}>
+                                <div className="instance-member-identity">
+                                  <strong>{member.name}</strong>
+                                  <small>{member.email || member.shortId || member.userId}</small>
+                                </div>
+                                <span className="instance-member-role">{member.role}</span>
+                                <strong>{member.balance.toLocaleString()}</strong>
+                                <span>
+                                  Level {member.level} · {member.xp.toLocaleString()} XP
+                                </span>
+                                <span
+                                  className={
+                                    member.linkedAwsAccount ? 'member-linked' : 'member-unlinked'
+                                  }
+                                >
+                                  {member.linkedAwsAccount ? 'Linked' : 'Not linked'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {rewardWorkspaceTab === 'settings' && (
+                      <div className="instance-settings-panel">
+                        <div className="instance-panel-heading">
+                          <div>
+                            <span>Configuration</span>
+                            <h3>Instance settings</h3>
+                            <p>Rotate credentials or update the classroom connection.</p>
+                          </div>
+                        </div>
+                        {selectedRewardInstance.source === 'database' ? (
+                          <RewardInstanceForm
+                            form={rewardSettingsForm}
+                            saving={rewardSettingsSaving}
+                            submitLabel="Save settings"
+                            apiKeyOptional
+                            onChange={handleRewardSettingsFieldChange}
+                            onSubmit={handleSaveRewardSettings}
+                          />
+                        ) : (
+                          <div className="empty-reward-instances">
+                            Environment-configured instances must be changed in deployment settings.
+                          </div>
+                        )}
+                        <div className="instance-danger-zone">
+                          <div>
+                            <strong>
+                              {selectedRewardInstance.active
+                                ? 'Deactivate instance'
+                                : 'Activate instance'}
+                            </strong>
+                            <p>
+                              {selectedRewardInstance.active
+                                ? 'Stops new account links and scoped challenge access.'
+                                : 'Restores account linking and scoped challenge access.'}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            className={selectedRewardInstance.active ? 'ban-btn' : 'unban-btn'}
+                            onClick={() => handleToggleRewardIntegration(selectedRewardInstance)}
+                          >
+                            {selectedRewardInstance.active ? 'Deactivate' : 'Activate'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </section>
                 )}
-              </section>
-            </div>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -1812,6 +1933,84 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
           </motion.div>
         )}
       </div>
+
+      {showRewardCreateModal && (
+        <div
+          className="modal-overlay admin-editor-overlay"
+          onClick={() => {
+            if (!rewardSaving) setShowRewardCreateModal(false);
+          }}
+        >
+          <div
+            className="modal-content admin-editor-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="admin-editor-header">
+              <div>
+                <span className="modal-eyebrow">New reward instance</span>
+                <h3>Connect a Prizeversity classroom</h3>
+                <p>The API key is verified and stored only on the server.</p>
+              </div>
+              <button
+                type="button"
+                className="admin-modal-close"
+                aria-label="Close"
+                onClick={() => setShowRewardCreateModal(false)}
+                disabled={rewardSaving}
+              >
+                <X size={20} aria-hidden="true" />
+              </button>
+            </header>
+            <RewardInstanceForm
+              form={rewardForm}
+              saving={rewardSaving}
+              onChange={handleRewardFieldChange}
+              onSubmit={handleCreateRewardIntegration}
+            />
+          </div>
+        </div>
+      )}
+
+      {showChallengeCreateModal && (
+        <div
+          className="modal-overlay admin-editor-overlay"
+          onClick={() => {
+            if (!challengeSaving) setShowChallengeCreateModal(false);
+          }}
+        >
+          <div
+            className="modal-content admin-editor-modal challenge-editor-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="admin-editor-header">
+              <div>
+                <span className="modal-eyebrow">Challenge authoring</span>
+                <h3>Create challenge</h3>
+                <p>
+                  Configure validation, rewards, and the classroom that can access this challenge.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="admin-modal-close"
+                aria-label="Close"
+                onClick={() => setShowChallengeCreateModal(false)}
+                disabled={challengeSaving}
+              >
+                <X size={20} aria-hidden="true" />
+              </button>
+            </header>
+            <ChallengeCreateForm
+              form={challengeForm}
+              rewardInstances={activeRewardInstances}
+              saving={challengeSaving}
+              onChange={handleChallengeFieldChange}
+              onApplyTemplate={applyChallengeValidationTemplate}
+              onSubmit={handleCreateChallenge}
+            />
+          </div>
+        </div>
+      )}
 
       {showRoleModal && (
         <div className="modal-overlay" onClick={() => setShowRoleModal(false)}>

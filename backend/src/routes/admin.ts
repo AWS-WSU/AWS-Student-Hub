@@ -60,6 +60,11 @@ router.post(
 );
 router.get('/reward-integrations', requireAdmin, rewardIntegrationAdminController.listInstances);
 router.post('/reward-integrations', requireAdmin, rewardIntegrationAdminController.createInstance);
+router.get(
+  '/reward-integrations/:instanceId/members',
+  requireAdmin,
+  rewardIntegrationAdminController.listInstanceMembers
+);
 router.put(
   '/reward-integrations/:instanceId',
   requireAdmin,
