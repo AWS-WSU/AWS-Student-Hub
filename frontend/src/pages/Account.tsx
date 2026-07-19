@@ -1394,9 +1394,13 @@ function Account({ theme: _theme }: AccountProps) {
               </div>
               <div className="toggle-container">
                 <motion.button
+                  type="button"
                   className={`toggle-switch ${formData.wantsEmails ? 'active' : ''}`}
                   onClick={handleEmailToggle}
                   disabled={loading}
+                  role="switch"
+                  aria-checked={formData.wantsEmails}
+                  aria-label="Email communications"
                   whileTap={{ scale: 0.95 }}
                 >
                   <motion.div

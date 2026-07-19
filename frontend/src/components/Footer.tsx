@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { Mail, ShieldCheck } from 'lucide-react';
 import { newsletterAPI } from '../utils/api';
 import type { ThemeProps } from '../types/ui';
 import './styles/Footer.css';
@@ -107,11 +108,11 @@ function Footer({ theme: _theme }: ThemeProps) {
         >
           <h3>Contact Us</h3>
           <div className="contact-info">
-            <i className="fas fa-envelope"></i>
+            <Mail size={16} aria-hidden="true" />
             <a href="mailto:awscloudclubs@wayne.edu">awscloudclubs@wayne.edu</a>
           </div>
           <div className="contact-info">
-            <i className="fas fa-user-shield"></i>
+            <ShieldCheck size={16} aria-hidden="true" />
             <a href="mailto:awssbg@wayne.edu">Account deletion: awssbg@wayne.edu</a>
           </div>
         </motion.div>
@@ -138,7 +139,6 @@ function Footer({ theme: _theme }: ThemeProps) {
               <motion.button
                 type="submit"
                 disabled={isLoading}
-                whileHover={!isLoading ? { backgroundColor: 'var(--accent-secondary)' } : {}}
                 whileTap={!isLoading ? { scale: 0.95 } : {}}
                 style={{
                   opacity: isLoading ? 0.7 : 1,

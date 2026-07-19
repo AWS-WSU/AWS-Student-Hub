@@ -1,81 +1,17 @@
-:root[data-theme='light'] {
-  --card-bg: var(--light-card-bg);
-  --input-bg: #f1f5f9;
-  --border-color: #e2e8f0;
-  --text-muted: #64748b;
-  --accent-color: var(--light-accent);
-  --accent-hover: #e68900;
-  --accent-color-10: rgba(255, 153, 0, 0.1);
-  --accent-color-20: rgba(255, 153, 0, 0.2);
-  --error-color: #ef4444;
-  --error-bg: #fee2e2;
-}
-
-:root[data-theme='dark'] {
-  --card-bg: var(--dark-card-bg);
-  --input-bg: #334155;
-  --border-color: #334155;
-  --text-muted: #94a3b8;
-  --accent-color: var(--dark-accent);
-  --accent-hover: #ffad33;
-  --accent-color-10: rgba(255, 153, 0, 0.1);
-  --accent-color-20: rgba(255, 153, 0, 0.2);
-  --error-color: #ef4444;
-  --error-bg: rgba(239, 68, 68, 0.1);
-}
-
-#root {
+.app,
+.layout-container {
   width: 100%;
-  margin: 0;
-  padding: 0;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+  min-height: 100vh;
 }
 
 .layout-container {
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
 .layout-content {
   flex: 1;
-  padding-top: 64px;
+  padding-top: 68px;
 }
 
 .layout-content--no-pad {

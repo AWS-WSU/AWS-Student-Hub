@@ -35,7 +35,7 @@ import type { PublicProfile, User, UserRole } from '../types/user';
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || 'https://bx7226tmz2.execute-api.us-east-1.amazonaws.com/prod';
 
-type JsonRecord = Record<string, any>;
+type JsonRecord = Record<string, unknown>;
 
 type RequestOptions = Omit<RequestInit, 'headers'> & {
   headers?: Record<string, string>;
@@ -115,14 +115,37 @@ const getAuthHeaders = (): Record<string, string> => {
   };
 };
 
-const readJson = async <T = any>(response: Response): Promise<T> => {
+const readJson = async <T = unknown>(response: Response): Promise<T> => {
   const contentType = response.headers.get('content-type');
+  const body = await response.text();
+
+  if (!body.trim()) {
+    if (response.ok && (response.status === 204 || response.status === 205)) {
+      return undefined as T;
+    }
+
+    throw new Error(
+      response.ok
+        ? 'The server returned an empty response. Please try again.'
+        : `Request failed with status ${response.status}.`
+    );
+  }
 
   if (contentType && contentType.includes('application/json')) {
-    return response.json() as Promise<T>;
+    try {
+      return JSON.parse(body) as T;
+    } catch {
+      throw new Error('The server returned malformed data. Please try again.');
+    }
   }
 
   throw new Error('Server response was not JSON');
+};
+
+const getResponseError = (data: JsonRecord, status: number): string => {
+  if (typeof data.error === 'string' && data.error) return data.error;
+  if (typeof data.message === 'string' && data.message) return data.message;
+  return `HTTP error! status: ${status}`;
 };
 
 const apiRequest = async <T = any>(endpoint: string, options: RequestOptions = {}): Promise<T> => {
@@ -130,12 +153,14 @@ const apiRequest = async <T = any>(endpoint: string, options: RequestOptions = {
   const token = getStoredItem('accessToken');
 
   const defaultHeaders: Record<string, string> = {
+    Accept: 'application/json',
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
   const finalOptions: RequestInit & { headers: Record<string, string> } = {
     ...options,
+    cache: options.cache ?? 'no-store',
     headers: {
       ...defaultHeaders,
       ...(options.headers || {}),
@@ -164,9 +189,7 @@ const apiRequest = async <T = any>(endpoint: string, options: RequestOptions = {
         const data = await readJson<JsonRecord>(retryResponse);
 
         if (!retryResponse.ok) {
-          throw new Error(
-            data.error || data.message || `HTTP error! status: ${retryResponse.status}`
-          );
+          throw new Error(getResponseError(data, retryResponse.status));
         }
 
         return data as T;
@@ -176,7 +199,7 @@ const apiRequest = async <T = any>(endpoint: string, options: RequestOptions = {
     const data = await readJson<JsonRecord>(response);
 
     if (!response.ok) {
-      throw new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
+      throw new Error(getResponseError(data, response.status));
     }
 
     return data as T;

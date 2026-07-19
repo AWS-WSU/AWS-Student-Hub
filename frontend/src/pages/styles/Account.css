@@ -418,8 +418,12 @@
 
 .toggle-switch {
   position: relative;
+  display: block;
   width: 50px;
+  min-width: 50px;
   height: 26px;
+  min-height: 26px;
+  padding: 0;
   background: rgba(var(--text-primary-rgb), 0.2);
   border-radius: 13px;
   border: none;
@@ -431,7 +435,8 @@
 
 .toggle-switch:hover:not(:disabled) {
   background: rgba(var(--text-primary-rgb), 0.25);
-  transform: scale(1.02);
+  border-color: transparent;
+  transform: none;
 }
 
 .toggle-switch.active {
@@ -441,6 +446,7 @@
 
 .toggle-switch.active:hover:not(:disabled) {
   background: var(--accent);
+  border-color: transparent;
   box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.4);
 }
 
