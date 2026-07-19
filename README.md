@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://wayneaws.dev">
-    <img src="https://github.com/user-attachments/assets/2057d3aa-a3e2-4566-b2f6-b89b0dd165f5" width="300" alt="AWS Student Hub banner" />
+    <img src="https://github.com/user-attachments/assets/9e44c205-24ca-4cfd-9ea4-5ee1dcc7a4a4" width="300" alt="AWS Student Hub banner" />
   </a>
 </p>
 
