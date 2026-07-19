@@ -420,7 +420,7 @@ export const authAPI = {
     return response.json();
   },
 
-  searchUsers: async (query: string, limit = 10): Promise<UsersResponse> => {
+  searchUsers: async (query: string, limit = 10, signal?: AbortSignal): Promise<UsersResponse> => {
     const params = new URLSearchParams({
       q: query,
       limit: limit.toString(),
@@ -428,6 +428,8 @@ export const authAPI = {
 
     const response = await fetch(`${API_BASE_URL}/auth/search?${params}`, {
       headers: getAuthHeaders(),
+      cache: 'no-store',
+      signal,
     });
 
     if (!response.ok) {
