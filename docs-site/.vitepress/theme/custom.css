@@ -77,18 +77,33 @@ h3,
 }
 
 .VPNavBarTitle .title {
-  font-size: 1.05rem;
-  line-height: 1.2;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: clamp(0.78rem, 1vw, 0.92rem);
+  line-height: 1.08;
   font-weight: 750;
   letter-spacing: -0.025em;
+  white-space: normal;
 }
 
 .VPNavBarTitle {
+  width: 100%;
+  min-width: 0;
   gap: 0.65rem;
+  overflow: hidden;
 }
 
 .VPNavBarTitle .logo {
+  flex: 0 0 auto;
   max-height: 32px;
+}
+
+.VPNavBarTitle .title span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .VPDoc h1 {
