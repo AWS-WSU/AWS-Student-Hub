@@ -12,7 +12,7 @@ function About() {
     <div className="landing-container">
       <section id="about" className="about-section">
         <div className="section-header">
-          <h2>About Our Club</h2>
+          <h2>About Our Group</h2>
           <div className="section-divider">
             <span></span>
             <div className="divider-icon">
@@ -85,7 +85,7 @@ function About() {
         >
           <div className="stat-item">
             <span className="stat-number">250+</span>
-            <span className="stat-label">Club Members</span>
+            <span className="stat-label">Group Members</span>
           </div>
           <div className="stat-item">
             <span className="stat-number">6+</span>
@@ -116,7 +116,7 @@ function About() {
             className="join-button pulse-animation"
             onClick={() => navigate(user ? '/events' : '/auth?mode=signup')}
           >
-            {user ? 'View Events' : 'Join the Club'}
+            {user ? 'View Events' : 'Join the Group'}
           </button>
         </motion.div>
       </section>

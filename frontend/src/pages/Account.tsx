@@ -1390,7 +1390,7 @@ function Account({ theme: _theme }: AccountProps) {
             <div className="preference-item">
               <div className="preference-info">
                 <h3>Email Communications</h3>
-                <p>Receive updates about events, resources, and club news</p>
+                <p>Receive updates about events, resources, and group news</p>
               </div>
               <div className="toggle-container">
                 <motion.button

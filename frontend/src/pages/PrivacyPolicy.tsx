@@ -20,9 +20,9 @@ function PrivacyPolicy() {
         <p className="privacy-eyebrow">AWS Student Hub</p>
         <h1>Privacy Policy</h1>
         <p className="privacy-intro">
-          This policy explains how the Wayne State University AWS Cloud Computing Club collects,
+          This policy explains how the Wayne State University AWS Student Builder Group collects,
           uses, shares, and protects information through this website, member accounts, event tools,
-          AWS challenges, and related club features.
+          AWS challenges, and related group features.
         </p>
         <p className="privacy-date">Effective date: {effectiveDate}</p>
       </motion.section>
@@ -43,7 +43,7 @@ function PrivacyPolicy() {
           </p>
           <p>
             Deletion may remove or anonymize account profile data, authentication records, challenge
-            records, and related club records where practical. We may retain limited information
+            records, and related group records where practical. We may retain limited information
             when needed for security, abuse prevention, backups, event administration, dispute
             resolution, WSU reporting obligations, or other legitimate operational requirements.
           </p>
@@ -86,7 +86,7 @@ function PrivacyPolicy() {
             </li>
             <li>
               Moderation and administration data, including role changes, bans, suspension status,
-              ban reasons, and admin records needed to operate the club platform safely.
+              ban reasons, and admin records needed to operate the group platform safely.
             </li>
             <li>
               Technical and security data, such as request metadata, error logs, browser storage
@@ -100,7 +100,7 @@ function PrivacyPolicy() {
           <ul>
             <li>To create, authenticate, secure, and manage member accounts.</li>
             <li>
-              To provide member profiles, account settings, events, resources, and club updates.
+              To provide member profiles, account settings, events, resources, and group updates.
             </li>
             <li>
               To run AWS challenges, provision challenge credentials, validate submissions, track
@@ -115,8 +115,8 @@ function PrivacyPolicy() {
               administrative messages.
             </li>
             <li>
-              To moderate the platform, investigate misuse, enforce club rules, enforce WSU-related
-              expectations, and protect users and club resources.
+              To moderate the platform, investigate misuse, enforce group rules, enforce WSU-related
+              expectations, and protect users and group resources.
             </li>
             <li>
               To improve reliability, debug errors, maintain backups, analyze aggregate usage, and
@@ -140,9 +140,9 @@ function PrivacyPolicy() {
           <h2>AWS Challenge Credentials</h2>
           <p>
             The site may provision AWS challenge credentials for your account. These credentials are
-            intended only for club-authorized challenge work. Do not share, sell, publish, reuse, or
-            misuse them. Misuse may lead to account restriction, credential revocation, reporting to
-            club leadership, and referral to the appropriate Wayne State University offices or
+            intended only for group-authorized challenge work. Do not share, sell, publish, reuse,
+            or misuse them. Misuse may lead to account restriction, credential revocation, reporting
+            to group leadership, and referral to the appropriate Wayne State University offices or
             authorities.
           </p>
         </section>
@@ -150,16 +150,16 @@ function PrivacyPolicy() {
         <section className="privacy-card">
           <h2>WSU Code of Conduct and Reporting</h2>
           <p>
-            Because this club is affiliated with Wayne State University, all users must acknowledge
+            Because this group is affiliated with Wayne State University, all users must acknowledge
             and follow applicable WSU policies, including the Wayne State University Student Code of
-            Conduct, when participating in club digital spaces, events, challenges, communications,
+            Conduct, when participating in group digital spaces, events, challenges, communications,
             and related activities.
           </p>
           <p>
             Harassment, discrimination, threats, intimidation, academic misconduct, unauthorized use
             of systems, credential misuse, impersonation, abuse of rewards, or mistreatment of other
             students, guests, officers, faculty, staff, or community members is not permitted.
-            Concerns may be reported to club leadership at{' '}
+            Concerns may be reported to group leadership at{' '}
             <a href="mailto:awssbg@wayne.edu">awssbg@wayne.edu</a> and, when appropriate, to the
             proper Wayne State University office or authority.
           </p>
@@ -189,7 +189,7 @@ function PrivacyPolicy() {
           <p>
             We do not sell your personal information. We may share information only as needed to run
             the site, provide requested features, protect the community, comply with obligations, or
-            support club operations.
+            support group operations.
           </p>
           <ul>
             <li>
@@ -238,7 +238,7 @@ function PrivacyPolicy() {
             <li>You can update most profile information from the account settings page.</li>
             <li>You can turn event email notifications on or off in your account settings.</li>
             <li>
-              You can unsubscribe from newsletter communications by contacting club leadership.
+              You can unsubscribe from newsletter communications by contacting group leadership.
             </li>
             <li>You can unlink your Prizeversity account from account settings when available.</li>
             <li>You can sign out from the current device or request broader account support.</li>
@@ -253,7 +253,7 @@ function PrivacyPolicy() {
           <h2>Data Retention</h2>
           <p>
             We keep personal information for as long as reasonably needed to provide the site,
-            operate the club platform, maintain security, administer events and challenges, resolve
+            operate the group platform, maintain security, administer events and challenges, resolve
             disputes, enforce rules, support WSU-related reporting, and meet technical or legal
             obligations. Backup copies, logs, moderation records, security records, reward records,
             and records connected to reports or investigations may remain for longer when necessary.
@@ -273,19 +273,19 @@ function PrivacyPolicy() {
         <section className="privacy-card">
           <h2>Children</h2>
           <p>
-            The site is intended for Wayne State University students, club participants, and invited
-            community members. It is not directed to children under 13. If you believe a child under
-            13 provided personal information through the site, contact us so we can review and
-            remove it where appropriate.
+            The site is intended for Wayne State University students, group participants, and
+            invited community members. It is not directed to children under 13. If you believe a
+            child under 13 provided personal information through the site, contact us so we can
+            review and remove it where appropriate.
           </p>
         </section>
 
         <section className="privacy-card">
           <h2>Changes to This Policy</h2>
           <p>
-            We may update this policy as club operations, site features, integrations, or university
-            requirements change. The effective date above will be updated when material changes are
-            made.
+            We may update this policy as group operations, site features, integrations, or
+            university requirements change. The effective date above will be updated when material
+            changes are made.
           </p>
         </section>
 

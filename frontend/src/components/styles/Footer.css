@@ -26,7 +26,9 @@
 }
 
 .footer-aws-logo {
-  height: 125px; /* Increased from 45px */
+  width: 125px;
+  height: 125px;
+  object-fit: contain;
 }
 
 .footer-logo h3 {

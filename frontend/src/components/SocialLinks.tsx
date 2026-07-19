@@ -64,7 +64,7 @@ const SocialSection = () => {
   return (
     <section className="social-section">
       <h2>Follow Us</h2>
-      <p>Stay connected with the AWS Cloud Club at Wayne State University</p>
+      <p>Stay connected with the AWS Student Builder Group at Wayne State University</p>
       <div className="social-icons">
         <img
           src="/linkedin.svg"

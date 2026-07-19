@@ -22,7 +22,7 @@ VITE_API_URL=http://localhost:5001/api
 
 Use one of these approaches:
 
-1. Ask a project maintainer for the shared development MongoDB URI if you are an approved AWS Cloud Club maintainer or contributor.
+1. Ask a project maintainer for the shared development MongoDB URI if you are an approved AWS Student Builder Group maintainer or contributor.
 2. Create your own MongoDB Atlas cluster for isolated local development.
 3. Run a local MongoDB instance and point `MONGODB_URI` at it.
 

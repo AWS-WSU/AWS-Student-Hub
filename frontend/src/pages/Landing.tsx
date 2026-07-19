@@ -11,7 +11,7 @@ import { authAPI, eventsAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import type { Event as HubEvent, ThemeProps, User } from '../types';
 
-function Landing({ theme }: ThemeProps) {
+function Landing({ theme: _theme }: ThemeProps) {
   const [events, setEvents] = useState<HubEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<HubEvent | null>(null);
@@ -163,8 +163,8 @@ function Landing({ theme }: ThemeProps) {
             transition={{ delay: 0.3, duration: 0.8 }}
           >
             <img
-              src={theme === 'light' ? '/aws-logo-dark.svg' : '/aws-logo-light.svg'}
-              alt="AWS Logo"
+              src="/aws-student-builder-group-logo.png"
+              alt="AWS Student Builder Group"
               className="hero-logo"
             />
           </motion.div>
@@ -196,7 +196,7 @@ function Landing({ theme }: ThemeProps) {
             transition={{ delay: 1.1, duration: 0.8 }}
           >
             <button className="cta-primary pulse-animation" onClick={handleJoinClick}>
-              {user ? 'View Events' : 'Join the Club'}
+              {user ? 'View Events' : 'Join the Group'}
             </button>
             <button className="cta-secondary" onClick={() => navigate('/about')}>
               Learn More
@@ -326,7 +326,7 @@ function Landing({ theme }: ThemeProps) {
               transition={{ duration: 0.6, delay: 0.3 }}
               viewport={{ once: true, amount: 0.3 }}
             >
-              Let's give a warm welcome to our newest club members! Ready to join this amazing
+              Let's give a warm welcome to our newest group members! Ready to join this amazing
               community?
             </motion.p>
           </motion.div>
@@ -617,7 +617,7 @@ function Landing({ theme }: ThemeProps) {
               : 'Join our community today and get access to workshops, networking events, and resources to accelerate your career.'}
           </p>
           <button className="join-button pulse-animation" onClick={handleJoinClick}>
-            {user ? 'View Events' : 'Join the Club'}
+            {user ? 'View Events' : 'Join the Group'}
           </button>
         </motion.div>
       </section>

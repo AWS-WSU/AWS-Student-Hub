@@ -13,7 +13,7 @@ function Resources() {
     <div className="landing-container">
       <section id="resources" className="resources-section">
         <div className="section-header">
-          <h2>Club Resources</h2>
+          <h2>Group Resources</h2>
           <div className="section-divider">
             <span></span>
             <div className="divider-icon">
@@ -87,12 +87,12 @@ function Resources() {
           <div className="testimonials-slider">
             <div className="testimonial">
               <p>
-                Being on the board for the AWS Cloud Club really pushed me out of my comfort zone.
-                As a finance major, I wasn't fluent in technology terms at first but organizing
-                events helped me pick up so many concepts I wouldn't have learned in the classroom.
-                It gave me the confidence to navigate technical conversations, which I rely on now
-                in my role at Deloitte, where I work closely with AWS in technology risk advisory
-                practice.
+                Being on the board for the AWS Student Builder Group really pushed me out of my
+                comfort zone. As a finance major, I wasn't fluent in technology terms at first but
+                organizing events helped me pick up so many concepts I wouldn't have learned in the
+                classroom. It gave me the confidence to navigate technical conversations, which I
+                rely on now in my role at Deloitte, where I work closely with AWS in technology risk
+                advisory practice.
               </p>
               <div className="testimonial-author">
                 <img src="/mahdyya.jpeg" alt="Jane Doe" />
@@ -126,7 +126,7 @@ function Resources() {
             className="join-button pulse-animation"
             onClick={() => navigate(user ? '/events' : '/auth?mode=signup')}
           >
-            {user ? 'View Events' : 'Join the Club'}
+            {user ? 'View Events' : 'Join the Group'}
           </button>
         </motion.div>
       </section>

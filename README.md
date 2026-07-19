@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  AWS Student Hub is the Wayne State University AWS Cloud Club web platform. It gives students a central place to discover club events, manage accounts, join the Discord community, and access cloud-security challenge resources.
+  AWS Student Hub is the Wayne State University AWS Student Builder Group web platform. It gives students a central place to discover group events, manage accounts, join the Discord community, and access cloud-security challenge resources.
 </p>
 
 ## Live site

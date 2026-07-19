@@ -140,23 +140,13 @@ function Navbar({ theme, toggleTheme }: LayoutProps) {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
       >
-        <Link
-          to="/"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            textDecoration: 'none',
-            color: 'inherit',
-          }}
-        >
-          <img
-            src={theme === 'light' ? '/aws-logo-dark.svg' : '/aws-logo-light.svg'}
-            alt="AWS Logo"
-            className="aws-logo"
-          />
+        <Link to="/" className="brand-link" aria-label="AWS Student Builder Group home">
+          <span className="brand-mark-wrap" aria-hidden="true">
+            <img src="/aws-student-builder-group-logo.png" alt="" className="aws-logo" />
+          </span>
           <div className="logo-text">
-            <h1>Wayne State University</h1>
-            <span className="accent-text">AWS Cloud Computing Club</span>
+            <span className="brand-university">Wayne State University</span>
+            <span className="brand-name">AWS Student Builder Group</span>
           </div>
         </Link>
       </motion.div>

@@ -6,7 +6,7 @@ import { newsletterAPI } from '../utils/api';
 import type { ThemeProps } from '../types/ui';
 import './styles/Footer.css';
 
-function Footer({ theme }: ThemeProps) {
+function Footer({ theme: _theme }: ThemeProps) {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ text?: string; type: string }>({ text: '', type: '' });
@@ -59,11 +59,11 @@ function Footer({ theme }: ThemeProps) {
         >
           <div className="footer-logo">
             <img
-              src={theme === 'light' ? '/aws-logo-dark.svg' : '/aws-logo-light.svg'}
-              alt="AWS Logo"
+              src="/aws-student-builder-group-logo.png"
+              alt="AWS Student Builder Group"
               className="footer-aws-logo"
             />
-            <h3>WSU AWS Cloud Computing Club</h3>
+            <h3>WSU AWS Student Builder Group</h3>
           </div>
           <p>
             Empowering students with cloud computing skills and connecting them to industry
@@ -165,7 +165,7 @@ function Footer({ theme }: ThemeProps) {
 
       <div className="footer-bottom">
         <p>
-          &copy; {new Date().getFullYear()} Wayne State University AWS Cloud Computing Club -{' '}
+          &copy; {new Date().getFullYear()} Wayne State University AWS Student Builder Group -{' '}
           <Link to="/privacy">Privacy Policy</Link>
         </p>
       </div>
