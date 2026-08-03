@@ -222,14 +222,14 @@ Resources:
             Headers:
               Access-Control-Allow-Origin: "'*'"
               Access-Control-Allow-Headers: "'Content-Type,Authorization'"
-              Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+              Access-Control-Allow-Methods: "'GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS'"
               Access-Control-Allow-Credentials: "'false'"
         DEFAULT_5XX:
           ResponseParameters:
             Headers:
               Access-Control-Allow-Origin: "'*'"
               Access-Control-Allow-Headers: "'Content-Type,Authorization'"
-              Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+              Access-Control-Allow-Methods: "'GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS'"
               Access-Control-Allow-Credentials: "'false'"
 
   # Lambda execution role

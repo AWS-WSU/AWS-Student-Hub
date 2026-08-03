@@ -20,6 +20,7 @@ const allowedOrigins = [
   'https://prizeversity.com',
   'https://www.prizeversity.com',
 ];
+const allowedMethods = 'GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS';
 
 const getOrigin = (event: APIGatewayProxyEvent): string | undefined => {
   return event.headers?.origin || event.headers?.Origin || undefined;
@@ -38,7 +39,7 @@ const handleCors = (event: APIGatewayProxyEvent): APIGatewayProxyResult => {
       headers: {
         'Access-Control-Allow-Origin': origin,
         'Access-Control-Allow-Credentials': 'true',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+        'Access-Control-Allow-Methods': allowedMethods,
         'Access-Control-Allow-Headers':
           'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
         'Access-Control-Max-Age': '600',
@@ -106,7 +107,7 @@ export const handler = async (
       if (isAllowedOrigin(origin)) {
         response.headers['Access-Control-Allow-Origin'] = origin;
         response.headers['Access-Control-Allow-Credentials'] = 'true';
-        response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS';
+        response.headers['Access-Control-Allow-Methods'] = allowedMethods;
         response.headers['Access-Control-Allow-Headers'] =
           'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token';
       }
