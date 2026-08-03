@@ -18,6 +18,7 @@ const curatedKeys = new Set([
   'aws_cloud_security_lab',
   'robots_txt_trap',
   'ciphered_seal_protocol',
+  'sql_injection_sandbox',
 ]);
 
 const toAssignmentStatus = (status: string): ChallengeAssignmentStatus => {

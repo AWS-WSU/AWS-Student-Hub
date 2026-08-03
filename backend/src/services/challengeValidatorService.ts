@@ -11,6 +11,12 @@ import {
   isCipheredSealSequence,
   normalizeCipheredSealConfig,
 } from './cipheredSealService';
+import {
+  getSqlInjectionSuccessMessage,
+  normalizeSqlInjectionSandboxConfig,
+  SQL_INJECTION_VALIDATOR_TYPE,
+  validateSqlInjectionCompletionToken,
+} from './sqlInjectionSandboxService';
 
 export interface ChallengeValidatorContext {
   user: IUserDocument;
@@ -86,6 +92,12 @@ interface GenericProofSubmissionPayload {
   text?: string;
   link?: string;
   url?: string;
+}
+
+interface SqlInjectionSubmissionPayload {
+  flag?: string;
+  secret?: string;
+  answer?: string;
 }
 
 const validators = new Map<string, ChallengeValidator>();
@@ -209,6 +221,15 @@ const normalizeGenericProofPayload = (payload: unknown): GenericProofSubmissionP
     text: cleanString(payload.text) || undefined,
     link: cleanString(payload.link) || undefined,
     url: cleanString(payload.url) || undefined,
+  };
+};
+
+const normalizeSqlInjectionPayload = (payload: unknown): SqlInjectionSubmissionPayload => {
+  if (!isRecord(payload)) return {};
+  return {
+    flag: cleanString(payload.flag) || undefined,
+    secret: cleanString(payload.secret) || undefined,
+    answer: cleanString(payload.answer) || undefined,
   };
 };
 
@@ -486,6 +507,50 @@ const cipheredSealValidator: ChallengeValidator = {
   },
 };
 
+const sqlInjectionValidator: ChallengeValidator = {
+  type: SQL_INJECTION_VALIDATOR_TYPE,
+
+  async validate(rawConfig, rawPayload, context) {
+    normalizeSqlInjectionSandboxConfig(rawConfig);
+    const payload = normalizeSqlInjectionPayload(rawPayload);
+    const submittedToken = cleanString(payload.flag || payload.secret || payload.answer);
+
+    if (!submittedToken) {
+      return {
+        accepted: false,
+        outcome: 'rejected',
+        message: 'Submit the flag recovered from the restricted database row.',
+      };
+    }
+
+    const accepted = validateSqlInjectionCompletionToken(submittedToken, context);
+    return {
+      accepted,
+      outcome: accepted ? 'accepted' : 'rejected',
+      message: accepted
+        ? getSqlInjectionSuccessMessage(rawConfig)
+        : 'That flag does not belong to this challenge session.',
+      publicDetails: {
+        isolatedSandbox: true,
+      },
+      privateDetails: {
+        personalizedToken: true,
+        challengeVersion: context.challenge.version,
+      },
+    };
+  },
+
+  sanitizePayload(payload) {
+    const normalizedPayload = normalizeSqlInjectionPayload(payload);
+    return {
+      submitted: Boolean(
+        normalizedPayload.flag || normalizedPayload.secret || normalizedPayload.answer
+      ),
+      flag: '[redacted]',
+    };
+  },
+};
+
 export const registerChallengeValidator = (validator: ChallengeValidator): void => {
   validators.set(validator.type, validator);
 };
@@ -581,6 +646,10 @@ export const prepareChallengeValidationConfigForStorage = (
     return { ...getCipheredSealConfig({ ...config, type }) };
   }
 
+  if (type === SQL_INJECTION_VALIDATOR_TYPE) {
+    return { ...normalizeSqlInjectionSandboxConfig({ ...config, type }) };
+  }
+
   getChallengeValidator(type);
   return {
     ...config,
@@ -592,3 +661,4 @@ registerChallengeValidator(awsSecretValidator);
 registerChallengeValidator(staticSecretValidator);
 registerChallengeValidator(manualReviewValidator);
 registerChallengeValidator(cipheredSealValidator);
+registerChallengeValidator(sqlInjectionValidator);

@@ -58,6 +58,20 @@ The generic sanitizer redacts field names containing secret, password, token, or
 
 For `static_secret`, plaintext expected values are normalized and hashed before the definition is stored. Student submissions are compared as hashes. This protects the database record from casually exposing the answer, but it does not compensate for weak or guessable secrets.
 
+## Deliberately vulnerable labs
+
+The SQL Injection Sandbox is vulnerable by design, but its SQL boundary is disposable and synthetic:
+
+- A new in-memory database is created for every search request.
+- The database contains no application, Prizeversity, credential, or student-profile data.
+- The vulnerable query cannot reach MongoDB or any persistent SQL service.
+- Stacked statements and control characters are rejected, input and output are bounded, and requests are rate-limited.
+- Parser details and stacks are not returned to the student.
+- The hidden flag is HMAC-derived for one user, assignment, challenge, and version.
+- Final acceptance is performed by the backend validator using a timing-safe comparison.
+
+Do not replace the in-memory adapter with a production database connection. Extending this challenge with persistent data or general-purpose SQL execution changes the security model and requires a separate isolation review.
+
 ## Browser trust boundary
 
 The frontend is an untrusted presentation layer. A student can inspect JavaScript, network responses, hidden DOM, and public assets.

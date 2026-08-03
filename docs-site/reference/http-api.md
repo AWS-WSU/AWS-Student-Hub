@@ -98,6 +98,33 @@ POST /challenges/ciphered-seal/route/:routeKey/resolve
 
 The resolve body contains `seedNumber`. Both endpoints enforce linked instance and active assignment scope.
 
+### SQL Injection Sandbox routes
+
+```text
+GET  /challenges/:slug/sql-sandbox
+POST /challenges/:slug/sql-sandbox/search
+```
+
+The state route starts or resumes assignment-scoped progress and returns public sandbox metadata. The search body is:
+
+```json
+{
+  "query": "archive title or SQL payload"
+}
+```
+
+The response contains the executed synthetic statement, bounded result rows, truncation state, and an optional safe parser error. Search calls are rate-limited and do not increment completion attempts. Students submit a recovered flag through the standard endpoint:
+
+```json
+{
+  "payload": {
+    "flag": "FLAG{personalized-value}"
+  }
+}
+```
+
+Both sandbox routes enforce authentication, active account linking, published definition state, and the student's active classroom assignment.
+
 ## Admin catalog routes
 
 | Method   | Path                                             | Purpose                                                                               |
