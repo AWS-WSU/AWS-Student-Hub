@@ -38,6 +38,11 @@ import {
   resolveSubmittedCipheredSealSeed,
 } from './cipheredSealService';
 import { getPrizeversityStatus } from './rewardIntegrationService';
+import {
+  getSqlInjectionPublicExperience,
+  runSqlInjectionSandboxQuery,
+  SQL_INJECTION_VALIDATOR_TYPE,
+} from './sqlInjectionSandboxService';
 
 export type ChallengeErrorCode =
   | 'CHALLENGE_NOT_FOUND'
@@ -340,10 +345,14 @@ const toRewardPreview = (reward: IChallengeRewardConfig) => ({
 });
 
 const getPublicChallengeExperience = (challenge: IChallengeDocument) => {
-  if (getValidatorType(challenge) !== CIPHERED_SEAL_VALIDATOR_TYPE) return undefined;
-
   try {
-    return getCipheredSealPublicExperience(challenge.validation);
+    if (getValidatorType(challenge) === CIPHERED_SEAL_VALIDATOR_TYPE) {
+      return getCipheredSealPublicExperience(challenge.validation);
+    }
+    if (getValidatorType(challenge) === SQL_INJECTION_VALIDATOR_TYPE) {
+      return getSqlInjectionPublicExperience(challenge.validation);
+    }
+    return undefined;
   } catch {
     return undefined;
   }
@@ -835,6 +844,50 @@ export const resolveCipheredSealRouteSeed = async (
 ) => {
   const { challenge, user } = await getCipheredSealPlayerContext(routeKey, userId);
   return resolveSubmittedCipheredSealSeed(challenge, user, seedNumber);
+};
+
+const getSqlInjectionPlayerContext = async (slug: string, userId: string) => {
+  const { challenge, assignment, user } = await ensureAssignedChallenge(slug, userId);
+  if (getValidatorType(challenge) !== SQL_INJECTION_VALIDATOR_TYPE) {
+    throw new ChallengeServiceError('SQL sandbox not found.', 'CHALLENGE_NOT_FOUND', 404);
+  }
+  if (assignment.reward?.enabled && !hasRewardIdentity(user)) {
+    throw new ChallengeServiceError(
+      'Link your Prizeversity account before entering this challenge.',
+      'REWARD_LINK_REQUIRED',
+      403
+    );
+  }
+
+  const progress = await getOrCreateProgress(challenge, assignment, userId);
+  return { challenge, assignment, user, progress };
+};
+
+export const getSqlInjectionSandboxState = async (slug: string, userId: string) => {
+  const { challenge, assignment, progress } = await getSqlInjectionPlayerContext(slug, userId);
+  return {
+    challenge: toPublicChallengeDto(challenge, assignment),
+    progress: toProgressDto(progress),
+    rewardLink: await getRewardLinkSummary(userId, getAssignmentScopeId(assignment)),
+    sandbox: getSqlInjectionPublicExperience(challenge.validation),
+  };
+};
+
+export const searchSqlInjectionSandbox = async (slug: string, userId: string, input: unknown) => {
+  const { challenge, user, progress } = await getSqlInjectionPlayerContext(slug, userId);
+  try {
+    return runSqlInjectionSandboxQuery(challenge.validation, input, {
+      challenge,
+      progress,
+      user,
+    });
+  } catch (error: unknown) {
+    throw new ChallengeServiceError(
+      error instanceof Error ? error.message : 'Unable to run the sandbox query.',
+      'INVALID_CHALLENGE_INPUT',
+      400
+    );
+  }
 };
 
 export const submitChallenge = async (

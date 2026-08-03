@@ -27,6 +27,14 @@ export interface CipheredSealExperience {
   imagePath: string;
 }
 
+export interface SqlInjectionExperience {
+  type: 'sql_injection';
+  tableName: string;
+  maxInputLength: number;
+}
+
+export type ChallengeExperience = CipheredSealExperience | SqlInjectionExperience;
+
 export interface ChallengeRewardConfig extends ChallengeRewardPreview {
   activityName?: string;
   description?: string;
@@ -74,7 +82,7 @@ export interface ChallengeListItem {
   tags: string[];
   version: number;
   validationType?: ChallengeValidationType;
-  experience?: CipheredSealExperience;
+  experience?: ChallengeExperience;
   startsAt?: string | null;
   endsAt?: string | null;
   rewardIntegrationInstanceId?: string | null;
@@ -150,6 +158,29 @@ export interface CipheredSealResolveResponse {
     leftSeal: 0 | 1;
     rightSeal: 0 | 1;
   };
+}
+
+export interface SqlInjectionSandboxStateResponse {
+  challenge: ChallengeDetail;
+  progress: ChallengeProgress;
+  rewardLink: ChallengeRewardLinkSummary;
+  sandbox: SqlInjectionExperience;
+}
+
+export interface SqlInjectionSandboxRow {
+  id: number;
+  title: string;
+  department: string;
+  classification: string;
+  content: string;
+}
+
+export interface SqlInjectionSandboxSearchResponse {
+  statement: string;
+  rows: SqlInjectionSandboxRow[];
+  rowCount: number;
+  truncated: boolean;
+  queryError?: string;
 }
 
 export interface AdminChallenge extends ChallengeDetail {

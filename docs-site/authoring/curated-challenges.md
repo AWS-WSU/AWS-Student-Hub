@@ -39,8 +39,26 @@ Run seed scripts separately for each environment whose catalog should contain th
 | AWS Cloud Security Lab | `aws_secret`      | Uses the authenticated user's assigned AWS challenge secret.                           |
 | Robots.txt Trap        | `static_secret`   | Adds `/robots.txt` discovery and a dedicated hidden vault route.                       |
 | Ciphered Seal Protocol | `ciphered_seal`   | Adds a metadata route key, per-user layout, calculator state, and sequence validation. |
+| SQL Injection Sandbox  | `sql_injection`   | Runs vulnerable queries against a disposable, synthetic in-memory database.            |
 
 The Robots.txt challenge demonstrates that a curated experience may reuse a generic validator while still requiring source-controlled routes and presentation.
+
+## SQL Injection Sandbox
+
+The SQL Injection Sandbox is intentionally vulnerable within a narrow boundary. Each search request creates a fresh in-memory PostgreSQL-compatible database containing only synthetic records. The vulnerable query never touches MongoDB, Prizeversity, application users, environment variables, or another student's state.
+
+The restricted row contains a completion flag derived with an HMAC over the challenge, challenge version, classroom assignment, and AWS Student Hub user. Consequently, a flag copied from another student or another assignment is rejected by the standard challenge submission endpoint.
+
+Operational behavior:
+
+- Opening the lab enforces authentication, active Prizeversity linking, and an active assignment.
+- Search requests are rate-limited, length-limited, and restricted to one statement; semicolons are rejected.
+- SQL parser errors are converted to a generic student-safe message.
+- Search activity does not consume challenge attempts. Only final flag submissions do.
+- Correct submission uses the normal completion and reward-emission pipeline.
+- The database is rebuilt for every query and retains no student input.
+
+This controlled vulnerability must remain in `sqlInjectionSandboxService.ts`. Do not point its query executor at a persistent or shared database to make the data feel more realistic.
 
 ## Implementing a curated validator
 

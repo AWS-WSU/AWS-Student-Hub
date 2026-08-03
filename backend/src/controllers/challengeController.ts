@@ -6,8 +6,10 @@ import {
   getCipheredSealRouteState,
   getChallengeProgress,
   getPublishedChallenge,
+  getSqlInjectionSandboxState,
   listPublishedChallenges,
   resolveCipheredSealRouteSeed,
+  searchSqlInjectionSandbox,
   startChallenge,
   submitChallenge,
 } from '../services/challengeService';
@@ -93,6 +95,38 @@ export const resolveCipheredSealSeed = async (req: Request, res: Response): Prom
     res
       .status(getErrorStatus(error, 400))
       .json(getErrorBody(error, 'Unable to resolve the seal values'));
+  }
+};
+
+export const getSqlInjectionSandbox = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const result = await getSqlInjectionSandboxState(req.params.slug, req.user.id);
+    res.json(result);
+  } catch (error: unknown) {
+    res
+      .status(getErrorStatus(error, 404))
+      .json(getErrorBody(error, 'Unable to load SQL injection sandbox'));
+  }
+};
+
+export const searchSqlInjection = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const result = await searchSqlInjectionSandbox(req.params.slug, req.user.id, req.body?.query);
+    res.json(result);
+  } catch (error: unknown) {
+    res
+      .status(getErrorStatus(error, 400))
+      .json(getErrorBody(error, 'Unable to run SQL sandbox query'));
   }
 };
 

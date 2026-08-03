@@ -19,6 +19,8 @@ import type {
   ChallengeSubmitResponse,
   CipheredSealResolveResponse,
   CipheredSealRouteStateResponse,
+  SqlInjectionSandboxSearchResponse,
+  SqlInjectionSandboxStateResponse,
   ChallengeProgressStatus,
   ChallengeStatus,
 } from '../types/challenge';
@@ -560,6 +562,20 @@ export const challengeAPI = {
     return apiRequest(`/challenges/ciphered-seal/route/${encodeURIComponent(routeKey)}/resolve`, {
       method: 'POST',
       body: JSON.stringify({ seedNumber }),
+    });
+  },
+
+  getSqlInjectionSandbox: async (slug: string): Promise<SqlInjectionSandboxStateResponse> => {
+    return apiRequest(`/challenges/${encodeURIComponent(slug)}/sql-sandbox`);
+  },
+
+  searchSqlInjectionSandbox: async (
+    slug: string,
+    query: string
+  ): Promise<SqlInjectionSandboxSearchResponse> => {
+    return apiRequest(`/challenges/${encodeURIComponent(slug)}/sql-sandbox/search`, {
+      method: 'POST',
+      body: JSON.stringify({ query }),
     });
   },
 

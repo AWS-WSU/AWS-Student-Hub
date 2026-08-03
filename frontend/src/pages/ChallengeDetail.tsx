@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   Clock3,
+  Database,
   Download,
   Link2,
   Lock,
@@ -110,7 +111,10 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
 
   const isCompleted = completedStatuses.has(progress?.status || '');
   const isManualReview = challenge?.validationType === 'manual_review';
-  const isCipheredSeal = challenge?.experience?.type === 'ciphered_seal';
+  const cipheredSealExperience =
+    challenge?.experience?.type === 'ciphered_seal' ? challenge.experience : null;
+  const isCipheredSeal = Boolean(cipheredSealExperience);
+  const isSqlInjection = challenge?.experience?.type === 'sql_injection';
   const rewardLocked = Boolean(
     user && challenge?.reward.enabled && rewardLink && !rewardLink.linked
   );
@@ -128,6 +132,10 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
       const response = await challengeAPI.start(slug);
       setChallenge(response.challenge);
       setProgress(response.progress);
+      if (response.challenge.experience?.type === 'sql_injection') {
+        navigate(`/challenges/${slug}/lab`);
+        return;
+      }
       setSuccess('Challenge started.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start challenge');
@@ -243,11 +251,11 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
               <div className="challenge-instructions">{challenge.instructions}</div>
             )}
 
-            {isCipheredSeal && challenge.experience && (
+            {cipheredSealExperience && (
               <div className="ciphered-seal-discovery">
                 <div className="ciphered-seal-artifact">
                   <img
-                    src={challenge.experience.imagePath}
+                    src={cipheredSealExperience.imagePath}
                     alt="An unlabeled technical shrine diagram with four seals"
                   />
                   <span aria-hidden="true">Artifact 01</span>
@@ -260,7 +268,7 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
                     height resolve the numeric application route described in the briefing.
                   </p>
                   <a
-                    href={challenge.experience.imagePath}
+                    href={cipheredSealExperience.imagePath}
                     download="ciphered-seal-map.png"
                     className="ciphered-seal-download"
                   >
@@ -323,6 +331,11 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
                   </div>
                 )}
                 {progress.lastValidationMessage && <small>{progress.lastValidationMessage}</small>}
+                {isSqlInjection && (
+                  <button type="button" onClick={() => navigate(`/challenges/${slug}/lab`)}>
+                    <Database size={16} aria-hidden="true" /> Reopen sandbox
+                  </button>
+                )}
               </div>
             ) : progress.status === 'pending_review' ? (
               <div className="challenge-submit-state pending">
@@ -341,11 +354,23 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
                   This challenge does not accept a secret here. Resolve the artifact metadata, then
                   navigate to the resulting <code>/challenge/&lt;route&gt;</code> path.
                 </small>
-                {challenge.experience && (
-                  <a href={challenge.experience.imagePath} download="ciphered-seal-map.png">
+                {cipheredSealExperience && (
+                  <a href={cipheredSealExperience.imagePath} download="ciphered-seal-map.png">
                     <Download size={16} aria-hidden="true" /> Download artifact
                   </a>
                 )}
+              </div>
+            ) : isSqlInjection ? (
+              <div className="challenge-submit-state">
+                <Database size={24} aria-hidden="true" />
+                <p>Isolated SQL lab unlocked</p>
+                <small>
+                  Open the synthetic archive database, manipulate its vulnerable search query, and
+                  recover your personalized completion flag.
+                </small>
+                <button type="button" onClick={() => navigate(`/challenges/${slug}/lab`)}>
+                  Open SQL sandbox
+                </button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="challenge-submit-form">

@@ -62,6 +62,7 @@ cd backend
 bun run seed-aws-cyber-challenge
 bun run seed-robots-trap-challenge
 bun run seed-ciphered-seal-challenge
+bun run seed-sql-injection-challenge
 ```
 
 Each command uses the active `MONGODB_URI`. Confirm the target before running it.
