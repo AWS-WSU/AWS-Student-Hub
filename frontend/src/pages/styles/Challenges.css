@@ -890,6 +890,208 @@
   width: 100%;
 }
 
+.pcap-forensics-artifact {
+  background: linear-gradient(145deg, #17201c, #0d1310);
+  border: 1px solid rgba(243, 154, 39, 0.34);
+  border-radius: 18px;
+  color: #edf2ee;
+  display: grid;
+  gap: 1.4rem;
+  grid-template-columns: minmax(250px, 0.9fr) minmax(0, 1.1fr);
+  margin-top: 1.5rem;
+  overflow: hidden;
+  padding: 1rem;
+  text-align: left;
+}
+
+.pcap-file-preview {
+  background:
+    linear-gradient(rgba(155, 180, 165, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(155, 180, 165, 0.07) 1px, transparent 1px), #0a100d;
+  background-size: 24px 24px;
+  border: 1px solid #35443c;
+  display: flex;
+  flex-direction: column;
+  min-height: 240px;
+}
+
+.pcap-file-bar,
+.pcap-file-footer {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.035);
+  display: flex;
+  padding: 0.65rem 0.75rem;
+}
+
+.pcap-file-bar {
+  border-bottom: 1px solid #2b3731;
+  gap: 0.32rem;
+}
+
+.pcap-file-bar > span {
+  background: #66736c;
+  border-radius: 50%;
+  height: 6px;
+  width: 6px;
+}
+
+.pcap-file-bar > span:first-child {
+  background: #f39a27;
+}
+
+.pcap-file-bar strong {
+  color: #819087;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  margin-left: auto;
+}
+
+.pcap-traffic-map {
+  align-items: center;
+  display: grid;
+  flex: 1;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(80px, 1fr) auto;
+  padding: 1.1rem;
+}
+
+.pcap-node {
+  align-items: center;
+  aspect-ratio: 1;
+  border: 1px solid #55665c;
+  display: flex;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.55rem;
+  justify-content: center;
+  letter-spacing: 0.08em;
+  max-width: 64px;
+  padding: 0.4rem;
+  position: relative;
+}
+
+.pcap-node::after {
+  border: 1px solid rgba(243, 154, 39, 0.38);
+  content: '';
+  inset: 5px;
+  position: absolute;
+}
+
+.pcap-node.server {
+  border-color: rgba(243, 154, 39, 0.65);
+}
+
+.pcap-packet-flow {
+  align-items: center;
+  display: flex;
+  min-width: 0;
+}
+
+.pcap-packet-flow span {
+  color: #f0ad54;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.52rem;
+}
+
+.pcap-packet-flow i {
+  background: linear-gradient(90deg, #405047, #f39a27);
+  flex: 1;
+  height: 1px;
+  margin: 0 0.25rem;
+  min-width: 8px;
+  position: relative;
+}
+
+.pcap-packet-flow i::after {
+  border-bottom: 3px solid transparent;
+  border-left: 5px solid #f39a27;
+  border-top: 3px solid transparent;
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -2px;
+}
+
+.pcap-file-footer {
+  border-top: 1px solid #2b3731;
+  color: #809087;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.58rem;
+  justify-content: space-between;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.pcap-artifact-briefing {
+  align-self: center;
+  padding: 0.75rem 0.85rem 0.75rem 0;
+}
+
+.pcap-artifact-briefing > span {
+  color: #f0a13a;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.pcap-artifact-briefing h3 {
+  color: #f5f7f5;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  font-weight: 500;
+  margin: 0.45rem 0 0.7rem;
+}
+
+.pcap-artifact-briefing p {
+  color: #acb8b0;
+  line-height: 1.6;
+  margin: 0 0 0.85rem;
+}
+
+.pcap-protocols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.pcap-protocols span {
+  border: 1px solid #46564d;
+  color: #bdc9c1;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.09em;
+  padding: 0.3rem 0.48rem;
+}
+
+.pcap-download-button {
+  align-items: center;
+  background: #f39a27;
+  border: 1px solid #f39a27;
+  border-radius: 8px;
+  color: #151914;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 800;
+  gap: 0.5rem;
+  justify-content: center;
+  padding: 0.72rem 0.95rem;
+}
+
+.pcap-download-button:hover:not(:disabled) {
+  background: #ffad45;
+}
+
+.pcap-download-button:disabled {
+  background: #303a34;
+  border-color: #46524b;
+  color: #919d95;
+  cursor: not-allowed;
+}
+
 .challenges-info {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -981,6 +1183,14 @@
 
   .ciphered-seal-discovery {
     grid-template-columns: 1fr;
+  }
+
+  .pcap-forensics-artifact {
+    grid-template-columns: 1fr;
+  }
+
+  .pcap-artifact-briefing {
+    padding: 0.5rem;
   }
 
   .ciphered-seal-briefing {

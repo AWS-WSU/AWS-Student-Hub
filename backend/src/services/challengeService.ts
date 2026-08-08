@@ -43,6 +43,11 @@ import {
   runSqlInjectionSandboxQuery,
   SQL_INJECTION_VALIDATOR_TYPE,
 } from './sqlInjectionSandboxService';
+import {
+  buildPcapForensicsCapture,
+  getPcapForensicsPublicExperience,
+  PCAP_FORENSICS_VALIDATOR_TYPE,
+} from './pcapForensicsService';
 
 export type ChallengeErrorCode =
   | 'CHALLENGE_NOT_FOUND'
@@ -351,6 +356,9 @@ const getPublicChallengeExperience = (challenge: IChallengeDocument) => {
     }
     if (getValidatorType(challenge) === SQL_INJECTION_VALIDATOR_TYPE) {
       return getSqlInjectionPublicExperience(challenge.validation);
+    }
+    if (getValidatorType(challenge) === PCAP_FORENSICS_VALIDATOR_TYPE) {
+      return getPcapForensicsPublicExperience(challenge.validation);
     }
     return undefined;
   } catch {
@@ -888,6 +896,32 @@ export const searchSqlInjectionSandbox = async (slug: string, userId: string, in
       400
     );
   }
+};
+
+const getPcapForensicsPlayerContext = async (slug: string, userId: string) => {
+  const { challenge, assignment, user } = await ensureAssignedChallenge(slug, userId);
+  if (getValidatorType(challenge) !== PCAP_FORENSICS_VALIDATOR_TYPE) {
+    throw new ChallengeServiceError('Packet capture not found.', 'CHALLENGE_NOT_FOUND', 404);
+  }
+  if (assignment.reward?.enabled && !hasRewardIdentity(user)) {
+    throw new ChallengeServiceError(
+      'Link your Prizeversity account before downloading this challenge.',
+      'REWARD_LINK_REQUIRED',
+      403
+    );
+  }
+
+  const progress = await getOrCreateProgress(challenge, assignment, userId);
+  return { challenge, user, progress };
+};
+
+export const downloadPcapForensicsCapture = async (slug: string, userId: string) => {
+  const { challenge, user, progress } = await getPcapForensicsPlayerContext(slug, userId);
+  const experience = getPcapForensicsPublicExperience(challenge.validation);
+  return {
+    capture: buildPcapForensicsCapture({ challenge, progress, user }),
+    fileName: experience.fileName,
+  };
 };
 
 export const submitChallenge = async (

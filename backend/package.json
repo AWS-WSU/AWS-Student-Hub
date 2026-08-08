@@ -18,6 +18,7 @@
     "seed-robots-trap-challenge": "tsx scripts/challenges/seedRobotsTrapChallenge.ts",
     "seed-ciphered-seal-challenge": "tsx scripts/challenges/seedCipheredSealChallenge.ts",
     "seed-sql-injection-challenge": "tsx scripts/challenges/seedSqlInjectionSandboxChallenge.ts",
+    "seed-pcap-forensics-challenge": "tsx scripts/challenges/seedPcapForensicsChallenge.ts",
     "migrate-challenge-catalog": "tsx scripts/challenges/migrateChallengeCatalogAssignments.ts"
   },
   "dependencies": {

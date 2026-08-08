@@ -19,6 +19,7 @@ const curatedKeys = new Set([
   'robots_txt_trap',
   'ciphered_seal_protocol',
   'sql_injection_sandbox',
+  'pcap_forensics',
 ]);
 
 const toAssignmentStatus = (status: string): ChallengeAssignmentStatus => {

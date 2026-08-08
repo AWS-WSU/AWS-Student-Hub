@@ -16,6 +16,16 @@ const sqlSandboxSearchLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const pcapDownloadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: {
+    error: 'Too many capture downloads. Wait a moment before trying again.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 router.get('/', optionalJwt, challengeController.listChallenges);
 router.get('/ciphered-seal/route/:routeKey', checkJwt, challengeController.getCipheredSealState);
 router.post(
@@ -30,6 +40,7 @@ router.post(
   sqlSandboxSearchLimiter,
   challengeController.searchSqlInjection
 );
+router.get('/:slug/pcap', checkJwt, pcapDownloadLimiter, challengeController.downloadPcapCapture);
 router.get('/:slug', optionalJwt, challengeController.getChallenge);
 router.get('/:slug/progress', checkJwt, challengeController.getProgress);
 router.post('/:slug/start', checkJwt, challengeController.start);

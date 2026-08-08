@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import type { ChallengeDifficulty } from '../models/Challenge';
 import {
   ChallengeServiceError,
+  downloadPcapForensicsCapture,
   getCipheredSealRouteState,
   getChallengeProgress,
   getPublishedChallenge,
@@ -127,6 +128,27 @@ export const searchSqlInjection = async (req: Request, res: Response): Promise<v
     res
       .status(getErrorStatus(error, 400))
       .json(getErrorBody(error, 'Unable to run SQL sandbox query'));
+  }
+};
+
+export const downloadPcapCapture = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const result = await downloadPcapForensicsCapture(req.params.slug, req.user.id);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
+    res.setHeader('Content-Length', String(result.capture.length));
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.status(200).send(result.capture);
+  } catch (error: unknown) {
+    res
+      .status(getErrorStatus(error, 404))
+      .json(getErrorBody(error, 'Unable to generate packet capture'));
   }
 };
 

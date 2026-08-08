@@ -40,6 +40,7 @@ Run seed scripts separately for each environment whose catalog should contain th
 | Robots.txt Trap        | `static_secret`   | Adds `/robots.txt` discovery and a dedicated hidden vault route.                       |
 | Ciphered Seal Protocol | `ciphered_seal`   | Adds a metadata route key, per-user layout, calculator state, and sequence validation. |
 | SQL Injection Sandbox  | `sql_injection`   | Runs vulnerable queries against a disposable, synthetic in-memory database.            |
+| PCAP Forensics         | `pcap_forensics`  | Generates assignment-scoped network evidence for analysis in Wireshark.                |
 
 The Robots.txt challenge demonstrates that a curated experience may reuse a generic validator while still requiring source-controlled routes and presentation.
 
@@ -59,6 +60,22 @@ Operational behavior:
 - The database is rebuilt for every query and retains no student input.
 
 This controlled vulnerability must remain in `sqlInjectionSandboxService.ts`. Do not point its query executor at a persistent or shared database to make the data feel more realistic.
+
+## PCAP Forensics
+
+PCAP Forensics generates a standards-compliant Ethernet capture when a student downloads the evidence. The capture contains synthetic DNS queries, a TCP exchange, and an HTTP request carrying a personalized completion flag. Students analyze the file in Wireshark and submit the recovered flag through the normal challenge endpoint.
+
+The capture is generated from the authenticated player context rather than stored as one shared artifact. Its flag is HMAC-derived from the challenge, challenge version, classroom assignment, and AWS Student Hub user. A capture or flag shared across students therefore cannot complete another student's challenge.
+
+Operational behavior:
+
+- Download requires authentication, an active Prizeversity link, and an active classroom assignment.
+- Downloading starts or resumes assignment-scoped progress but does not consume an attempt.
+- Capture downloads are rate-limited and returned with private, no-store caching.
+- The file contains documentation-range IP addresses and synthetic traffic only.
+- Final flag submission consumes an attempt and uses the standard completion and reward pipeline.
+
+Do not replace the generator with captures of real club, classroom, or student traffic. Curated evidence must not contain production hostnames, credentials, tokens, private IP plans, or personal data.
 
 ## Implementing a curated validator
 
