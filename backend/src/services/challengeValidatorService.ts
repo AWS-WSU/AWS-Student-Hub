@@ -17,6 +17,12 @@ import {
   SQL_INJECTION_VALIDATOR_TYPE,
   validateSqlInjectionCompletionToken,
 } from './sqlInjectionSandboxService';
+import {
+  getPcapForensicsSuccessMessage,
+  normalizePcapForensicsConfig,
+  PCAP_FORENSICS_VALIDATOR_TYPE,
+  validatePcapForensicsFlag,
+} from './pcapForensicsService';
 
 export interface ChallengeValidatorContext {
   user: IUserDocument;
@@ -95,6 +101,12 @@ interface GenericProofSubmissionPayload {
 }
 
 interface SqlInjectionSubmissionPayload {
+  flag?: string;
+  secret?: string;
+  answer?: string;
+}
+
+interface PcapForensicsSubmissionPayload {
   flag?: string;
   secret?: string;
   answer?: string;
@@ -225,6 +237,15 @@ const normalizeGenericProofPayload = (payload: unknown): GenericProofSubmissionP
 };
 
 const normalizeSqlInjectionPayload = (payload: unknown): SqlInjectionSubmissionPayload => {
+  if (!isRecord(payload)) return {};
+  return {
+    flag: cleanString(payload.flag) || undefined,
+    secret: cleanString(payload.secret) || undefined,
+    answer: cleanString(payload.answer) || undefined,
+  };
+};
+
+const normalizePcapForensicsPayload = (payload: unknown): PcapForensicsSubmissionPayload => {
   if (!isRecord(payload)) return {};
   return {
     flag: cleanString(payload.flag) || undefined,
@@ -551,6 +572,50 @@ const sqlInjectionValidator: ChallengeValidator = {
   },
 };
 
+const pcapForensicsValidator: ChallengeValidator = {
+  type: PCAP_FORENSICS_VALIDATOR_TYPE,
+
+  async validate(rawConfig, rawPayload, context) {
+    normalizePcapForensicsConfig(rawConfig);
+    const payload = normalizePcapForensicsPayload(rawPayload);
+    const submittedFlag = cleanString(payload.flag || payload.secret || payload.answer);
+
+    if (!submittedFlag) {
+      return {
+        accepted: false,
+        outcome: 'rejected',
+        message: 'Submit the flag recovered from the packet capture.',
+      };
+    }
+
+    const accepted = validatePcapForensicsFlag(submittedFlag, context);
+    return {
+      accepted,
+      outcome: accepted ? 'accepted' : 'rejected',
+      message: accepted
+        ? getPcapForensicsSuccessMessage(rawConfig)
+        : 'That flag does not belong to this packet capture.',
+      publicDetails: {
+        captureValidated: true,
+      },
+      privateDetails: {
+        personalizedCapture: true,
+        challengeVersion: context.challenge.version,
+      },
+    };
+  },
+
+  sanitizePayload(payload) {
+    const normalizedPayload = normalizePcapForensicsPayload(payload);
+    return {
+      submitted: Boolean(
+        normalizedPayload.flag || normalizedPayload.secret || normalizedPayload.answer
+      ),
+      flag: '[redacted]',
+    };
+  },
+};
+
 export const registerChallengeValidator = (validator: ChallengeValidator): void => {
   validators.set(validator.type, validator);
 };
@@ -650,6 +715,10 @@ export const prepareChallengeValidationConfigForStorage = (
     return { ...normalizeSqlInjectionSandboxConfig({ ...config, type }) };
   }
 
+  if (type === PCAP_FORENSICS_VALIDATOR_TYPE) {
+    return { ...normalizePcapForensicsConfig({ ...config, type }) };
+  }
+
   getChallengeValidator(type);
   return {
     ...config,
@@ -662,3 +731,4 @@ registerChallengeValidator(staticSecretValidator);
 registerChallengeValidator(manualReviewValidator);
 registerChallengeValidator(cipheredSealValidator);
 registerChallengeValidator(sqlInjectionValidator);
+registerChallengeValidator(pcapForensicsValidator);

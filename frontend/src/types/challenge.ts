@@ -33,7 +33,17 @@ export interface SqlInjectionExperience {
   maxInputLength: number;
 }
 
-export type ChallengeExperience = CipheredSealExperience | SqlInjectionExperience;
+export interface PcapForensicsExperience {
+  type: 'pcap_forensics';
+  fileName: string;
+  packetCount: number;
+  protocols: readonly ['DNS', 'TCP', 'HTTP'];
+}
+
+export type ChallengeExperience =
+  | CipheredSealExperience
+  | SqlInjectionExperience
+  | PcapForensicsExperience;
 
 export interface ChallengeRewardConfig extends ChallengeRewardPreview {
   activityName?: string;

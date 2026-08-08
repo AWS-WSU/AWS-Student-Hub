@@ -214,6 +214,52 @@ const apiRequest = async <T = any>(endpoint: string, options: RequestOptions = {
   }
 };
 
+const apiBlobRequest = async (endpoint: string): Promise<Blob> => {
+  const url = `${API_BASE_URL}${endpoint}`;
+  const request = () =>
+    fetch(url, {
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/octet-stream',
+        ...(getStoredItem('accessToken')
+          ? { Authorization: `Bearer ${getStoredItem('accessToken')}` }
+          : {}),
+      },
+    });
+
+  try {
+    let response = await request();
+    if (response.status === 401 && getStoredItem('refreshToken')) {
+      try {
+        await refreshTokens();
+      } catch {
+        clearStoredItem('accessToken');
+        clearStoredItem('refreshToken');
+        clearStoredItem('cachedUser');
+        throw new Error('Session expired. Please log in again.');
+      }
+      response = await request();
+    }
+
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await response.json();
+        throw new Error(getResponseError(data as JsonRecord, response.status));
+      }
+      throw new Error(`Capture download failed with status ${response.status}.`);
+    }
+
+    return response.blob();
+  } catch (error) {
+    console.error('api download failed.', error);
+    if (error instanceof Error && error.message === 'Failed to fetch') {
+      throw new Error('Unable to connect to the server. Please check your connection.');
+    }
+    throw error;
+  }
+};
+
 // Set item to appropriate storage based on rememberMe
 const setStoredItem = (key: string, value: string): void => {
   const shouldRemember = localStorage.getItem('rememberMe') === 'true';
@@ -577,6 +623,10 @@ export const challengeAPI = {
       method: 'POST',
       body: JSON.stringify({ query }),
     });
+  },
+
+  downloadPcapCapture: async (slug: string): Promise<Blob> => {
+    return apiBlobRequest(`/challenges/${encodeURIComponent(slug)}/pcap`);
   },
 
   progress: async (slug: string): Promise<ChallengeProgressResponse> => {

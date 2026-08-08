@@ -77,6 +77,7 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [downloadingCapture, setDownloadingCapture] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [rewardModalOpen, setRewardModalOpen] = useState(false);
@@ -115,6 +116,9 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
     challenge?.experience?.type === 'ciphered_seal' ? challenge.experience : null;
   const isCipheredSeal = Boolean(cipheredSealExperience);
   const isSqlInjection = challenge?.experience?.type === 'sql_injection';
+  const pcapExperience =
+    challenge?.experience?.type === 'pcap_forensics' ? challenge.experience : null;
+  const isPcapForensics = Boolean(pcapExperience);
   const rewardLocked = Boolean(
     user && challenge?.reward.enabled && rewardLink && !rewardLink.linked
   );
@@ -150,7 +154,9 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
       setError(
         isManualReview
           ? 'Enter proof before submitting.'
-          : 'Enter the challenge secret before submitting.'
+          : isPcapForensics
+            ? 'Enter the flag recovered from the packet capture.'
+            : 'Enter the challenge secret before submitting.'
       );
       return;
     }
@@ -162,7 +168,7 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
     try {
       const response = await challengeAPI.submit(
         slug,
-        isManualReview ? { proof: secret } : { secret }
+        isManualReview ? { proof: secret } : isPcapForensics ? { flag: secret } : { secret }
       );
       setProgress(response.progress);
       setSuccess(response.message);
@@ -175,6 +181,28 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
       setError(err instanceof Error ? err.message : 'Failed to submit challenge');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handlePcapDownload = async () => {
+    if (!pcapExperience || !user || !progress || progress.status === 'not_started') return;
+
+    setDownloadingCapture(true);
+    setError('');
+    try {
+      const capture = await challengeAPI.downloadPcapCapture(slug);
+      const downloadUrl = URL.createObjectURL(capture);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = pcapExperience.fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to download packet capture');
+    } finally {
+      setDownloadingCapture(false);
     }
   };
 
@@ -278,6 +306,62 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
               </div>
             )}
 
+            {pcapExperience && (
+              <div className="pcap-forensics-artifact">
+                <div className="pcap-file-preview" aria-hidden="true">
+                  <div className="pcap-file-bar">
+                    <span />
+                    <span />
+                    <span />
+                    <strong>CAPTURE 01</strong>
+                  </div>
+                  <div className="pcap-traffic-map">
+                    <div className="pcap-node client">CLIENT</div>
+                    <div className="pcap-packet-flow">
+                      <span>DNS</span>
+                      <i />
+                      <span>TCP</span>
+                      <i />
+                      <span>HTTP</span>
+                    </div>
+                    <div className="pcap-node server">SERVER</div>
+                  </div>
+                  <div className="pcap-file-footer">
+                    <span>Ethernet</span>
+                    <span>{pcapExperience.packetCount} packets</span>
+                  </div>
+                </div>
+                <div className="pcap-artifact-briefing">
+                  <span>Personalized evidence</span>
+                  <h3>{pcapExperience.fileName}</h3>
+                  <p>
+                    Open this capture in Wireshark and inspect its DNS and HTTP request traffic. The
+                    evidence file is generated specifically for your challenge assignment.
+                  </p>
+                  <div className="pcap-protocols" aria-label="Protocols present in capture">
+                    {pcapExperience.protocols.map((protocol) => (
+                      <span key={protocol}>{protocol}</span>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="pcap-download-button"
+                    onClick={handlePcapDownload}
+                    disabled={
+                      downloadingCapture || !user || !progress || progress.status === 'not_started'
+                    }
+                  >
+                    <Download size={17} aria-hidden="true" />
+                    {downloadingCapture
+                      ? 'Generating capture...'
+                      : !progress || progress.status === 'not_started'
+                        ? 'Start challenge to download'
+                        : 'Download PCAP evidence'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="challenge-detail-meta-grid">
               <div>
                 <span>Type</span>
@@ -375,7 +459,11 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
             ) : (
               <form onSubmit={handleSubmit} className="challenge-submit-form">
                 <label>
-                  {isManualReview ? 'Submission proof' : 'Challenge secret'}
+                  {isManualReview
+                    ? 'Submission proof'
+                    : isPcapForensics
+                      ? 'Recovered flag'
+                      : 'Challenge secret'}
                   {isManualReview ? (
                     <textarea
                       value={secret}
@@ -388,7 +476,7 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
                       type="text"
                       value={secret}
                       onChange={(event) => setSecret(event.target.value)}
-                      placeholder="Paste the secret value"
+                      placeholder={isPcapForensics ? 'FLAG{...}' : 'Paste the secret value'}
                       disabled={submitting || rewardLocked}
                     />
                   )}

@@ -72,6 +72,8 @@ The SQL Injection Sandbox is vulnerable by design, but its SQL boundary is dispo
 
 Do not replace the in-memory adapter with a production database connection. Extending this challenge with persistent data or general-purpose SQL execution changes the security model and requires a separate isolation review.
 
+The PCAP Forensics generator follows the same synthetic-data boundary. It uses documentation-range addresses, fixed fictional hostnames, and a per-student HMAC flag. Captures are generated only after assignment checks, are not stored server-side, and are returned with no-store caching. Never use real packet captures as challenge fixtures unless they have undergone a documented privacy and credential review.
+
 ## Browser trust boundary
 
 The frontend is an untrusted presentation layer. A student can inspect JavaScript, network responses, hidden DOM, and public assets.

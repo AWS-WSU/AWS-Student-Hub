@@ -125,6 +125,26 @@ The response contains the executed synthetic statement, bounded result rows, tru
 
 Both sandbox routes enforce authentication, active account linking, published definition state, and the student's active classroom assignment.
 
+### PCAP Forensics route
+
+```text
+GET /challenges/:slug/pcap
+```
+
+Returns a personalized `.pcap` file as `application/octet-stream`. The response is an authenticated, rate-limited binary download with private, no-store caching. Access enforces the student's active Prizeversity link and classroom assignment and starts progress if necessary.
+
+The recovered flag is submitted through the standard endpoint:
+
+```json
+{
+  "payload": {
+    "flag": "FLAG{personalized-value}"
+  }
+}
+```
+
+Capture download does not consume an attempt. Final flag submission does.
+
 ## Admin catalog routes
 
 | Method   | Path                                             | Purpose                                                                               |
