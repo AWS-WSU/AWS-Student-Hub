@@ -5,6 +5,8 @@ import { ArrowRight, BadgeCheck, BookOpen, CloudUpload, Link2 } from 'lucide-rea
 import SocialLinks from '../components/SocialLinks';
 import '../pages/styles/Landing.css';
 
+const DISCORD_INVITE_URL = 'https://discord.gg/BX8nCQHU';
+
 function Resources() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -35,9 +37,9 @@ function Resources() {
               <CloudUpload size={22} aria-hidden="true" />
             </div>
             <h3>AWS Free Tier Access</h3>
-            <p>Get started with AWS services at no cost through our educational partnership.</p>
-            <a href="#" className="resource-link">
-              Access Now <ArrowRight size={15} aria-hidden="true" />
+            <p>Ask the group about AWS student access and recommended learning paths.</p>
+            <a href={DISCORD_INVITE_URL} className="resource-link" target="_blank" rel="noreferrer">
+              Ask on Discord <ArrowRight size={15} aria-hidden="true" />
             </a>
           </motion.div>
 
@@ -52,9 +54,9 @@ function Resources() {
               <BadgeCheck size={22} aria-hidden="true" />
             </div>
             <h3>Certification Vouchers</h3>
-            <p>Active members may qualify for discounted AWS certification exam vouchers.</p>
-            <a href="#" className="resource-link">
-              Learn More <ArrowRight size={15} aria-hidden="true" />
+            <p>Ask the group about current certification opportunities and eligibility.</p>
+            <a href={DISCORD_INVITE_URL} className="resource-link" target="_blank" rel="noreferrer">
+              Ask on Discord <ArrowRight size={15} aria-hidden="true" />
             </a>
           </motion.div>
 

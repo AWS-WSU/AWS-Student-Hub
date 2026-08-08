@@ -523,6 +523,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    if (user.auth0Id?.startsWith('google-oauth2|')) {
+      res.status(409).json({
+        error:
+          'This account uses Google sign-in. Continue with Google to access it, and reset its password through Google if needed.',
+      });
+      return;
+    }
+
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       res.status(401).json({
@@ -734,9 +742,9 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     }
 
     if (user.auth0Id) {
-      res.json({
-        success: true,
-        message: 'If an account exists with this information, a reset code has been sent.',
+      res.status(409).json({
+        error:
+          'This account uses Google sign-in. Continue with Google to access it, and reset its password through Google if needed.',
       });
       return;
     }
@@ -795,9 +803,9 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
     }
 
     if (user.auth0Id) {
-      res.json({
-        success: true,
-        message: 'If the email matches the username, a reset code has been sent.',
+      res.status(409).json({
+        error:
+          'This account uses Google sign-in. Continue with Google to access it, and reset its password through Google if needed.',
       });
       return;
     }

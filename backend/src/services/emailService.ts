@@ -481,7 +481,7 @@ export const sendEventNotification = async (
             <p>AWS Student Builder Group @ Wayne State University</p>
             <div class="social-links">
               <a href="https://discord.gg/KaQdmjGp">Discord</a> •
-              <a href="https://www.instagram.com/awscloudclub.wsu">Instagram</a> •
+              <a href="https://www.instagram.com/aws_sbg_wsu/">Instagram</a> •
               <a href="https://github.com/awsccwsu">GitHub</a>
             </div>
             <p class="unsubscribe">

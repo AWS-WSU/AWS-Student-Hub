@@ -82,7 +82,7 @@ const SocialSection = () => {
         </a>
         <a
           className="social-icon"
-          href="https://www.instagram.com/awscloudwsu/"
+          href="https://www.instagram.com/aws_sbg_wsu/"
           target="_blank"
           rel="noreferrer"
           aria-label="AWS Student Builder Group on Instagram"
