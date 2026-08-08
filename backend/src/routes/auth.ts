@@ -39,6 +39,16 @@ const validateLogin = [
   body('password').notEmpty().withMessage('Password is required'),
 ];
 
+const validateAuth0Login = [
+  body('idToken')
+    .isString()
+    .isLength({ min: 100, max: 12000 })
+    .withMessage('A valid Auth0 identity token is required'),
+  body('deviceId').optional().isString().isLength({ min: 1, max: 200 }),
+  body('rememberMe').optional().isBoolean(),
+  body('acceptedPolicies').optional().isBoolean(),
+];
+
 const validateForgotPassword = [
   body('identifier').trim().notEmpty().withMessage('Email or username is required'),
 ];
@@ -57,6 +67,7 @@ const validateResetPassword = [
 
 router.post('/signup', signupLimiter, validateSignup, authController.signup);
 router.post('/login', loginLimiter, validateLogin, authController.login);
+router.post('/auth0', loginLimiter, validateAuth0Login, authController.auth0Login);
 router.post(
   '/forgot-password',
   passwordResetLimiter,

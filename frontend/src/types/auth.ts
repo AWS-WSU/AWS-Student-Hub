@@ -34,6 +34,13 @@ export interface SignupPayload {
   acceptedPolicies?: boolean;
 }
 
+export interface Auth0ExchangePayload {
+  idToken: string;
+  deviceId: string;
+  rememberMe: boolean;
+  acceptedPolicies: boolean;
+}
+
 export class PolicyAcknowledgementRequiredError extends Error {
   readonly policyVersion?: string;
 
@@ -57,4 +64,5 @@ export interface AuthContextValue {
   getAwsCredentials: (password: string) => Promise<AwsCredentials>;
   markAwsCredentialsViewed: () => Promise<Record<string, unknown>>;
   isAuthenticated: boolean;
+  authError: string | null;
 }

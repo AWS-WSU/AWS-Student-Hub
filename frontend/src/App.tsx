@@ -1,7 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import { ToastProvider } from './context/ToastContext';
-import { useState, useEffect } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider, useToast } from './context/ToastContext';
+import { useState, useEffect, useRef } from 'react';
 import type { Theme } from './types/ui';
 import Layout from './components/Layout';
 import Landing from './pages/Landing';
@@ -25,11 +26,34 @@ import './styles/VisualRefresh.css';
 
 function AppContent() {
   const [theme, setTheme] = useState<Theme>((localStorage.getItem('theme') as Theme) || 'dark');
+  const { error: auth0Error } = useAuth0();
+  const { authError } = useAuth();
+  const { showToast } = useToast();
+  const reportedAuth0Error = useRef<Error | null>(null);
+  const reportedAuthExchangeError = useRef<string | null>(null);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (!auth0Error || reportedAuth0Error.current === auth0Error) return;
+
+    reportedAuth0Error.current = auth0Error;
+    console.error('auth0 login error.', auth0Error);
+    showToast(
+      'Google sign-in could not be completed. Use email sign-in or contact an admin.',
+      'error'
+    );
+  }, [auth0Error, showToast]);
+
+  useEffect(() => {
+    if (!authError || reportedAuthExchangeError.current === authError) return;
+
+    reportedAuthExchangeError.current = authError;
+    showToast(authError, 'error');
+  }, [authError, showToast]);
 
   const toggleTheme = () => {
     const newTheme: Theme = theme === 'light' ? 'dark' : 'light';

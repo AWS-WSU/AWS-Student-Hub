@@ -69,9 +69,9 @@ function Resources() {
               <BookOpen size={22} aria-hidden="true" />
             </div>
             <h3>Learning Materials</h3>
-            <p>Access our curated collection of guides, tutorials, and practice exercises.</p>
-            <a href="#" className="resource-link">
-              Browse Library <ArrowRight size={15} aria-hidden="true" />
+            <p>Open the challenge handbook for classroom setup, authoring, and operations.</p>
+            <a href="/docs/" className="resource-link">
+              Open Handbook <ArrowRight size={15} aria-hidden="true" />
             </a>
           </motion.div>
         </div>

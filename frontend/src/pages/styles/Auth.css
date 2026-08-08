@@ -406,6 +406,14 @@
   gap: 0.5rem;
 }
 
+.social-auth-unavailable {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .social-button {
   width: 100%;
   display: flex;

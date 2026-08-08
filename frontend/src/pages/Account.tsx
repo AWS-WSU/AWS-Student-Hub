@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth0 } from '@auth0/auth0-react';
 import { useAuth } from '../context/AuthContext';
 import './styles/Account.css';
 import { validateImageFile, compressImage } from '../utils/imageUtils';
@@ -144,7 +143,6 @@ function Account({ theme: _theme }: AccountProps) {
   const inputRefs = useRef<Partial<Record<AccountField, AccountInputElement | null>>>({});
 
   const navigate = useNavigate();
-  const { isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
   const {
     user: authUser,
     updateUser,
@@ -153,9 +151,9 @@ function Account({ theme: _theme }: AccountProps) {
     refreshTokens,
   } = useAuth();
 
-  const isAuthenticated = isAuth0Authenticated || !!authUser;
-  const currentUser = (auth0User || authUser) as AccountUser | undefined;
-  const isSocialLogin = !!auth0User;
+  const isAuthenticated = !!authUser;
+  const currentUser = authUser as AccountUser | undefined;
+  const isSocialLogin = Boolean(authUser?.auth0Id);
   const isPrizeversityLinked = Boolean(prizeversityStatus?.linked && prizeversityStatus.account);
   const isPrizeversityGateLoading = isPrizeversityLoading && !prizeversityStatus;
 

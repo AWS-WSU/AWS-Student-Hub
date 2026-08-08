@@ -5,6 +5,7 @@ export type UserGrade = '' | 'Freshman' | 'Sophomore' | 'Junior' | 'Senior' | 'G
 export interface User {
   _id?: string;
   id?: string;
+  auth0Id?: string;
   username: string;
   fullName: string;
   email: string;

@@ -94,6 +94,9 @@ function Footer({ theme: _theme }: ThemeProps) {
               <Link to="/resources">Resources</Link>
             </li>
             <li>
+              <a href="/docs/">Operations Handbook</a>
+            </li>
+            <li>
               <Link to="/privacy">Privacy Policy</Link>
             </li>
           </ul>

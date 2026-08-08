@@ -6,7 +6,7 @@ echo "starting aws student hub lambda deployment."
 
 if [ -z "$1" ]; then
     echo "error: environment parameter required."
-    echo "usage: ./deploy.sh [dev|staging|prod] [mongodb-uri] [admin-token] [jwt-secret] [cors-origin] [s3-bucket] [s3-access-key] [s3-secret-key] [s3-region] [aws-admin-access-key] [aws-admin-secret-key] [aws-region] [aws-s3-bucket] [smtp-host] [smtp-port] [smtp-encryption] [smtp-user] [smtp-pass] [discord-token] [discord-guild-id] [discord-channel-id] [aws-cred-key] [aws-event-thumbnails-bucket]."
+    echo "usage: ./deploy.sh [dev|staging|prod] [mongodb-uri] [admin-token] [jwt-secret] [cors-origin] [s3-bucket] [s3-access-key] [s3-secret-key] [s3-region] [aws-admin-access-key] [aws-admin-secret-key] [aws-region] [aws-s3-bucket] [smtp-host] [smtp-port] [smtp-encryption] [smtp-user] [smtp-pass] [discord-token] [discord-guild-id] [discord-channel-id] [aws-cred-key] [aws-event-thumbnails-bucket] [auth0-domain] [auth0-client-id]."
     echo "example: ./deploy.sh dev 'mongodb-uri' 'your-admin-token' 'your-jwt-secret' 'https://mydomain.com,http://localhost:3000' 'my-bucket' 'access-key' 'secret' 'us-east-2' 'discord-token' 'guild-id' 'channel-id' 'smtp@email.com' 'smtp-pass' 'encryption-key'."
     exit 1
 fi
@@ -34,6 +34,8 @@ DISCORD_GUILD_ID=${20:-""}
 DISCORD_CHANNEL_ID=${21:-""}
 AWS_CRED_ENCRYPTION_KEY=${22:-""}
 AWS_HUB_EVENT_THUMBNAILS=${23:-"aws-student-hub-event-thumbnails"}
+AUTH0_DOMAIN=${24:-""}
+AUTH0_CLIENT_ID=${25:-""}
 
 if [ -z "$MONGODB_URI" ] || [ -z "$ADMIN_TOKEN" ] || [ -z "$JWT_SECRET" ] || [ -z "$S3_BUCKET_NAME" ] || [ -z "$S3_ACCESS_KEY_ID" ] || [ -z "$S3_SECRET_ACCESS_KEY" ] || [ -z "$AWS_ADMIN_ACCESS_KEY_ID" ] || [ -z "$AWS_ADMIN_SECRET_ACCESS_KEY" ] || [ -z "$AWS_S3_BUCKET" ] || [ -z "$SMTP_USER" ] || [ -z "$SMTP_PASS" ] || [ -z "$DISCORD_BOT_TOKEN" ] || [ -z "$DISCORD_GUILD_ID" ] || [ -z "$DISCORD_CHANNEL_ID" ] || [ -z "$AWS_CRED_ENCRYPTION_KEY" ]; then
     echo "error: missing required parameters."
@@ -66,36 +68,48 @@ echo "building deployment package."
 sam build
 
 echo "deploying to aws."
+SAM_PARAMETERS=(
+  "Environment=$ENVIRONMENT"
+  "MongoDbUri=$MONGODB_URI"
+  "AdminToken=$ADMIN_TOKEN"
+  "JwtSecret=$JWT_SECRET"
+  "CorsOrigin=$CORS_ORIGIN"
+  "S3BucketName=$S3_BUCKET_NAME"
+  "S3AccessKeyId=$S3_ACCESS_KEY_ID"
+  "S3SecretAccessKey=$S3_SECRET_ACCESS_KEY"
+  "S3Region=$S3_REGION"
+  "AwsAdminAccessKeyId=$AWS_ADMIN_ACCESS_KEY_ID"
+  "AwsAdminSecretAccessKey=$AWS_ADMIN_SECRET_ACCESS_KEY"
+  "CustomAwsRegion=$CUSTOM_AWS_REGION"
+  "AwsS3Bucket=$AWS_S3_BUCKET"
+  "SmtpHost=$SMTP_HOST"
+  "SmtpPort=$SMTP_PORT"
+  "SmtpEncryption=$SMTP_ENCRYPTION"
+  "SmtpUser=$SMTP_USER"
+  "SmtpPass=$SMTP_PASS"
+  "DiscordBotToken=$DISCORD_BOT_TOKEN"
+  "DiscordGuildId=$DISCORD_GUILD_ID"
+  "DiscordChannelId=$DISCORD_CHANNEL_ID"
+  "AwsCredEncryptionKey=$AWS_CRED_ENCRYPTION_KEY"
+  "AwsHubEventThumbnails=$AWS_HUB_EVENT_THUMBNAILS"
+)
+
+# Auth0 is optional until Google sign-in is configured for this environment.
+if [ -n "$AUTH0_DOMAIN" ]; then
+  SAM_PARAMETERS+=("Auth0Domain=$AUTH0_DOMAIN")
+fi
+
+if [ -n "$AUTH0_CLIENT_ID" ]; then
+  SAM_PARAMETERS+=("Auth0ClientId=$AUTH0_CLIENT_ID")
+fi
+
 sam deploy \
   --stack-name "student-hub-backend-$ENVIRONMENT" \
   --region "us-east-1" \
   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
   --resolve-s3 \
   --no-fail-on-empty-changeset \
-  --parameter-overrides \
-    Environment="$ENVIRONMENT" \
-    MongoDbUri="$MONGODB_URI" \
-    AdminToken="$ADMIN_TOKEN" \
-    JwtSecret="$JWT_SECRET" \
-    CorsOrigin="$CORS_ORIGIN" \
-    S3BucketName="$S3_BUCKET_NAME" \
-    S3AccessKeyId="$S3_ACCESS_KEY_ID" \
-    S3SecretAccessKey="$S3_SECRET_ACCESS_KEY" \
-    S3Region="$S3_REGION" \
-    AwsAdminAccessKeyId="$AWS_ADMIN_ACCESS_KEY_ID" \
-    AwsAdminSecretAccessKey="$AWS_ADMIN_SECRET_ACCESS_KEY" \
-    CustomAwsRegion="$CUSTOM_AWS_REGION" \
-    AwsS3Bucket="$AWS_S3_BUCKET" \
-    SmtpHost="$SMTP_HOST" \
-    SmtpPort="$SMTP_PORT" \
-    SmtpEncryption="$SMTP_ENCRYPTION" \
-    SmtpUser="$SMTP_USER" \
-    SmtpPass="$SMTP_PASS" \
-    DiscordBotToken="$DISCORD_BOT_TOKEN" \
-    DiscordGuildId="$DISCORD_GUILD_ID" \
-    DiscordChannelId="$DISCORD_CHANNEL_ID" \
-    AwsCredEncryptionKey="$AWS_CRED_ENCRYPTION_KEY" \
-    AwsHubEventThumbnails="$AWS_HUB_EVENT_THUMBNAILS"
+  --parameter-overrides "${SAM_PARAMETERS[@]}"
 
 echo "deployment completed successfully."
 echo ""

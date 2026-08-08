@@ -2,10 +2,6 @@ import './styles/SocialLinks.css';
 import { discordAPI } from '../utils/api';
 
 const SocialSection = () => {
-  const handleSocialClick = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
   const isMobile = () => {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       navigator.userAgent
@@ -66,34 +62,50 @@ const SocialSection = () => {
       <h2>Follow Us</h2>
       <p>Stay connected with the AWS Student Builder Group at Wayne State University</p>
       <div className="social-icons">
-        <img
-          src="/linkedin.svg"
-          alt="LinkedIn"
-          style={{ cursor: 'pointer', width: '40px', margin: '0 6px' }}
-          onClick={() =>
-            handleSocialClick(
-              'https://www.linkedin.com/company/aws-cloud-club-wayne-state-university/'
-            )
-          }
-        />
-        <img
-          src="/github.svg"
-          alt="GitHub"
-          style={{ cursor: 'pointer', width: '40px', margin: '0 6px' }}
-          onClick={() => handleSocialClick('https://github.com/AWS-WSU')}
-        />
-        <img
-          src="/instagram.svg"
-          alt="Instagram"
-          style={{ cursor: 'pointer', width: '40px', margin: '0 6px' }}
-          onClick={() => handleSocialClick('https://www.instagram.com/awscloudwsu/')}
-        />
-        <img
-          src="/discord.svg"
-          alt="Join Discord"
-          style={{ cursor: 'pointer', width: '40px', margin: '0 6px' }}
+        <a
+          className="social-icon"
+          href="https://www.linkedin.com/company/aws-cloud-club-wayne-state-university/"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="AWS Student Builder Group on LinkedIn"
+        >
+          <img src="/linkedin.svg" alt="" />
+        </a>
+        <a
+          className="social-icon"
+          href="https://github.com/AWS-WSU"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="AWS Student Builder Group on GitHub"
+        >
+          <img src="/github.svg" alt="" />
+        </a>
+        <a
+          className="social-icon"
+          href="https://www.instagram.com/awscloudwsu/"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="AWS Student Builder Group on Instagram"
+        >
+          <img src="/instagram.svg" alt="" />
+        </a>
+        <a
+          className="social-icon"
+          href="https://www.youtube.com/@WSUAWSCloudClub"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="AWS Student Builder Group on YouTube"
+        >
+          <img src="/youtube.svg" alt="" />
+        </a>
+        <button
+          type="button"
+          className="social-icon"
           onClick={handleDiscordClick}
-        />
+          aria-label="Join the AWS Student Builder Group Discord"
+        >
+          <img src="/discord.svg" alt="" />
+        </button>
       </div>
     </section>
   );

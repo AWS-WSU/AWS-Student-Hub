@@ -71,6 +71,8 @@ The admin dashboard separates global authoring from classroom delivery:
 
 Challenge and instance administration requires `admin` or `superuser`. A superuser satisfies every admin check.
 
+See [Roles and permissions](./roles-and-permissions) for the full site-wide capability matrix, including moderation, events, user promotion, challenges, and instance management.
+
 There is no separate administrator login. An instructor registers and signs in through the normal AWS Student Hub account flow, then opens **Admin Dashboard** after an authorized operator assigns the required role.
 
 Only a superuser can assign `admin` or `superuser` roles from **User Management**. The first superuser for an environment is bootstrapped by an operator after that person has registered:

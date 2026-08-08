@@ -38,6 +38,16 @@ Parameters:
     Description: Admin token for admin access
     NoEcho: true
 
+  Auth0Domain:
+    Type: String
+    Default: ''
+    Description: Auth0 tenant domain used to verify social-login identity tokens
+
+  Auth0ClientId:
+    Type: String
+    Default: ''
+    Description: Auth0 application client ID used as the identity-token audience
+
   S3BucketName:
     Type: String
     Description: S3 bucket name for file uploads
@@ -143,6 +153,8 @@ Resources:
           MONGODB_URI: !Ref MongoDbUri
           ADMIN_TOKEN: !Ref AdminToken
           JWT_SECRET: !Ref JwtSecret
+          AUTH0_DOMAIN: !Ref Auth0Domain
+          AUTH0_CLIENT_ID: !Ref Auth0ClientId
           PORT: '5001'
           NODE_ENV: !Ref Environment
           CORS_ORIGIN: !Ref CorsOrigin

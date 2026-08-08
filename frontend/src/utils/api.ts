@@ -1,6 +1,11 @@
 import type { AdminStats, EmailQueueEntry } from '../types/admin';
 import type { ApiResponse } from '../types/api';
-import type { AuthResponse, LoginCredentials, SignupPayload } from '../types/auth';
+import type {
+  Auth0ExchangePayload,
+  AuthResponse,
+  LoginCredentials,
+  SignupPayload,
+} from '../types/auth';
 import type {
   AdminChallengeAssignmentPayload,
   AdminChallengeAssignmentRemoveResponse,
@@ -369,6 +374,21 @@ export const authAPI = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Signup failed');
+    }
+
+    return response.json() as Promise<AuthResponse>;
+  },
+
+  exchangeAuth0Identity: async (payload: Auth0ExchangePayload): Promise<AuthResponse> => {
+    const response = await fetch(`${API_BASE_URL}/auth/auth0`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const error = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(error.error || 'Google sign-in failed');
     }
 
     return response.json() as Promise<AuthResponse>;

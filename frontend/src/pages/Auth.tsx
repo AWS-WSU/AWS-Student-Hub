@@ -5,6 +5,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { auth0Config } from '../config/auth0';
 import { authAPI } from '../utils/api';
 import { ArrowLeft, Check, Circle } from 'lucide-react';
 import CyberChallengeModal from '../components/CyberChallengeModal';
@@ -215,20 +216,37 @@ function Auth({ theme: _theme }: AuthProps) {
   const [showCyberModal, setShowCyberModal] = useState<boolean>(false);
   const [awsCredentials, setAwsCredentials] = useState<AwsCredentials | null>(null);
 
-  const { loginWithRedirect, isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
+  const { loginWithRedirect, error: auth0Error } = useAuth0();
   const {
     user: authUser,
     login,
     signup,
     forceLogoutAndClearData,
     markAwsCredentialsViewed,
+    authError,
   } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if ((authUser || (isAuth0Authenticated && auth0User)) && !isLoading) {
-      const currentUser = (auth0User || authUser) as AuthUserLike | undefined;
+    if (!auth0Error) return;
+
+    console.error('auth0 login error.', auth0Error);
+    setError(
+      'Google sign-in could not be completed. Please use email sign-in or contact an admin.'
+    );
+    setIsLoading(false);
+  }, [auth0Error]);
+
+  useEffect(() => {
+    if (!authError) return;
+    setError(authError);
+    setIsLoading(false);
+  }, [authError]);
+
+  useEffect(() => {
+    if (authUser && !isLoading) {
+      const currentUser = authUser as AuthUserLike;
 
       if (
         currentUser &&
@@ -251,15 +269,7 @@ function Auth({ theme: _theme }: AuthProps) {
         navigate(redirectPath, { replace: true });
       }
     }
-  }, [
-    authUser,
-    isAuth0Authenticated,
-    auth0User,
-    navigate,
-    isLoading,
-    showCyberModal,
-    redirectPath,
-  ]);
+  }, [authUser, navigate, isLoading, showCyberModal, redirectPath]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -469,6 +479,7 @@ function Auth({ theme: _theme }: AuthProps) {
         return;
       }
 
+      sessionStorage.setItem('auth0PolicyAcknowledged', 'true');
       setIsLoading(true);
       await loginWithRedirect({
         appState: { returnTo: window.location.origin },
@@ -912,22 +923,26 @@ function Auth({ theme: _theme }: AuthProps) {
             <div className="auth-divider">Or continue with</div>
 
             <div className="social-auth">
-              <motion.button
-                className="social-button"
-                onClick={handleSocialLogin}
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <img src="/gmail.svg" alt="Google" />
-                Continue with Google
-              </motion.button>
+              {auth0Config.configured ? (
+                <motion.button
+                  className="social-button"
+                  onClick={handleSocialLogin}
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <img src="/gmail.svg" alt="Google" />
+                  Continue with Google
+                </motion.button>
+              ) : (
+                <p className="social-auth-unavailable">
+                  Google sign-in is not configured. Use email sign-in instead.
+                </p>
+              )}
             </div>
-            {!isLogin && (
-              <p className="auth-policy-note">
-                By continuing, you acknowledge the <Link to="/privacy">Privacy Policy</Link> and
-                applicable Wayne State University conduct expectations.
-              </p>
-            )}
+            <p className="auth-policy-note">
+              By continuing, you acknowledge the <Link to="/privacy">Privacy Policy</Link> and
+              applicable Wayne State University conduct expectations.
+            </p>
 
             <motion.button
               className="back-home"

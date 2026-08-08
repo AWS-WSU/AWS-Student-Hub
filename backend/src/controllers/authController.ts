@@ -10,6 +10,7 @@ import type { UserGrade } from '../models/User';
 import { createChallengeUser } from '../services/awsProvision';
 import { sendResetCode } from '../services/emailService';
 import { memberSearchIndex } from '../services/memberSearchIndex';
+import { verifyAuth0IdToken } from '../services/auth0Service';
 import logger from '../config/logger';
 
 const log = logger.child({ module: 'authController' });
@@ -172,7 +173,9 @@ const getRefreshTokenRememberMe = (
 };
 
 const generateUsername = async (email: string): Promise<string> => {
-  const baseUsername = email.split('@')[0];
+  const emailPrefix = email.split('@')[0] || 'member';
+  const normalizedPrefix = emailPrefix.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 24);
+  const baseUsername = normalizedPrefix.length >= 3 ? normalizedPrefix : `user_${normalizedPrefix}`;
   let username = baseUsername;
   let counter = 1;
 
@@ -183,6 +186,152 @@ const generateUsername = async (email: string): Promise<string> => {
     }
     username = `${baseUsername}${counter}`;
     counter++;
+  }
+};
+
+export const auth0Login = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    const { idToken, deviceId, rememberMe, acceptedPolicies } = req.body as {
+      idToken: string;
+      deviceId?: string;
+      rememberMe?: boolean;
+      acceptedPolicies?: boolean;
+    };
+
+    const identity = await verifyAuth0IdToken(idToken);
+    if (!identity.subject.startsWith('google-oauth2|')) {
+      res.status(401).json({ error: 'The identity is not from the configured Google connection.' });
+      return;
+    }
+
+    if (!identity.emailVerified) {
+      res.status(401).json({ error: 'Google must verify the email address before sign-in.' });
+      return;
+    }
+
+    let user = await User.findOne({ auth0Id: identity.subject }).select(
+      '+awsAccessKeyId +awsSecretAccessKey'
+    );
+
+    if (!user) {
+      const emailUser = await User.findOne({ email: identity.email }).select(
+        '+awsAccessKeyId +awsSecretAccessKey'
+      );
+
+      if (emailUser?.auth0Id && emailUser.auth0Id !== identity.subject) {
+        res.status(409).json({ error: 'This email is already linked to another social account.' });
+        return;
+      }
+
+      user = emailUser;
+    }
+
+    if (user && (user.status || 'active') !== 'active') {
+      res.status(403).json({ error: `Account is ${user.status}. Access denied.` });
+      return;
+    }
+
+    if (!user) {
+      if (!acceptedPolicies) {
+        res.status(403).json({
+          error: 'You must acknowledge the Privacy Policy and WSU conduct expectations.',
+          acknowledgementRequired: true,
+          policyVersion: CURRENT_POLICY_VERSION,
+        });
+        return;
+      }
+
+      const username = await generateUsername(identity.email);
+      const fullName =
+        identity.name?.trim() ||
+        identity.nickname?.trim() ||
+        identity.email.split('@')[0] ||
+        'User';
+
+      user = new User({
+        auth0Id: identity.subject,
+        username,
+        fullName: fullName.length >= 2 ? fullName : 'Google User',
+        email: identity.email,
+        password: `${crypto.randomBytes(48).toString('base64url')}Aa1!`,
+        profilePicture: identity.picture || '/avatar.jpg',
+      });
+      applyPolicyAcknowledgement(user);
+
+      try {
+        const challengeUserResult = await createChallengeUser(username);
+        user.nextChallengePassword = challengeUserResult.password;
+        user.awsAccessKeyId = challengeUserResult.access_key;
+        user.awsSecretAccessKey = challengeUserResult.secret_key;
+      } catch (awsError: unknown) {
+        log.error(`failed to create aws challenge user for social account ${username}.`, awsError);
+      }
+    } else {
+      user.auth0Id = identity.subject;
+      if (identity.picture && (!user.profilePicture || user.profilePicture === '/avatar.jpg')) {
+        user.profilePicture = identity.picture;
+      }
+
+      if (!hasPolicyAcknowledgement(user)) {
+        if (!acceptedPolicies) {
+          res.status(403).json({
+            error: 'You must acknowledge the Privacy Policy and WSU conduct expectations.',
+            acknowledgementRequired: true,
+            policyVersion: CURRENT_POLICY_VERSION,
+          });
+          return;
+        }
+        applyPolicyAcknowledgement(user);
+      }
+    }
+
+    const currentDeviceId = deviceId || generateDeviceId();
+    user.cleanExpiredRefreshTokens();
+    const { accessToken, refreshToken } = generateTokens(user, currentDeviceId, !!rememberMe);
+
+    user.lastLogin = new Date();
+    await user.save();
+
+    const userObj = user.toSafeObject();
+    attachAwsCredentialsIfLinked(userObj, user);
+
+    res.json({
+      accessToken,
+      refreshToken,
+      deviceId: currentDeviceId,
+      rememberMe: !!rememberMe,
+      user: userObj,
+    });
+  } catch (error: unknown) {
+    log.error('auth0 login error.', error);
+
+    if (getErrorMessage(error).includes('configuration is incomplete')) {
+      res.status(503).json({ error: 'Google sign-in is not configured on the server.' });
+      return;
+    }
+
+    if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.TokenExpiredError) {
+      res.status(401).json({ error: 'Google sign-in token is invalid or expired.' });
+      return;
+    }
+
+    if (hasConnectionError(error)) {
+      res.status(503).json({ error: 'Service temporarily unavailable. Please try again.' });
+      return;
+    }
+
+    if (getErrorCode(error) === 11000) {
+      res.status(409).json({ error: 'This Google account is already linked.' });
+      return;
+    }
+
+    res.status(500).json({ error: 'Server error during Google sign-in.' });
   }
 };
 

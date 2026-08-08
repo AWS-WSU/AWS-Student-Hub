@@ -2,6 +2,10 @@
 
 Routes below are relative to the configured backend origin. A deployed API Gateway stage may add a prefix such as `/prod`; the Express application itself mounts these paths directly.
 
+This page is an engineering reference for the authenticated backend contract used by the AWS Student Hub frontend. It is not a separate public integration API. An authorized admin can technically call the same admin endpoints used by the dashboard, but authentication, current database-backed RBAC, validation, and classroom scoping still apply. Anonymous visitors cannot create, publish, assign, or complete challenges through these routes.
+
+Endpoint names and payload shapes are not challenge answers. Correct solutions and signing material remain server-side; see [Security boundaries](./security#public-api-documentation-and-challenge-integrity).
+
 ## Authentication
 
 Authenticated requests use:
@@ -12,6 +16,8 @@ Content-Type: application/json
 ```
 
 Student account and challenge mutations require a valid JWT. Every route under `/admin` listed here requires `admin` or `superuser`.
+
+Google sign-in first returns an Auth0 identity token to the browser. The frontend exchanges it through `POST /auth/auth0`; the backend verifies the issuer, signature, audience, provider, and verified email before linking or provisioning a local user and issuing the same Student Hub access and refresh tokens used by password login. Auth0 identity tokens are not accepted directly by challenge or admin routes.
 
 Error responses generally contain `error`. Challenge-domain errors also include a stable `code` and optional `details`.
 

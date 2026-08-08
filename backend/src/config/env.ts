@@ -60,6 +60,8 @@ const env = {
   JWT_SECRET: jwtSecret,
   CHALLENGE_SIGNING_SECRET: optionalString('CHALLENGE_SIGNING_SECRET'),
   ADMIN_TOKEN: optionalString('ADMIN_TOKEN'),
+  AUTH0_DOMAIN: optionalString('AUTH0_DOMAIN'),
+  AUTH0_CLIENT_ID: optionalString('AUTH0_CLIENT_ID'),
 
   S3_ACCESS_KEY_ID: optionalString('S3_ACCESS_KEY_ID'),
   S3_SECRET_ACCESS_KEY: optionalString('S3_SECRET_ACCESS_KEY'),

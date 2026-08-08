@@ -8,6 +8,8 @@ Deploy challenge code, migrate existing data when required, register curated def
 | ----------------- | ------------------------------------------------------------------ |
 | `MONGODB_URI`     | Challenge, assignment, user-link, and reward-emission persistence. |
 | `JWT_SECRET`      | Authentication and admin route verification.                       |
+| `AUTH0_DOMAIN`    | Auth0 issuer used to verify Google identity tokens.                |
+| `AUTH0_CLIENT_ID` | Auth0 application audience for Google identity tokens.             |
 | `SMTP_HOST`       | Ownership-code mail server.                                        |
 | `SMTP_PORT`       | SMTP port, normally `587` for STARTTLS.                            |
 | `SMTP_ENCRYPTION` | SMTP transport mode.                                               |

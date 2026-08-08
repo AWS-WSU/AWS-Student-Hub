@@ -13,7 +13,7 @@ createRoot(document.getElementById('root') as HTMLElement).render(
       clientId={auth0Config.clientId}
       authorizationParams={{
         redirect_uri: auth0Config.redirectUri,
-        audience: auth0Config.audience,
+        ...(auth0Config.audience ? { audience: auth0Config.audience } : {}),
         scope: 'openid profile email',
         response_type: 'code',
         code_challenge_method: 'S256',

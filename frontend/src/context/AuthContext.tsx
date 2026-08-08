@@ -106,9 +106,11 @@ const getInitialLoadingState = (): boolean => {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(getInitialUserState);
   const [loading, setLoading] = useState<boolean>(getInitialLoadingState);
+  const [authError, setAuthError] = useState<string | null>(null);
   const refreshPromiseRef = useRef<Promise<AuthResponse | void> | null>(null);
+  const auth0ExchangeRef = useRef<Promise<void> | null>(null);
   const deviceId = generateDeviceId();
-  const { isAuthenticated: isAuth0Authenticated, user: auth0User } = useAuth0();
+  const { isAuthenticated: isAuth0Authenticated, user: auth0User, getIdTokenClaims } = useAuth0();
 
   const logout = useCallback(
     async (allDevices = false): Promise<void> => {
@@ -142,6 +144,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         clearStoredItem('cachedUser');
         clearStoredItem('deviceId');
         localStorage.removeItem('rememberMe');
+        sessionStorage.removeItem('auth0PolicyAcknowledged');
+        setAuthError(null);
 
         // Clear refresh promise
         if (refreshPromiseRef.current) {
@@ -243,13 +247,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     };
 
-    if (user && !isAuth0Authenticated) {
+    if (user) {
       const timeoutId = setupTokenRefresh();
       return () => {
         if (timeoutId) clearTimeout(timeoutId);
       };
     }
-  }, [user, isAuth0Authenticated, refreshTokens]);
+  }, [user, refreshTokens]);
 
   useEffect(() => {
     const checkExistingSession = async () => {
@@ -294,29 +298,62 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     };
 
-    if (!isAuth0Authenticated) {
-      checkExistingSession();
-    } else {
-      setLoading(false);
-    }
+    checkExistingSession();
   }, [isAuth0Authenticated, logout, refreshTokens]);
 
   useEffect(() => {
-    if (isAuth0Authenticated && auth0User) {
-      setUser({
-        ...(auth0User as Record<string, unknown>),
-        fullName: auth0User.name || auth0User.email || '',
-        email: auth0User.email || '',
-        username: auth0User.nickname || auth0User.email || '',
-        profilePicture: auth0User.picture,
-      } as User);
-      setLoading(false);
+    if (!isAuth0Authenticated || !auth0User) {
+      auth0ExchangeRef.current = null;
+      return;
     }
-  }, [isAuth0Authenticated, auth0User]);
+
+    if (getStoredItem('accessToken') && getStoredItem('refreshToken') && user) {
+      setLoading(false);
+      return;
+    }
+
+    if (auth0ExchangeRef.current) return;
+
+    setLoading(true);
+    setAuthError(null);
+
+    auth0ExchangeRef.current = (async () => {
+      try {
+        const claims = await getIdTokenClaims();
+        if (!claims?.__raw) {
+          throw new Error('Google did not return an identity token.');
+        }
+
+        const response = await authAPI.exchangeAuth0Identity({
+          idToken: claims.__raw,
+          deviceId,
+          rememberMe: true,
+          acceptedPolicies: sessionStorage.getItem('auth0PolicyAcknowledged') === 'true',
+        });
+
+        localStorage.setItem('rememberMe', 'true');
+        setStoredItem('accessToken', response.accessToken, true);
+        setStoredItem('refreshToken', response.refreshToken, true);
+        setStoredItem('cachedUser', JSON.stringify(response.user), true);
+        sessionStorage.removeItem('auth0PolicyAcknowledged');
+        setUser(response.user);
+      } catch (error) {
+        clearStoredItem('accessToken');
+        clearStoredItem('refreshToken');
+        clearStoredItem('cachedUser');
+        setUser(null);
+        setAuthError(error instanceof Error ? error.message : 'Google sign-in failed.');
+      } finally {
+        setLoading(false);
+        auth0ExchangeRef.current = null;
+      }
+    })();
+  }, [auth0User, deviceId, getIdTokenClaims, isAuth0Authenticated, user]);
 
   const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
       setLoading(true);
+      setAuthError(null);
 
       const { rememberMe, ...restCredentials } = credentials;
 
@@ -373,6 +410,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const signup = async (userData: SignupPayload): Promise<AuthResponse> => {
     try {
       setLoading(true);
+      setAuthError(null);
 
       const { rememberMe, ...restUserData } = userData;
 
@@ -557,7 +595,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     forceLogoutAndClearData,
     getAwsCredentials,
     markAwsCredentialsViewed,
-    isAuthenticated: isAuth0Authenticated || !!user,
+    isAuthenticated: !!user,
+    authError,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

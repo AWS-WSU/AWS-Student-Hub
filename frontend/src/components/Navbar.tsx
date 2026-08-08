@@ -87,21 +87,20 @@ function Navbar({ theme, toggleTheme }: LayoutProps) {
     };
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await authLogout();
     if (isAuth0Authenticated) {
       auth0Logout({
         logoutParams: {
           returnTo: window.location.origin,
         },
       });
-    } else {
-      authLogout();
     }
     setIsAccountDropdownOpen(false);
   };
 
-  const isAuthenticated = isAuth0Authenticated || !!authUser;
-  const currentUser = (auth0User || authUser) as NavbarUser | undefined;
+  const isAuthenticated = !!authUser;
+  const currentUser = authUser as NavbarUser | undefined;
 
   const isActive = (path: string): boolean => location.pathname === path;
 
@@ -432,6 +431,15 @@ function Navbar({ theme, toggleTheme }: LayoutProps) {
               >
                 <Link to="/resources" onClick={toggleMenu}>
                   Resources
+                </Link>
+              </motion.li>
+              <motion.li
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <Link to="/challenges" onClick={toggleMenu}>
+                  Challenges
                 </Link>
               </motion.li>
             </ul>

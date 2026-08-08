@@ -12,6 +12,8 @@ member < moderator < admin < superuser
 
 Challenge catalog, assignment, reward-instance, roster, and manual-review routes require at least `admin`. Superusers satisfy that requirement automatically.
 
+The site-wide distinction between member, moderator, admin, and superuser is documented in [Roles and permissions](../guide/roles-and-permissions).
+
 The middleware reloads role and account status from MongoDB for each admin request rather than trusting a role embedded in the browser state.
 
 ::: warning Global admin scope
@@ -88,6 +90,14 @@ Never rely on:
 - Client-computed success flags
 
 Curated validators must decide acceptance on the backend.
+
+## Public API documentation and challenge integrity
+
+The HTTP reference documents the authenticated contract used by the AWS Student Hub frontend. It is not an anonymous challenge-authoring API and it does not contain stored answers, signing secrets, API keys, or student-specific solutions.
+
+Knowing an endpoint or request shape is not an authorization bypass. Student routes still enforce the signed-in user, active account status, linked Prizeversity instance, published classroom assignment, schedule, attempt limits, and backend validation. Admin routes independently reload the user's current role and require `admin` or `superuser`.
+
+Public route documentation can reduce discovery work, so challenge integrity must never depend on an endpoint being unknown. If a challenge requires implementation details that would materially reveal its solution, keep those details in source-controlled internal notes rather than the public handbook.
 
 ## Logging and screenshots
 

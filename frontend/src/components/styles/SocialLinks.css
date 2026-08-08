@@ -22,8 +22,41 @@
   flex-wrap: wrap;
 }
 
-.social-icon img {
+.social-icon {
+  display: inline-flex;
   width: 48px;
   height: 48px;
-  transition: transform 0.3s ease;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.social-icon:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.social-icon:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.social-icon img {
+  width: 25px;
+  height: 25px;
+}
+
+.social-icon svg {
+  width: 27px;
+  height: 27px;
 }

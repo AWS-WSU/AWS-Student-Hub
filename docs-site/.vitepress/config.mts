@@ -5,6 +5,7 @@ const teacherSidebar = [
     text: 'Start here',
     items: [
       { text: 'System overview', link: '/guide/system-overview' },
+      { text: 'Roles and permissions', link: '/guide/roles-and-permissions' },
       { text: 'Semester runbook', link: '/guide/semester-runbook' },
     ],
   },
@@ -68,6 +69,7 @@ export default defineConfig({
       alt: 'AWS Student Builder Group',
     },
     nav: [
+      { text: 'Main site', link: 'https://wayneaws.dev/', target: '_self' },
       { text: 'Teacher guide', link: '/guide/system-overview', activeMatch: '^/guide/' },
       { text: 'Authoring', link: '/authoring/choose-a-type', activeMatch: '^/authoring/' },
       { text: 'Developer reference', link: '/reference/architecture', activeMatch: '^/reference/' },

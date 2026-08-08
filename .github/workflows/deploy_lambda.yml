@@ -78,7 +78,9 @@ jobs:
             "${{ secrets.DISCORD_GUILD_ID }}" \
             "${{ secrets.DISCORD_CHANNEL_ID }}" \
             "${{ secrets.AWS_CRED_ENCRYPTION_KEY }}" \
-            "${{ secrets.AWS_HUB_EVENT_THUMBNAILS }}"
+            "${{ secrets.AWS_HUB_EVENT_THUMBNAILS }}" \
+            "${{ secrets.AUTH0_DOMAIN }}" \
+            "${{ secrets.AUTH0_CLIENT_ID }}"
 
   deploy-prod:
     name: Deploy to Production
@@ -138,4 +140,6 @@ jobs:
             "${{ secrets.DISCORD_GUILD_ID }}" \
             "${{ secrets.DISCORD_CHANNEL_ID }}" \
             "${{ secrets.AWS_CRED_ENCRYPTION_KEY }}" \
-            "${{ secrets.AWS_HUB_EVENT_THUMBNAILS }}"
+            "${{ secrets.AWS_HUB_EVENT_THUMBNAILS }}" \
+            "${{ secrets.AUTH0_DOMAIN }}" \
+            "${{ secrets.AUTH0_CLIENT_ID }}"
