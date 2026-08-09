@@ -9,6 +9,7 @@ import {
   processEmailQueue,
   retryFailedEmail,
 } from '../services/emailService';
+import { deletePrizeversityAccountData } from '../services/rewardIntegrationService';
 
 const log = logger.child({ module: 'adminController' });
 
@@ -154,6 +155,8 @@ export const updateUserRole = async (req: Request, res: Response): Promise<void>
       });
       return;
     }
+
+    await deletePrizeversityAccountData(user._id);
 
     res.json({
       success: true,

@@ -112,6 +112,11 @@ function Navbar({ theme, toggleTheme }: LayoutProps) {
     setIsAccountDropdownOpen(!isAccountDropdownOpen);
   };
 
+  const openAuth = (mode: 'signin' | 'signup') => {
+    navigate(mode === 'signup' ? '/auth?mode=signup' : '/auth');
+    setIsMenuOpen(false);
+  };
+
   const getDisplayName = (user?: NavbarUser | null): string => {
     if (!user) return 'User';
 
@@ -201,7 +206,7 @@ function Navbar({ theme, toggleTheme }: LayoutProps) {
           <div className="auth-buttons">
             <motion.button
               className="auth-option secondary"
-              onClick={() => navigate('/auth')}
+              onClick={() => openAuth('signin')}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -209,7 +214,7 @@ function Navbar({ theme, toggleTheme }: LayoutProps) {
             </motion.button>
             <motion.button
               className="auth-option primary"
-              onClick={() => navigate('/auth')}
+              onClick={() => openAuth('signup')}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -443,6 +448,31 @@ function Navbar({ theme, toggleTheme }: LayoutProps) {
                 </Link>
               </motion.li>
             </ul>
+
+            {!isAuth0Authenticated && !authUser && (
+              <motion.div
+                className="mobile-menu-auth"
+                aria-label="Account actions"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.55 }}
+              >
+                <button
+                  type="button"
+                  className="auth-option secondary"
+                  onClick={() => openAuth('signin')}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  className="auth-option primary"
+                  onClick={() => openAuth('signup')}
+                >
+                  Sign Up
+                </button>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

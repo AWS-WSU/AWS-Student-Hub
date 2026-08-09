@@ -606,67 +606,119 @@ export const rewardIntegrationAPI = {
       method: 'DELETE',
     });
   },
+
+  unlinkMembership: async (instanceId: string): Promise<RewardIntegrationLinkResponse> => {
+    return apiRequest(`/integrations/prizeversity/link/${encodeURIComponent(instanceId)}`, {
+      method: 'DELETE',
+    });
+  },
 };
+
+const withChallengeAssignment = (path: string, assignmentId?: string | null): string =>
+  assignmentId ? `${path}?assignmentId=${encodeURIComponent(assignmentId)}` : path;
 
 export const challengeAPI = {
   list: async (): Promise<ChallengeListResponse> => {
     return apiRequest('/challenges');
   },
 
-  get: async (slug: string): Promise<ChallengeDetailResponse> => {
-    return apiRequest(`/challenges/${encodeURIComponent(slug)}`);
+  get: async (slug: string, assignmentId?: string | null): Promise<ChallengeDetailResponse> => {
+    return apiRequest(
+      withChallengeAssignment(`/challenges/${encodeURIComponent(slug)}`, assignmentId)
+    );
   },
 
-  getCipheredSealState: async (routeKey: string): Promise<CipheredSealRouteStateResponse> => {
-    return apiRequest(`/challenges/ciphered-seal/route/${encodeURIComponent(routeKey)}`);
+  getCipheredSealState: async (
+    routeKey: string,
+    assignmentId?: string | null
+  ): Promise<CipheredSealRouteStateResponse> => {
+    return apiRequest(
+      withChallengeAssignment(
+        `/challenges/ciphered-seal/route/${encodeURIComponent(routeKey)}`,
+        assignmentId
+      )
+    );
   },
 
   resolveCipheredSealSeed: async (
     routeKey: string,
-    seedNumber: number
+    seedNumber: number,
+    assignmentId?: string | null
   ): Promise<CipheredSealResolveResponse> => {
-    return apiRequest(`/challenges/ciphered-seal/route/${encodeURIComponent(routeKey)}/resolve`, {
-      method: 'POST',
-      body: JSON.stringify({ seedNumber }),
-    });
+    return apiRequest(
+      withChallengeAssignment(
+        `/challenges/ciphered-seal/route/${encodeURIComponent(routeKey)}/resolve`,
+        assignmentId
+      ),
+      {
+        method: 'POST',
+        body: JSON.stringify({ seedNumber }),
+      }
+    );
   },
 
-  getSqlInjectionSandbox: async (slug: string): Promise<SqlInjectionSandboxStateResponse> => {
-    return apiRequest(`/challenges/${encodeURIComponent(slug)}/sql-sandbox`);
+  getSqlInjectionSandbox: async (
+    slug: string,
+    assignmentId?: string | null
+  ): Promise<SqlInjectionSandboxStateResponse> => {
+    return apiRequest(
+      withChallengeAssignment(`/challenges/${encodeURIComponent(slug)}/sql-sandbox`, assignmentId)
+    );
   },
 
   searchSqlInjectionSandbox: async (
     slug: string,
-    query: string
+    query: string,
+    assignmentId?: string | null
   ): Promise<SqlInjectionSandboxSearchResponse> => {
-    return apiRequest(`/challenges/${encodeURIComponent(slug)}/sql-sandbox/search`, {
-      method: 'POST',
-      body: JSON.stringify({ query }),
-    });
+    return apiRequest(
+      withChallengeAssignment(
+        `/challenges/${encodeURIComponent(slug)}/sql-sandbox/search`,
+        assignmentId
+      ),
+      {
+        method: 'POST',
+        body: JSON.stringify({ query }),
+      }
+    );
   },
 
-  downloadPcapCapture: async (slug: string): Promise<Blob> => {
-    return apiBlobRequest(`/challenges/${encodeURIComponent(slug)}/pcap`);
+  downloadPcapCapture: async (slug: string, assignmentId?: string | null): Promise<Blob> => {
+    return apiBlobRequest(
+      withChallengeAssignment(`/challenges/${encodeURIComponent(slug)}/pcap`, assignmentId)
+    );
   },
 
-  progress: async (slug: string): Promise<ChallengeProgressResponse> => {
-    return apiRequest(`/challenges/${encodeURIComponent(slug)}/progress`);
+  progress: async (
+    slug: string,
+    assignmentId?: string | null
+  ): Promise<ChallengeProgressResponse> => {
+    return apiRequest(
+      withChallengeAssignment(`/challenges/${encodeURIComponent(slug)}/progress`, assignmentId)
+    );
   },
 
-  start: async (slug: string): Promise<ChallengeProgressResponse> => {
-    return apiRequest(`/challenges/${encodeURIComponent(slug)}/start`, {
-      method: 'POST',
-    });
+  start: async (slug: string, assignmentId?: string | null): Promise<ChallengeProgressResponse> => {
+    return apiRequest(
+      withChallengeAssignment(`/challenges/${encodeURIComponent(slug)}/start`, assignmentId),
+      {
+        method: 'POST',
+      }
+    );
   },
 
   submit: async (
     slug: string,
-    payload: Record<string, unknown>
+    payload: Record<string, unknown>,
+    assignmentId?: string | null
   ): Promise<ChallengeSubmitResponse> => {
-    return apiRequest(`/challenges/${encodeURIComponent(slug)}/submit`, {
-      method: 'POST',
-      body: JSON.stringify({ payload }),
-    });
+    return apiRequest(
+      withChallengeAssignment(`/challenges/${encodeURIComponent(slug)}/submit`, assignmentId),
+      {
+        method: 'POST',
+        body: JSON.stringify({ payload }),
+      }
+    );
   },
 };
 

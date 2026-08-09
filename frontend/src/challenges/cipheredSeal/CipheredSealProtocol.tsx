@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import {
   ArrowLeft,
@@ -54,6 +54,8 @@ function WardSigil({ ward }: { ward: CipheredSealWard }) {
 
 function CipheredSealProtocol() {
   const { routeKey = '' } = useParams();
+  const [searchParams] = useSearchParams();
+  const requestedAssignmentId = searchParams.get('assignmentId');
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [state, setState] = useState<CipheredSealRouteStateResponse | null>(null);
@@ -68,11 +70,14 @@ function CipheredSealProtocol() {
   const [copied, setCopied] = useState(false);
   const [rewardModalOpen, setRewardModalOpen] = useState(false);
   const [submitReward, setSubmitReward] = useState<ChallengeSubmitResponse['reward']>();
+  const routePath = `/challenge/${routeKey}${
+    requestedAssignmentId ? `?assignmentId=${encodeURIComponent(requestedAssignmentId)}` : ''
+  }`;
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      navigate(`/auth?redirect=${encodeURIComponent(`/challenge/${routeKey}`)}`, { replace: true });
+      navigate(`/auth?redirect=${encodeURIComponent(routePath)}`, { replace: true });
       return;
     }
 
@@ -80,7 +85,7 @@ function CipheredSealProtocol() {
     setLoading(true);
     setError('');
     challengeAPI
-      .getCipheredSealState(routeKey)
+      .getCipheredSealState(routeKey, requestedAssignmentId)
       .then((response) => {
         if (active) setState(response);
       })
@@ -100,7 +105,7 @@ function CipheredSealProtocol() {
     return () => {
       active = false;
     };
-  }, [authLoading, navigate, routeKey, user]);
+  }, [authLoading, navigate, requestedAssignmentId, routeKey, routePath, user]);
 
   const isCompleted = completedStatuses.has(state?.progress.status || '');
   const canInvoke = Boolean(seedResult?.resolved && seedResult.values && !isCompleted);
@@ -125,7 +130,11 @@ function CipheredSealProtocol() {
     setSequence([]);
     setRitualMessage('Awaiting invocation.');
     try {
-      const response = await challengeAPI.resolveCipheredSealSeed(routeKey, seedNumber);
+      const response = await challengeAPI.resolveCipheredSealSeed(
+        routeKey,
+        seedNumber,
+        requestedAssignmentId || state?.challenge.assignmentId
+      );
       setSeedResult(response);
     } catch (requestError: unknown) {
       setSeedResult(null);
@@ -158,7 +167,11 @@ function CipheredSealProtocol() {
     setError('');
 
     try {
-      const response = await challengeAPI.submit(state.challenge.slug, { sequence });
+      const response = await challengeAPI.submit(
+        state.challenge.slug,
+        { sequence },
+        requestedAssignmentId || state.challenge.assignmentId
+      );
       setState((current) => (current ? { ...current, progress: response.progress } : current));
       setRitualMessage(response.message);
       if (response.accepted && response.completed) {

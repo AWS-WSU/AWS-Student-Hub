@@ -47,6 +47,15 @@ const getStoredItem = (key: string): string | null =>
 const getErrorMessage = (err: unknown, fallback: string): string =>
   err instanceof Error ? err.message : fallback;
 
+const getNextRewardInstanceId = (status: RewardIntegrationStatusResponse): string => {
+  const connectedInstanceIds = new Set(
+    (status.memberships || [])
+      .filter((membership) => membership.active && !membership.disabledByUser)
+      .map((membership) => membership.instanceId)
+  );
+  return status.instances.find((instance) => !connectedInstanceIds.has(instance.id))?.id || '';
+};
+
 const programmingLanguages: string[] = [
   'JavaScript',
   'Python',
@@ -194,9 +203,7 @@ function Account({ theme: _theme }: AccountProps) {
         if (shouldUpdate) {
           setPrizeversityStatus(status);
           setPrizeversityIdentifier(status.account?.email || currentUser?.email || '');
-          setSelectedRewardInstanceId(
-            status.account?.instanceId || status.instances?.[0]?.id || ''
-          );
+          setSelectedRewardInstanceId(getNextRewardInstanceId(status));
         }
       })
       .catch((err) => {
@@ -535,12 +542,19 @@ function Account({ theme: _theme }: AccountProps) {
         prizeversityIdentifier,
         selectedRewardInstanceId
       );
+      setPrizeversityStatus(response.status);
       if (response.verificationRequired && response.maskedEmail) {
         setPrizeversityVerification({
           maskedEmail: response.maskedEmail,
           expiresAt: response.expiresAt,
         });
         setPrizeversityVerificationCode('');
+      } else {
+        setPrizeversityVerification(null);
+        setPrizeversityVerificationCode('');
+        setPrizeversityIdentifier(response.status.account?.email || prizeversityIdentifier);
+        setSelectedRewardInstanceId(getNextRewardInstanceId(response.status));
+        await refreshTokens();
       }
       setSuccess(response.message);
       setTimeout(() => setSuccess(''), 4000);
@@ -563,9 +577,7 @@ function Account({ theme: _theme }: AccountProps) {
       const response = await rewardIntegrationAPI.verifyLink(prizeversityVerificationCode);
       setPrizeversityStatus(response.status);
       setPrizeversityIdentifier(response.status.account?.email || prizeversityIdentifier);
-      setSelectedRewardInstanceId(
-        response.status.account?.instanceId || response.status.instances?.[0]?.id || ''
-      );
+      setSelectedRewardInstanceId(getNextRewardInstanceId(response.status));
       setPrizeversityVerification(null);
       setPrizeversityVerificationCode('');
       await refreshTokens();
@@ -575,6 +587,28 @@ function Account({ theme: _theme }: AccountProps) {
       const message = getErrorMessage(err, 'Failed to verify Prizeversity link code');
       setPrizeversityLinkError(message);
       setError(message);
+    } finally {
+      setIsPrizeversityLoading(false);
+    }
+  };
+
+  const handlePrizeversityMembershipDisconnect = async (instanceId: string) => {
+    setIsPrizeversityLoading(true);
+    setPrizeversityLinkError('');
+    setPrizeversityVerification(null);
+    setPrizeversityVerificationCode('');
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await rewardIntegrationAPI.unlinkMembership(instanceId);
+      setPrizeversityStatus(response.status);
+      setSelectedRewardInstanceId(getNextRewardInstanceId(response.status));
+      await refreshTokens();
+      setSuccess(response.message);
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to disconnect Prizeversity classroom'));
     } finally {
       setIsPrizeversityLoading(false);
     }
@@ -592,7 +626,7 @@ function Account({ theme: _theme }: AccountProps) {
       const response = await rewardIntegrationAPI.unlink();
       setPrizeversityStatus(response.status);
       setPrizeversityIdentifier(currentUser?.email || '');
-      setSelectedRewardInstanceId(response.status.instances?.[0]?.id || '');
+      setSelectedRewardInstanceId(getNextRewardInstanceId(response.status));
       await refreshTokens();
       setSuccess(response.message);
       setTimeout(() => setSuccess(''), 4000);
@@ -675,6 +709,17 @@ function Account({ theme: _theme }: AccountProps) {
   const isPrizeversityEmailDeliveryError = prizeversityLinkError
     .toLowerCase()
     .includes('verification email');
+  const prizeversityMemberships = prizeversityStatus?.memberships || [];
+  const activePrizeversityMemberships = prizeversityMemberships.filter(
+    (membership) => membership.active && !membership.disabledByUser
+  );
+  const connectedRewardInstanceIds = new Set(
+    activePrizeversityMemberships.map((membership) => membership.instanceId)
+  );
+  const availableRewardInstances =
+    prizeversityStatus?.instances.filter(
+      (instance) => !connectedRewardInstanceIds.has(instance.id)
+    ) || [];
 
   return (
     <div className="account-container">
@@ -1035,11 +1080,11 @@ function Account({ theme: _theme }: AccountProps) {
                   <Shield size={28} aria-hidden="true" />
                 </div>
                 <div className="prizeversity-title">
-                  <span>{prizeversityStatus?.linked ? 'Connected' : 'Account sync'}</span>
-                  <h3>Link your Prizeversity account</h3>
+                  <span>{prizeversityStatus?.account ? 'Identity verified' : 'Account sync'}</span>
+                  <h3>Prizeversity identity and classrooms</h3>
                   <p>
-                    Challenge completions in AWS Student Hub will use this linked Prizeversity
-                    classroom account for rewards and progression.
+                    Verify your Prizeversity identity once, then connect each classroom whose
+                    challenges and rewards you need to access.
                   </p>
                 </div>
               </div>
@@ -1048,24 +1093,29 @@ function Account({ theme: _theme }: AccountProps) {
                 <div className="prizeversity-notice">
                   Prizeversity linking requires an AWS Student Hub account session.
                 </div>
-              ) : prizeversityStatus && !prizeversityStatus.configured ? (
+              ) : !prizeversityStatus ? (
+                <div className="prizeversity-notice">Loading Prizeversity classrooms...</div>
+              ) : !prizeversityStatus.configured ? (
                 <div className="prizeversity-notice">
                   Prizeversity integration is not configured yet. An admin needs to set the backend
                   Prizeversity API URL, API key, and classroom ID.
                 </div>
               ) : (
                 <>
-                  {prizeversityStatus?.linked && prizeversityStatus.account ? (
+                  {prizeversityStatus?.account ? (
                     <div className="prizeversity-linked-panel">
-                      <div className="prizeversity-linked-grid">
+                      <div className="prizeversity-linked-heading">
                         <div>
-                          <span>Matched account</span>
+                          <span>Verified identity</span>
                           <strong>
                             {prizeversityStatus.account.matchedName ||
                               prizeversityStatus.account.email ||
                               'Prizeversity user'}
                           </strong>
                         </div>
+                        <span className="prizeversity-identity-status">Verified</span>
+                      </div>
+                      <div className="prizeversity-linked-grid">
                         <div>
                           <span>Email</span>
                           <strong>{prizeversityStatus.account.email || 'Not provided'}</strong>
@@ -1075,14 +1125,8 @@ function Account({ theme: _theme }: AccountProps) {
                           <strong>{prizeversityStatus.account.shortId || 'Not provided'}</strong>
                         </div>
                         <div>
-                          <span>Last synced</span>
-                          <strong>
-                            {prizeversityStatus.account.lastSyncedAt
-                              ? new Date(
-                                  prizeversityStatus.account.lastSyncedAt
-                                ).toLocaleDateString()
-                              : 'Just now'}
-                          </strong>
+                          <span>Connected classrooms</span>
+                          <strong>{activePrizeversityMemberships.length}</strong>
                         </div>
                       </div>
                     </div>
@@ -1093,122 +1137,207 @@ function Account({ theme: _theme }: AccountProps) {
                     </div>
                   )}
 
-                  <div className="prizeversity-link-form">
-                    {prizeversityStatus?.instances && prizeversityStatus.instances.length > 1 && (
-                      <>
-                        <label htmlFor="prizeversity-instance">Reward classroom</label>
-                        <select
-                          id="prizeversity-instance"
-                          value={selectedRewardInstanceId}
-                          onChange={(event) => setSelectedRewardInstanceId(event.target.value)}
-                          disabled={isPrizeversityLoading}
-                          className="prizeversity-instance-select"
-                        >
-                          {prizeversityStatus.instances.map((instance) => (
-                            <option key={instance.id} value={instance.id}>
-                              {instance.name}
-                              {instance.classroomName ? ` - ${instance.classroomName}` : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </>
-                    )}
-
-                    <label htmlFor="prizeversity-identifier">Prizeversity identifier</label>
-                    <div className="prizeversity-input-row">
-                      <input
-                        id="prizeversity-identifier"
-                        type="text"
-                        value={prizeversityIdentifier}
-                        onChange={(event) => {
-                          setPrizeversityIdentifier(event.target.value);
-                          setPrizeversityLinkError('');
-                          setPrizeversityVerification(null);
-                          setPrizeversityVerificationCode('');
-                        }}
-                        placeholder={currentUser?.email || 'email@example.com'}
-                        disabled={isPrizeversityLoading}
-                      />
-                      <button
-                        type="button"
-                        className="show-modal-btn"
-                        onClick={handlePrizeversityLink}
-                        disabled={isPrizeversityLoading}
-                      >
-                        {isPrizeversityLoading ? (
-                          <>
-                            <RefreshCw size={16} aria-hidden="true" /> Syncing
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCw size={16} aria-hidden="true" />
-                            {prizeversityVerification
-                              ? 'Resend code'
-                              : prizeversityStatus?.linked
-                                ? 'Re-sync'
-                                : 'Send code'}
-                          </>
-                        )}
-                      </button>
-                    </div>
-                    {prizeversityVerification && (
-                      <div className="prizeversity-verification-panel">
-                        <div>
-                          <strong>Check your Prizeversity email.</strong>
-                          <span>
-                            We sent a one-time code to {prizeversityVerification.maskedEmail}. Enter
-                            it below to finish linking this account.
-                          </span>
-                        </div>
-                        <div className="prizeversity-code-row">
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            maxLength={6}
-                            value={prizeversityVerificationCode}
-                            onChange={(event) => {
-                              setPrizeversityVerificationCode(event.target.value);
-                              setPrizeversityLinkError('');
-                            }}
-                            placeholder="123456"
-                            disabled={isPrizeversityLoading}
-                          />
-                          <button
-                            type="button"
-                            className="show-modal-btn"
-                            onClick={handlePrizeversityVerify}
-                            disabled={
-                              isPrizeversityLoading ||
-                              prizeversityVerificationCode.trim().length < 6
-                            }
-                          >
-                            Verify code
-                          </button>
-                        </div>
+                  <div className="prizeversity-memberships">
+                    <div className="prizeversity-memberships-heading">
+                      <div>
+                        <span>Classroom access</span>
+                        <h4>Connected classrooms</h4>
                       </div>
-                    )}
-                    {prizeversityLinkError && (
-                      <div className="prizeversity-link-error" role="alert">
-                        <strong>
-                          {prizeversityVerification
-                            ? 'Verification failed.'
-                            : isPrizeversityEmailDeliveryError
-                              ? 'Verification email could not be sent.'
-                              : 'No Prizeversity match found.'}
-                        </strong>
-                        <span>{prizeversityLinkError}</span>
-                        <small>
-                          {prizeversityVerification
-                            ? 'Check the code from your email, or resend a new code if it expired.'
-                            : isPrizeversityEmailDeliveryError
-                              ? 'Your account was matched, but the site email provider rejected the send. Ask an admin to check SMTP credentials.'
-                              : 'Confirm you selected the right reward classroom and try your Prizeversity email, full name, or short ID.'}
-                        </small>
+                      <strong>{activePrizeversityMemberships.length} active</strong>
+                    </div>
+
+                    {prizeversityMemberships.length === 0 ? (
+                      <div className="prizeversity-memberships-empty">
+                        No classrooms are connected yet. Select the exact class below to begin.
+                      </div>
+                    ) : (
+                      <div className="prizeversity-membership-list">
+                        {prizeversityMemberships.map((membership) => {
+                          const membershipActive = membership.active && !membership.disabledByUser;
+                          const membershipStatus = membershipActive
+                            ? 'Connected'
+                            : membership.disabledByUser
+                              ? 'Disconnected'
+                              : 'No longer enrolled';
+
+                          return (
+                            <article
+                              key={membership.id}
+                              className={`prizeversity-membership ${membershipActive ? 'active' : 'inactive'}`}
+                            >
+                              <div className="prizeversity-membership-main">
+                                <div>
+                                  <span>{membership.instanceName || 'Reward classroom'}</span>
+                                  <strong>
+                                    {membership.classroomName || membership.classroomId}
+                                  </strong>
+                                </div>
+                                <span className="prizeversity-membership-status">
+                                  {membershipStatus}
+                                </span>
+                              </div>
+                              <div className="prizeversity-membership-meta">
+                                <span>Short ID: {membership.shortId || 'Not provided'}</span>
+                                <span>
+                                  Last checked:{' '}
+                                  {membership.lastVerifiedAt
+                                    ? new Date(membership.lastVerifiedAt).toLocaleDateString()
+                                    : 'Not yet'}
+                                </span>
+                              </div>
+                              {!membershipActive && membership.lastVerificationError && (
+                                <small>{membership.lastVerificationError}</small>
+                              )}
+                              {membershipActive && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handlePrizeversityMembershipDisconnect(membership.instanceId)
+                                  }
+                                  disabled={isPrizeversityLoading}
+                                >
+                                  Disconnect classroom
+                                </button>
+                              )}
+                            </article>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
 
-                  {prizeversityStatus?.linked && (
+                  {availableRewardInstances.length > 0 ? (
+                    <div className="prizeversity-link-form">
+                      <div className="prizeversity-link-form-heading">
+                        <span>Add classroom</span>
+                        <p>
+                          Choose the configured class you joined in Prizeversity. Existing verified
+                          identities connect additional classrooms without another email code.
+                        </p>
+                      </div>
+
+                      <label htmlFor="prizeversity-instance">Classroom to connect</label>
+                      <select
+                        id="prizeversity-instance"
+                        value={selectedRewardInstanceId}
+                        onChange={(event) => {
+                          setSelectedRewardInstanceId(event.target.value);
+                          setPrizeversityLinkError('');
+                          setPrizeversityVerification(null);
+                          setPrizeversityVerificationCode('');
+                        }}
+                        disabled={isPrizeversityLoading}
+                        className="prizeversity-instance-select"
+                      >
+                        {availableRewardInstances.map((instance) => (
+                          <option key={instance.id} value={instance.id}>
+                            {instance.name}
+                            {instance.classroomName ? ` - ${instance.classroomName}` : ''}
+                          </option>
+                        ))}
+                      </select>
+
+                      <label htmlFor="prizeversity-identifier">Prizeversity identifier</label>
+                      <div className="prizeversity-input-row">
+                        <input
+                          id="prizeversity-identifier"
+                          type="text"
+                          value={prizeversityIdentifier}
+                          onChange={(event) => {
+                            setPrizeversityIdentifier(event.target.value);
+                            setPrizeversityLinkError('');
+                            setPrizeversityVerification(null);
+                            setPrizeversityVerificationCode('');
+                          }}
+                          placeholder={currentUser?.email || 'email@example.com'}
+                          disabled={isPrizeversityLoading}
+                        />
+                        <button
+                          type="button"
+                          className="show-modal-btn"
+                          onClick={handlePrizeversityLink}
+                          disabled={isPrizeversityLoading || !selectedRewardInstanceId}
+                        >
+                          {isPrizeversityLoading ? (
+                            <>
+                              <RefreshCw size={16} aria-hidden="true" /> Connecting
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw size={16} aria-hidden="true" />
+                              {prizeversityVerification
+                                ? 'Resend code'
+                                : prizeversityStatus?.account
+                                  ? 'Connect classroom'
+                                  : 'Send code'}
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      {prizeversityVerification && (
+                        <div className="prizeversity-verification-panel">
+                          <div>
+                            <strong>Check your Prizeversity email.</strong>
+                            <span>
+                              We sent a one-time code to {prizeversityVerification.maskedEmail}.
+                              Enter it below to verify your identity and connect this classroom.
+                            </span>
+                          </div>
+                          <div className="prizeversity-code-row">
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={6}
+                              value={prizeversityVerificationCode}
+                              onChange={(event) => {
+                                setPrizeversityVerificationCode(event.target.value);
+                                setPrizeversityLinkError('');
+                              }}
+                              placeholder="123456"
+                              disabled={isPrizeversityLoading}
+                            />
+                            <button
+                              type="button"
+                              className="show-modal-btn"
+                              onClick={handlePrizeversityVerify}
+                              disabled={
+                                isPrizeversityLoading ||
+                                prizeversityVerificationCode.trim().length < 6
+                              }
+                            >
+                              Verify code
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="prizeversity-all-connected">
+                      Every configured Prizeversity classroom is connected to this account.
+                    </div>
+                  )}
+
+                  {prizeversityLinkError && (
+                    <div className="prizeversity-link-error" role="alert">
+                      <strong>
+                        {prizeversityVerification
+                          ? 'Verification failed.'
+                          : isPrizeversityEmailDeliveryError
+                            ? 'Verification email could not be sent.'
+                            : 'No classroom member found.'}
+                      </strong>
+                      <span>{prizeversityLinkError}</span>
+                      <small>
+                        {prizeversityVerification
+                          ? 'Check the code from your email, or resend a new code if it expired.'
+                          : isPrizeversityEmailDeliveryError
+                            ? 'Your account was matched, but the site email provider rejected the send. Ask an admin to check SMTP credentials.'
+                            : 'Confirm you joined the selected Prizeversity classroom, then try your email, full name, or short ID again.'}
+                      </small>
+                    </div>
+                  )}
+
+                  {prizeversityStatus?.account && (
                     <div className="account-challenge-actions compact">
                       <button
                         type="button"
@@ -1216,7 +1345,7 @@ function Account({ theme: _theme }: AccountProps) {
                         onClick={handlePrizeversityUnlink}
                         disabled={isPrizeversityLoading}
                       >
-                        <Unlink size={16} aria-hidden="true" /> Unlink Prizeversity
+                        <Unlink size={16} aria-hidden="true" /> Remove identity and all classrooms
                       </button>
                     </div>
                   )}

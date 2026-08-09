@@ -376,6 +376,19 @@
   color: var(--accent);
 }
 
+.mobile-menu-auth {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1.25rem;
+  padding: 1.25rem 0.35rem 0;
+  border-top: 1px solid var(--border-color);
+}
+
+.mobile-menu-auth .auth-option {
+  width: 100%;
+  min-height: 44px;
+}
+
 @media (min-width: 992px) {
   .desktop-nav {
     display: block;
@@ -395,6 +408,10 @@
 @media (max-width: 991px) {
   .landing-header {
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .header-controls > .auth-buttons {
+    display: none;
   }
 
   .mobile-menu-toggle {

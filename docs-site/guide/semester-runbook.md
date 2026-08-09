@@ -114,6 +114,6 @@ For a new semester or section:
 2. Create a new AWS Student Hub instance with that classroom's API key.
 3. Reuse catalog definitions by assigning them to the new instance.
 4. Configure new dates, limits, and rewards.
-5. Require students to link to the new classroom instance.
+5. Require students to join the new Prizeversity classroom and add that classroom in AWS Student Hub Account Settings. Existing verified identities do not replace or disconnect prior classes.
 
 Do not rename an old instance and replace its classroom credentials merely to reuse the UI. A new instance preserves clean classroom and reward history.

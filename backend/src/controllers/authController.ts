@@ -43,6 +43,8 @@ interface AwsCredentialUser {
 
 const filter = new Filter();
 const CURRENT_POLICY_VERSION = '2026-06-21';
+const PASSWORD_RESET_REQUEST_MESSAGE =
+  'If an account exists for that email, a verification code is on its way. If it does not arrive, check your spam or junk folder.';
 
 const getJwtSecret = (): string => {
   if (!env.JWT_SECRET) {
@@ -386,14 +388,20 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      res.status(400).json({ error: 'Account creation failed. Please check your information.' });
+      res.status(409).json({
+        error: existingUser.auth0Id
+          ? 'An account already exists for this email and uses Google sign-in. Continue with Google instead.'
+          : 'An account already exists for this email. Sign in or reset your password instead.',
+      });
       return;
     }
 
     if (providedUsername) {
       const existingUsername = await User.findOne({ username: providedUsername });
       if (existingUsername) {
-        res.status(400).json({ error: 'Account creation failed. Please check your information.' });
+        res
+          .status(409)
+          .json({ error: 'That username is already in use. Choose another username.' });
         return;
       }
     }
@@ -479,8 +487,9 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
     log.error('signup error.', error);
 
     if (getErrorCode(error) === 11000) {
-      res.status(400).json({
-        error: 'Account creation failed. Please check your information.',
+      res.status(409).json({
+        error:
+          'An account already exists with that email or username. Sign in or choose different information.',
       });
       return;
     }
@@ -735,7 +744,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
       res.json({
         success: true,
         message: isEmail
-          ? 'If an account exists with this email, a reset code has been sent.'
+          ? PASSWORD_RESET_REQUEST_MESSAGE
           : 'If an account exists with this username, you will need to verify your email address.',
       });
       return;
@@ -768,7 +777,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
 
     res.json({
       success: true,
-      message: 'If an account exists with this email, a reset code has been sent.',
+      message: PASSWORD_RESET_REQUEST_MESSAGE,
     });
   } catch (error: unknown) {
     log.error('forgot password error.', error);

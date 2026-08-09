@@ -48,9 +48,9 @@ SMTP availability is therefore part of the account-security boundary, not merely
 
 ## Classroom isolation
 
-Challenge access is derived from the user's stored instance ID. Services query assignments using that instance and do not accept a classroom ID supplied by the student.
+Challenge access is derived from persisted, roster-verified memberships. Services query assignments across those membership instance IDs and do not accept a classroom ID supplied by the student.
 
-Reward delivery verifies that the assignment instance matches the user's linked instance before selecting credentials and classroom ID.
+Student navigation carries an assignment ID when the same definition exists in multiple classes. The backend verifies that the assignment belongs to an active membership before loading progress. Reward delivery independently refreshes that exact membership, selects credentials from the assignment instance, and uses the classroom and Prizeversity user IDs stored on the membership.
 
 ## Validation and proof handling
 
@@ -95,7 +95,7 @@ Curated validators must decide acceptance on the backend.
 
 The HTTP reference documents the authenticated contract used by the AWS Student Hub frontend. It is not an anonymous challenge-authoring API and it does not contain stored answers, signing secrets, API keys, or student-specific solutions.
 
-Knowing an endpoint or request shape is not an authorization bypass. Student routes still enforce the signed-in user, active account status, linked Prizeversity instance, published classroom assignment, schedule, attempt limits, and backend validation. Admin routes independently reload the user's current role and require `admin` or `superuser`.
+Knowing an endpoint or request shape is not an authorization bypass. Student routes still enforce the signed-in user, active account status, roster-verified Prizeversity membership, published classroom assignment, schedule, attempt limits, and backend validation. Admin routes independently reload the user's current role and require `admin` or `superuser`.
 
 Public route documentation can reduce discovery work, so challenge integrity must never depend on an endpoint being unknown. If a challenge requires implementation details that would materially reveal its solution, keep those details in source-controlled internal notes rather than the public handbook.
 

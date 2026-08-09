@@ -5,7 +5,10 @@ import type { IChallengeAssignmentDocument } from '../models/ChallengeAssignment
 import type { IChallengeProgressDocument } from '../models/ChallengeProgress';
 import RewardIntegrationEmission from '../models/RewardIntegrationEmission';
 import type { IUserDocument } from '../models/User';
-import { grantPrizeversityChallengeReward } from './rewardIntegrationService';
+import {
+  getPrizeversityMembershipForInstance,
+  grantPrizeversityChallengeReward,
+} from './rewardIntegrationService';
 
 export interface ChallengeCompletionEvent {
   eventId: string;
@@ -65,9 +68,16 @@ const getCompletionXp = (reward: IChallengeRewardConfig) => {
   };
 };
 
-export const hasRewardIdentity = (user: IUserDocument): boolean => {
-  return Boolean(user.prizeversityUserId && user.prizeversityClassroomId);
-};
+export const hasRewardMembership = async (
+  user: IUserDocument,
+  rewardIntegrationInstanceId: string,
+  forceRefresh = false
+): Promise<boolean> =>
+  Boolean(
+    await getPrizeversityMembershipForInstance(user, rewardIntegrationInstanceId, {
+      forceRefresh,
+    })
+  );
 
 export const grantChallengeCompletionReward = async (
   event: ChallengeCompletionEvent,
@@ -80,32 +90,30 @@ export const grantChallengeCompletionReward = async (
     };
   }
 
-  if (!hasRewardIdentity(user)) {
+  const targetRewardIntegrationInstanceId =
+    event.rewardIntegrationInstanceId || user.rewardIntegrationInstanceId?.toString();
+  if (!targetRewardIntegrationInstanceId) {
+    throw new ChallengeRewardError('This challenge does not have a reward classroom.', 403);
+  }
+
+  const membership = await getPrizeversityMembershipForInstance(
+    user,
+    targetRewardIntegrationInstanceId,
+    { forceRefresh: true }
+  );
+  if (!membership) {
     throw new ChallengeRewardError(
-      'Link your Prizeversity account before completing rewardable challenges.',
+      'Connect the Prizeversity classroom assigned to this challenge before completing it.',
       403
     );
   }
 
   try {
-    const targetRewardIntegrationInstanceId =
-      event.rewardIntegrationInstanceId || user.rewardIntegrationInstanceId?.toString();
-
-    if (
-      event.rewardIntegrationInstanceId &&
-      user.rewardIntegrationInstanceId?.toString() !== event.rewardIntegrationInstanceId
-    ) {
-      throw new ChallengeRewardError(
-        'This challenge belongs to a different Prizeversity classroom.',
-        403
-      );
-    }
-
     const result = await grantPrizeversityChallengeReward({
       awsUserId: event.userId,
-      prizeversityUserId: user.prizeversityUserId as string,
+      prizeversityUserId: membership.prizeversityUserId,
       rewardIntegrationInstanceId: targetRewardIntegrationInstanceId,
-      classroomId: user.prizeversityClassroomId,
+      classroomId: membership.classroomId,
       challengeKey: event.challengeKey,
       activityName: event.reward.activityName || event.challengeTitle,
       description: event.reward.description || `Completed ${event.challengeTitle}`,
@@ -125,7 +133,7 @@ export const grantChallengeCompletionReward = async (
   } catch (error: unknown) {
     const emission = await RewardIntegrationEmission.findOne({
       awsUserId: event.userId,
-      classroomId: user.prizeversityClassroomId,
+      classroomId: membership.classroomId,
       challengeKey: event.challengeKey,
     });
 
