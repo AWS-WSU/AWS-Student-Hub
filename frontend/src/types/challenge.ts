@@ -96,6 +96,12 @@ export interface ChallengeListItem {
   startsAt?: string | null;
   endsAt?: string | null;
   rewardIntegrationInstanceId?: string | null;
+  classroom?: {
+    instanceId: string;
+    instanceName: string;
+    classroomId: string;
+    classroomName?: string;
+  };
   reward: ChallengeRewardPreview;
   maxAttempts?: number;
   progress?: ChallengeProgress;
@@ -112,6 +118,7 @@ export interface ChallengeRewardLinkSummary {
   configured: boolean;
   requiredInstanceId?: string | null;
   linkedInstanceId?: string | null;
+  linkedInstanceIds: string[];
 }
 
 export interface ChallengeListResponse {

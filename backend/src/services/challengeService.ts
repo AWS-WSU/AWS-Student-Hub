@@ -22,7 +22,7 @@ import User, { IUserDocument } from '../models/User';
 import {
   buildChallengeCompletionEvent,
   grantChallengeCompletionReward,
-  hasRewardIdentity,
+  hasRewardMembership,
   RewardGrantResult,
 } from './challengeRewardService';
 import {
@@ -37,7 +37,10 @@ import {
   getCipheredSealPublicExperience,
   resolveSubmittedCipheredSealSeed,
 } from './cipheredSealService';
-import { getPrizeversityStatus } from './rewardIntegrationService';
+import {
+  getActivePrizeversityMemberships,
+  getPrizeversityStatus,
+} from './rewardIntegrationService';
 import {
   getSqlInjectionPublicExperience,
   runSqlInjectionSandboxQuery,
@@ -108,6 +111,14 @@ interface RewardLinkSummary {
   configured: boolean;
   requiredInstanceId?: string | null;
   linkedInstanceId?: string | null;
+  linkedInstanceIds: string[];
+}
+
+interface ChallengeClassroomSummary {
+  instanceId: string;
+  instanceName: string;
+  classroomId: string;
+  classroomName?: string;
 }
 
 interface ChallengeSubmitResult {
@@ -405,7 +416,8 @@ const toProgressDto = (progress: IChallengeProgressDocument | null) => {
 const toPublicChallengeDto = (
   challenge: IChallengeDocument,
   assignment?: IChallengeAssignmentDocument | null,
-  progress?: IChallengeProgressDocument | null
+  progress?: IChallengeProgressDocument | null,
+  classroom?: ChallengeClassroomSummary | null
 ) => ({
   id: String(challenge._id),
   assignmentId: assignment?._id.toString() || null,
@@ -426,9 +438,24 @@ const toPublicChallengeDto = (
   endsAt: assignment ? assignment.endsAt : challenge.endsAt,
   maxAttempts: assignment ? assignment.maxAttempts : challenge.maxAttempts,
   rewardIntegrationInstanceId: getAssignmentScopeId(assignment),
+  classroom: classroom || undefined,
   reward: toRewardPreview(assignment ? assignment.reward : challenge.reward),
   progress: progress === undefined ? undefined : toProgressDto(progress),
 });
+
+const getChallengeClassroomSummary = async (
+  assignment: IChallengeAssignmentDocument
+): Promise<ChallengeClassroomSummary | null> => {
+  const instance = await RewardIntegrationInstance.findById(assignment.rewardIntegrationInstanceId);
+  if (!instance) return null;
+
+  return {
+    instanceId: instance._id.toString(),
+    instanceName: instance.name,
+    classroomId: instance.classroomId,
+    classroomName: instance.classroomName || undefined,
+  };
+};
 
 export const toAdminChallengeDto = (challenge: IChallengeDocument) => ({
   ...toPublicChallengeDto(challenge, null),
@@ -473,15 +500,19 @@ const getRewardLinkSummary = async (
       configured: false,
       requiredInstanceId: requiredInstanceId || null,
       linkedInstanceId: null,
+      linkedInstanceIds: [],
     };
   }
 
   const user = await User.findById(userId);
   const status = await getPrizeversityStatus(user);
-  const linkedInstanceId = status.account?.instanceId || null;
-  const linked = Boolean(
-    status.linked && (!requiredInstanceId || linkedInstanceId === requiredInstanceId)
-  );
+  const linkedInstanceIds = status.memberships
+    .filter((membership) => membership.active && !membership.disabledByUser)
+    .map((membership) => membership.instanceId);
+  const linkedInstanceId = linkedInstanceIds[0] || null;
+  const linked = requiredInstanceId
+    ? linkedInstanceIds.includes(requiredInstanceId)
+    : linkedInstanceIds.length > 0;
 
   return {
     required: true,
@@ -489,6 +520,7 @@ const getRewardLinkSummary = async (
     configured: status.configured,
     requiredInstanceId: requiredInstanceId || null,
     linkedInstanceId,
+    linkedInstanceIds,
   };
 };
 
@@ -496,9 +528,15 @@ interface AssignedChallengeContext {
   challenge: IChallengeDocument;
   assignment: IChallengeAssignmentDocument;
   user: IUserDocument;
+  classroom: ChallengeClassroomSummary | null;
 }
 
-const ensureLinkedChallengeUser = async (userId?: string): Promise<IUserDocument> => {
+interface LinkedChallengeUserContext {
+  user: IUserDocument;
+  instanceIds: Types.ObjectId[];
+}
+
+const ensureLinkedChallengeUser = async (userId?: string): Promise<LinkedChallengeUserContext> => {
   if (!userId || !Types.ObjectId.isValid(userId)) {
     throw new ChallengeServiceError(
       'Link your Prizeversity classroom account before opening challenges.',
@@ -511,43 +549,65 @@ const ensureLinkedChallengeUser = async (userId?: string): Promise<IUserDocument
   if (!user) {
     throw new ChallengeServiceError('User not found.', 'INVALID_CHALLENGE_INPUT', 404);
   }
-  if (!user.rewardIntegrationInstanceId) {
+  const memberships = await getActivePrizeversityMemberships(user, {
+    refreshStale: true,
+  });
+  const instanceIds = memberships
+    .map((membership) => membership.rewardIntegrationInstanceId)
+    .filter((instanceId): instanceId is Types.ObjectId => Boolean(instanceId));
+
+  if (instanceIds.length === 0) {
     throw new ChallengeServiceError(
       'Link your Prizeversity classroom account before opening challenges.',
       'REWARD_LINK_REQUIRED',
       403
     );
   }
-  const activeInstance = await RewardIntegrationInstance.exists({
-    _id: user.rewardIntegrationInstanceId,
-    active: true,
-  });
-  if (!activeInstance) {
-    throw new ChallengeServiceError(
-      'Your linked Prizeversity classroom is not currently active.',
-      'REWARD_LINK_REQUIRED',
-      403
-    );
-  }
-  return user;
+  return { user, instanceIds };
 };
 
-const findActiveAssignment = async (
+const findActiveAssignments = async (
   challengeId: Types.ObjectId,
-  rewardIntegrationInstanceId: Types.ObjectId
-): Promise<IChallengeAssignmentDocument | null> => {
-  return ChallengeAssignment.findOne({
+  rewardIntegrationInstanceIds: Types.ObjectId[],
+  assignmentId?: string
+): Promise<IChallengeAssignmentDocument[]> => {
+  if (assignmentId && !Types.ObjectId.isValid(assignmentId)) return [];
+
+  return ChallengeAssignment.find({
+    ...(assignmentId ? { _id: new Types.ObjectId(assignmentId) } : {}),
     challengeId,
-    rewardIntegrationInstanceId,
+    rewardIntegrationInstanceId: { $in: rewardIntegrationInstanceIds },
     ...isPublishedAssignmentNowQuery(),
-  });
+  }).sort({ publishedAt: -1, createdAt: -1 });
+};
+
+const selectAssignmentForUser = async (
+  assignments: IChallengeAssignmentDocument[],
+  userId: string,
+  assignmentId?: string
+): Promise<IChallengeAssignmentDocument | null> => {
+  if (assignments.length === 0) return null;
+  if (assignmentId || assignments.length === 1) return assignments[0];
+
+  const recentProgress = await ChallengeProgress.findOne({
+    userId: new Types.ObjectId(userId),
+    assignmentId: { $in: assignments.map((assignment) => assignment._id) },
+  }).sort({ updatedAt: -1 });
+  if (!recentProgress?.assignmentId) return assignments[0];
+
+  return (
+    assignments.find(
+      (assignment) => assignment._id.toString() === recentProgress.assignmentId?.toString()
+    ) || assignments[0]
+  );
 };
 
 const ensureAssignedChallenge = async (
   slug: string,
-  userId?: string
+  userId?: string,
+  assignmentId?: string
 ): Promise<AssignedChallengeContext> => {
-  const user = await ensureLinkedChallengeUser(userId);
+  const { user, instanceIds } = await ensureLinkedChallengeUser(userId);
   const challenge = await Challenge.findOne({
     slug: slugify(slug),
     status: 'published',
@@ -556,10 +616,8 @@ const ensureAssignedChallenge = async (
     throw new ChallengeServiceError('Challenge not found.', 'CHALLENGE_NOT_FOUND', 404);
   }
 
-  const assignment = await findActiveAssignment(
-    challenge._id,
-    user.rewardIntegrationInstanceId as Types.ObjectId
-  );
+  const assignments = await findActiveAssignments(challenge._id, instanceIds, assignmentId);
+  const assignment = await selectAssignmentForUser(assignments, user._id.toString(), assignmentId);
   if (!assignment) {
     throw new ChallengeServiceError(
       'This challenge is not available in your classroom.',
@@ -567,19 +625,25 @@ const ensureAssignedChallenge = async (
       404
     );
   }
-  return { challenge, assignment, user };
+  return {
+    challenge,
+    assignment,
+    user,
+    classroom: await getChallengeClassroomSummary(assignment),
+  };
 };
 
 const ensureAssignedCipheredSealChallenge = async (
   routeKey: string,
-  userId: string
+  userId: string,
+  assignmentId?: string
 ): Promise<AssignedChallengeContext> => {
   const normalizedRouteKey = cleanString(routeKey);
   if (!/^\d{4,12}$/.test(normalizedRouteKey)) {
     throw new ChallengeServiceError('Challenge route not found.', 'CHALLENGE_NOT_FOUND', 404);
   }
 
-  const user = await ensureLinkedChallengeUser(userId);
+  const { user, instanceIds } = await ensureLinkedChallengeUser(userId);
   const challenge = await Challenge.findOne({
     status: 'published',
     'validation.type': CIPHERED_SEAL_VALIDATOR_TYPE,
@@ -590,15 +654,18 @@ const ensureAssignedCipheredSealChallenge = async (
     throw new ChallengeServiceError('Challenge route not found.', 'CHALLENGE_NOT_FOUND', 404);
   }
 
-  const assignment = await findActiveAssignment(
-    challenge._id,
-    user.rewardIntegrationInstanceId as Types.ObjectId
-  );
+  const assignments = await findActiveAssignments(challenge._id, instanceIds, assignmentId);
+  const assignment = await selectAssignmentForUser(assignments, userId, assignmentId);
   if (!assignment) {
     throw new ChallengeServiceError('Challenge route not found.', 'CHALLENGE_NOT_FOUND', 404);
   }
 
-  return { challenge, assignment, user };
+  return {
+    challenge,
+    assignment,
+    user,
+    classroom: await getChallengeClassroomSummary(assignment),
+  };
 };
 
 const ensureChallengeById = async (challengeId: string): Promise<IChallengeDocument> => {
@@ -701,18 +768,20 @@ export const listPublishedChallenges = async (
       ? await User.findById(options.userId)
       : null;
 
-  if (!user?.rewardIntegrationInstanceId) {
+  if (!user) {
     return {
       challenges: [],
       rewardLink: await getRewardLinkSummary(options.userId),
     };
   }
 
-  const activeInstance = await RewardIntegrationInstance.exists({
-    _id: user.rewardIntegrationInstanceId,
-    active: true,
+  const memberships = await getActivePrizeversityMemberships(user, {
+    refreshStale: true,
   });
-  if (!activeInstance) {
+  const instanceIds = memberships
+    .map((membership) => membership.rewardIntegrationInstanceId)
+    .filter((instanceId): instanceId is Types.ObjectId => Boolean(instanceId));
+  if (instanceIds.length === 0) {
     return {
       challenges: [],
       rewardLink: await getRewardLinkSummary(options.userId),
@@ -720,9 +789,24 @@ export const listPublishedChallenges = async (
   }
 
   const assignments = await ChallengeAssignment.find({
-    rewardIntegrationInstanceId: user.rewardIntegrationInstanceId,
+    rewardIntegrationInstanceId: { $in: instanceIds },
     ...isPublishedAssignmentNowQuery(),
   }).sort({ publishedAt: -1, createdAt: -1 });
+  const instances = await RewardIntegrationInstance.find({
+    _id: { $in: instanceIds },
+    active: true,
+  });
+  const classroomByInstanceId = new Map<string, ChallengeClassroomSummary>(
+    instances.map((instance) => [
+      instance._id.toString(),
+      {
+        instanceId: instance._id.toString(),
+        instanceName: instance.name,
+        classroomId: instance.classroomId,
+        classroomName: instance.classroomName || undefined,
+      },
+    ])
+  );
   const challengeQuery: Record<string, unknown> = {
     _id: { $in: assignments.map((assignment) => assignment.challengeId) },
     status: 'published',
@@ -753,7 +837,8 @@ export const listPublishedChallenges = async (
       return toPublicChallengeDto(
         challenge,
         assignment,
-        progressByAssignmentId.get(assignment._id.toString()) || null
+        progressByAssignmentId.get(assignment._id.toString()) || null,
+        classroomByInstanceId.get(assignment.rewardIntegrationInstanceId.toString())
       );
     }),
     rewardLink: await getRewardLinkSummary(options.userId),
@@ -762,64 +847,87 @@ export const listPublishedChallenges = async (
 
 export const getPublishedChallenge = async (
   slug: string,
-  userId?: string
+  userId?: string,
+  assignmentId?: string
 ): Promise<{
   challenge: ReturnType<typeof toPublicChallengeDto>;
   rewardLink: RewardLinkSummary;
 }> => {
-  const { challenge, assignment } = await ensureAssignedChallenge(slug, userId);
+  const { challenge, assignment, classroom } = await ensureAssignedChallenge(
+    slug,
+    userId,
+    assignmentId
+  );
   const progress = await ChallengeProgress.findOne({
     userId: new Types.ObjectId(userId as string),
     assignmentId: assignment._id,
   });
 
   return {
-    challenge: toPublicChallengeDto(challenge, assignment, progress || null),
+    challenge: toPublicChallengeDto(challenge, assignment, progress || null, classroom),
     rewardLink: await getRewardLinkSummary(userId, getAssignmentScopeId(assignment)),
   };
 };
 
 export const getChallengeProgress = async (
   slug: string,
-  userId: string
+  userId: string,
+  assignmentId?: string
 ): Promise<{
   challenge: ReturnType<typeof toPublicChallengeDto>;
   progress: ReturnType<typeof toProgressDto>;
 }> => {
-  const { challenge, assignment } = await ensureAssignedChallenge(slug, userId);
+  const { challenge, assignment, classroom } = await ensureAssignedChallenge(
+    slug,
+    userId,
+    assignmentId
+  );
   const progress = await ChallengeProgress.findOne({
     userId: new Types.ObjectId(userId),
     assignmentId: assignment._id,
   });
 
   return {
-    challenge: toPublicChallengeDto(challenge, assignment),
+    challenge: toPublicChallengeDto(challenge, assignment, undefined, classroom),
     progress: toProgressDto(progress),
   };
 };
 
 export const startChallenge = async (
   slug: string,
-  userId: string
+  userId: string,
+  assignmentId?: string
 ): Promise<{
   challenge: ReturnType<typeof toPublicChallengeDto>;
   progress: ReturnType<typeof toProgressDto>;
 }> => {
-  const { challenge, assignment } = await ensureAssignedChallenge(slug, userId);
+  const { challenge, assignment, classroom } = await ensureAssignedChallenge(
+    slug,
+    userId,
+    assignmentId
+  );
   const progress = await getOrCreateProgress(challenge, assignment, userId);
 
   return {
-    challenge: toPublicChallengeDto(challenge, assignment),
+    challenge: toPublicChallengeDto(challenge, assignment, undefined, classroom),
     progress: toProgressDto(progress),
   };
 };
 
-const getCipheredSealPlayerContext = async (routeKey: string, userId: string) => {
-  const { challenge, assignment, user } = await ensureAssignedCipheredSealChallenge(
+const getCipheredSealPlayerContext = async (
+  routeKey: string,
+  userId: string,
+  assignmentId?: string
+) => {
+  const { challenge, assignment, user, classroom } = await ensureAssignedCipheredSealChallenge(
     routeKey,
-    userId
+    userId,
+    assignmentId
   );
-  if (assignment.reward?.enabled && !hasRewardIdentity(user)) {
+  if (
+    assignment.reward?.enabled &&
+    !(await hasRewardMembership(user, assignment.rewardIntegrationInstanceId.toString(), true))
+  ) {
     throw new ChallengeServiceError(
       'Link your Prizeversity account before entering this challenge.',
       'REWARD_LINK_REQUIRED',
@@ -828,17 +936,22 @@ const getCipheredSealPlayerContext = async (routeKey: string, userId: string) =>
   }
 
   const progress = await getOrCreateProgress(challenge, assignment, userId);
-  return { challenge, assignment, user, progress };
+  return { challenge, assignment, user, classroom, progress };
 };
 
-export const getCipheredSealRouteState = async (routeKey: string, userId: string) => {
-  const { challenge, assignment, user, progress } = await getCipheredSealPlayerContext(
+export const getCipheredSealRouteState = async (
+  routeKey: string,
+  userId: string,
+  assignmentId?: string
+) => {
+  const { challenge, assignment, user, classroom, progress } = await getCipheredSealPlayerContext(
     routeKey,
-    userId
+    userId,
+    assignmentId
   );
 
   return {
-    challenge: toPublicChallengeDto(challenge, assignment),
+    challenge: toPublicChallengeDto(challenge, assignment, undefined, classroom),
     progress: toProgressDto(progress),
     rewardLink: await getRewardLinkSummary(userId, getAssignmentScopeId(assignment)),
     protocol: buildCipheredSealPublicState(challenge, user),
@@ -848,18 +961,30 @@ export const getCipheredSealRouteState = async (routeKey: string, userId: string
 export const resolveCipheredSealRouteSeed = async (
   routeKey: string,
   userId: string,
-  seedNumber: unknown
+  seedNumber: unknown,
+  assignmentId?: string
 ) => {
-  const { challenge, user } = await getCipheredSealPlayerContext(routeKey, userId);
+  const { challenge, user } = await getCipheredSealPlayerContext(routeKey, userId, assignmentId);
   return resolveSubmittedCipheredSealSeed(challenge, user, seedNumber);
 };
 
-const getSqlInjectionPlayerContext = async (slug: string, userId: string) => {
-  const { challenge, assignment, user } = await ensureAssignedChallenge(slug, userId);
+const getSqlInjectionPlayerContext = async (
+  slug: string,
+  userId: string,
+  assignmentId?: string
+) => {
+  const { challenge, assignment, user, classroom } = await ensureAssignedChallenge(
+    slug,
+    userId,
+    assignmentId
+  );
   if (getValidatorType(challenge) !== SQL_INJECTION_VALIDATOR_TYPE) {
     throw new ChallengeServiceError('SQL sandbox not found.', 'CHALLENGE_NOT_FOUND', 404);
   }
-  if (assignment.reward?.enabled && !hasRewardIdentity(user)) {
+  if (
+    assignment.reward?.enabled &&
+    !(await hasRewardMembership(user, assignment.rewardIntegrationInstanceId.toString(), true))
+  ) {
     throw new ChallengeServiceError(
       'Link your Prizeversity account before entering this challenge.',
       'REWARD_LINK_REQUIRED',
@@ -868,21 +993,38 @@ const getSqlInjectionPlayerContext = async (slug: string, userId: string) => {
   }
 
   const progress = await getOrCreateProgress(challenge, assignment, userId);
-  return { challenge, assignment, user, progress };
+  return { challenge, assignment, user, classroom, progress };
 };
 
-export const getSqlInjectionSandboxState = async (slug: string, userId: string) => {
-  const { challenge, assignment, progress } = await getSqlInjectionPlayerContext(slug, userId);
+export const getSqlInjectionSandboxState = async (
+  slug: string,
+  userId: string,
+  assignmentId?: string
+) => {
+  const { challenge, assignment, classroom, progress } = await getSqlInjectionPlayerContext(
+    slug,
+    userId,
+    assignmentId
+  );
   return {
-    challenge: toPublicChallengeDto(challenge, assignment),
+    challenge: toPublicChallengeDto(challenge, assignment, undefined, classroom),
     progress: toProgressDto(progress),
     rewardLink: await getRewardLinkSummary(userId, getAssignmentScopeId(assignment)),
     sandbox: getSqlInjectionPublicExperience(challenge.validation),
   };
 };
 
-export const searchSqlInjectionSandbox = async (slug: string, userId: string, input: unknown) => {
-  const { challenge, user, progress } = await getSqlInjectionPlayerContext(slug, userId);
+export const searchSqlInjectionSandbox = async (
+  slug: string,
+  userId: string,
+  input: unknown,
+  assignmentId?: string
+) => {
+  const { challenge, user, progress } = await getSqlInjectionPlayerContext(
+    slug,
+    userId,
+    assignmentId
+  );
   try {
     return runSqlInjectionSandboxQuery(challenge.validation, input, {
       challenge,
@@ -898,12 +1040,19 @@ export const searchSqlInjectionSandbox = async (slug: string, userId: string, in
   }
 };
 
-const getPcapForensicsPlayerContext = async (slug: string, userId: string) => {
-  const { challenge, assignment, user } = await ensureAssignedChallenge(slug, userId);
+const getPcapForensicsPlayerContext = async (
+  slug: string,
+  userId: string,
+  assignmentId?: string
+) => {
+  const { challenge, assignment, user } = await ensureAssignedChallenge(slug, userId, assignmentId);
   if (getValidatorType(challenge) !== PCAP_FORENSICS_VALIDATOR_TYPE) {
     throw new ChallengeServiceError('Packet capture not found.', 'CHALLENGE_NOT_FOUND', 404);
   }
-  if (assignment.reward?.enabled && !hasRewardIdentity(user)) {
+  if (
+    assignment.reward?.enabled &&
+    !(await hasRewardMembership(user, assignment.rewardIntegrationInstanceId.toString(), true))
+  ) {
     throw new ChallengeServiceError(
       'Link your Prizeversity account before downloading this challenge.',
       'REWARD_LINK_REQUIRED',
@@ -912,11 +1061,19 @@ const getPcapForensicsPlayerContext = async (slug: string, userId: string) => {
   }
 
   const progress = await getOrCreateProgress(challenge, assignment, userId);
-  return { challenge, user, progress };
+  return { challenge, assignment, user, progress };
 };
 
-export const downloadPcapForensicsCapture = async (slug: string, userId: string) => {
-  const { challenge, user, progress } = await getPcapForensicsPlayerContext(slug, userId);
+export const downloadPcapForensicsCapture = async (
+  slug: string,
+  userId: string,
+  assignmentId?: string
+) => {
+  const { challenge, user, progress } = await getPcapForensicsPlayerContext(
+    slug,
+    userId,
+    assignmentId
+  );
   const experience = getPcapForensicsPublicExperience(challenge.validation);
   return {
     capture: buildPcapForensicsCapture({ challenge, progress, user }),
@@ -927,11 +1084,15 @@ export const downloadPcapForensicsCapture = async (slug: string, userId: string)
 export const submitChallenge = async (
   slug: string,
   userId: string,
-  payload: unknown
+  payload: unknown,
+  assignmentId?: string
 ): Promise<ChallengeSubmitResult> => {
-  const { challenge, assignment, user } = await ensureAssignedChallenge(slug, userId);
+  const { challenge, assignment, user } = await ensureAssignedChallenge(slug, userId, assignmentId);
 
-  if (assignment.reward?.enabled && !hasRewardIdentity(user)) {
+  if (
+    assignment.reward?.enabled &&
+    !(await hasRewardMembership(user, assignment.rewardIntegrationInstanceId.toString(), true))
+  ) {
     throw new ChallengeServiceError(
       'Link your Prizeversity account before completing rewardable challenges.',
       'REWARD_LINK_REQUIRED',

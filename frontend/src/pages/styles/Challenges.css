@@ -271,6 +271,22 @@
   align-items: center;
 }
 
+.challenge-card-context {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.challenge-classroom {
+  padding-left: 0.55rem;
+  border-left: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
 .challenge-difficulty {
   font-size: 0.85rem;
   font-weight: 600;

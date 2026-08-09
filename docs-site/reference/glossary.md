@@ -40,17 +40,21 @@ AWS Student Hub's server-side connection to one Prizeversity classroom, includin
 
 Validation outcome in which proof is stored as pending until an admin approves or rejects it.
 
+## Membership
+
+Roster-verified connection between one AWS Student Hub user and one Prizeversity classroom instance. One verified identity may have multiple memberships.
+
 ## Progress
 
 Current challenge state for one AWS user and one classroom assignment.
 
 ## Prizeversity link
 
-Verified mapping from one AWS user to one Prizeversity member and reward instance.
+Verified Prizeversity identity plus one or more classroom memberships for an AWS user.
 
 ## Published
 
-Eligible for use, not automatically visible. Student visibility still requires an active link, instance, definition, assignment, and availability window.
+Eligible for use, not automatically visible. Student visibility still requires an active classroom membership, instance, definition, assignment, and availability window.
 
 ## Reward instance
 

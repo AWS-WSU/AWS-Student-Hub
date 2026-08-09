@@ -6,6 +6,7 @@ import {
   getPrizeversityStatus,
   startPrizeversityAccountLink,
   unlinkPrizeversityAccount,
+  unlinkPrizeversityMembership,
   verifyPrizeversityAccountLink,
 } from '../services/rewardIntegrationService';
 
@@ -49,6 +50,16 @@ router.post('/link', checkJwt, async (req: Request, res: Response): Promise<void
       typeof req.body?.instanceId === 'string' ? req.body.instanceId.trim() : undefined;
     const verification = await startPrizeversityAccountLink(user, { identifier, instanceId });
 
+    if (!verification.verificationRequired) {
+      res.json({
+        message: 'Prizeversity classroom connected successfully',
+        ...verification,
+        status: await getPrizeversityStatus(user),
+        user: user.toSafeObject(),
+      });
+      return;
+    }
+
     res.json({
       message: `Verification code sent to ${verification.maskedEmail}`,
       ...verification,
@@ -81,6 +92,28 @@ router.post('/link/verify', checkJwt, async (req: Request, res: Response): Promi
   } catch (error: unknown) {
     res.status(getErrorStatus(error)).json({
       error: error instanceof Error ? error.message : 'Unable to verify Prizeversity link code',
+    });
+  }
+});
+
+router.delete('/link/:instanceId', checkJwt, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    await unlinkPrizeversityMembership(user, req.params.instanceId);
+
+    res.json({
+      message: 'Prizeversity classroom disconnected successfully',
+      status: await getPrizeversityStatus(user),
+      user: user.toSafeObject(),
+    });
+  } catch (error: unknown) {
+    res.status(getErrorStatus(error)).json({
+      error: error instanceof Error ? error.message : 'Unable to disconnect classroom',
     });
   }
 });

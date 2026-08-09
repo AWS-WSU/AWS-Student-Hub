@@ -57,7 +57,7 @@ A successful check proves the key can read the configured classroom. It does not
 
 The **Students** tab reads the current roster from Prizeversity. Balance, level, and XP values shown there come from Prizeversity rather than an AWS Student Hub wallet.
 
-For each Prizeversity member, AWS Student Hub also reports whether an AWS account is linked to that Prizeversity user ID in this instance.
+For each Prizeversity member, AWS Student Hub also reports whether an AWS account has an active membership for that Prizeversity user ID in this instance.
 
 ## Updating credentials
 
@@ -70,11 +70,11 @@ Leave the API key field blank when changing unrelated metadata. The existing key
 Deactivating an instance:
 
 - Prevents new challenge assignments from being created or published
-- Removes its assigned challenges from linked students
+- Removes its assigned challenges from students connected to that instance
 - Prevents it from being selected for new account links
 - Prevents normal reward delivery through that instance
 
-It does not delete assignments, student links, submissions, progress, or prior reward emissions. Reactivation restores eligibility, subject to assignment status and dates.
+It does not delete assignments, student memberships, submissions, progress, or prior reward emissions. Reactivation restores eligibility, subject to roster membership, assignment status, and dates.
 
 ## Environment fallback
 

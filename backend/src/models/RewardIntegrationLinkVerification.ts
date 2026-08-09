@@ -2,6 +2,7 @@ import mongoose, { HydratedDocument, Model, Schema, Types } from 'mongoose';
 
 export interface IRewardIntegrationLinkVerification {
   awsUserId: Types.ObjectId;
+  instanceKey?: string;
   rewardIntegrationInstanceId?: Types.ObjectId | null;
   prizeversityUserId: string;
   classroomId: string;
@@ -36,6 +37,10 @@ const rewardIntegrationLinkVerificationSchema = new Schema<
       type: Schema.Types.ObjectId,
       ref: 'RewardIntegrationInstance',
       default: null,
+    },
+    instanceKey: {
+      type: String,
+      trim: true,
     },
     prizeversityUserId: {
       type: String,

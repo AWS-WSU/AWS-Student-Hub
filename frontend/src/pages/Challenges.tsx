@@ -88,6 +88,10 @@ function Challenges({ theme: _theme }: ThemeProps) {
   const challenges = challengeResponse?.challenges || [];
   const rewardLinked = Boolean(rewardLink?.linked);
   const rewardConfigured = Boolean(rewardLink?.configured);
+  const linkedInstanceIds = new Set(rewardLink?.linkedInstanceIds || []);
+  const classroomCount = new Set(
+    challenges.map((challenge) => challenge.rewardIntegrationInstanceId).filter(Boolean)
+  ).size;
 
   const handleSignIn = () => {
     navigate('/auth?redirect=/challenges');
@@ -231,13 +235,16 @@ function Challenges({ theme: _theme }: ThemeProps) {
           ) : (
             filteredChallenges.map((challenge, index) => {
               const completed = completedStatuses.has(challenge.progress?.status || '');
+              const challengeRewardLinked = challenge.rewardIntegrationInstanceId
+                ? linkedInstanceIds.has(challenge.rewardIntegrationInstanceId)
+                : rewardLinked;
               const locked = Boolean(
-                challenge.reward.enabled && user && rewardLink && !rewardLinked
+                challenge.reward.enabled && user && rewardLink && !challengeRewardLinked
               );
 
               return (
                 <motion.article
-                  key={challenge.id}
+                  key={challenge.assignmentId || challenge.id}
                   className={`challenge-card ${completed ? 'completed' : ''} ${locked ? 'locked' : ''}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -245,12 +252,19 @@ function Challenges({ theme: _theme }: ThemeProps) {
                   whileHover={{ scale: 1.02, y: -4 }}
                 >
                   <div className="challenge-card-header">
-                    <span
-                      className="challenge-difficulty"
-                      style={{ color: difficultyColors[challenge.difficulty] || '#94a3b8' }}
-                    >
-                      {formatDifficulty(challenge.difficulty)}
-                    </span>
+                    <div className="challenge-card-context">
+                      <span
+                        className="challenge-difficulty"
+                        style={{ color: difficultyColors[challenge.difficulty] || '#94a3b8' }}
+                      >
+                        {formatDifficulty(challenge.difficulty)}
+                      </span>
+                      {challenge.classroom && classroomCount > 1 && (
+                        <span className="challenge-classroom">
+                          {challenge.classroom.classroomName || challenge.classroom.instanceName}
+                        </span>
+                      )}
+                    </div>
                     {challenge.reward.enabled && (
                       <span className="challenge-points">{challenge.reward.bits} bits</span>
                     )}
@@ -280,7 +294,15 @@ function Challenges({ theme: _theme }: ThemeProps) {
                     <button
                       type="button"
                       className="challenge-start-btn"
-                      onClick={() => navigate(`/challenges/${challenge.slug}`)}
+                      onClick={() =>
+                        navigate(
+                          `/challenges/${challenge.slug}${
+                            challenge.assignmentId
+                              ? `?assignmentId=${encodeURIComponent(challenge.assignmentId)}`
+                              : ''
+                          }`
+                        )
+                      }
                     >
                       {completed
                         ? 'Review'

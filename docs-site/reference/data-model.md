@@ -56,9 +56,25 @@ Server-side Prizeversity classroom connection.
 
 The model records `createdBy`, but service authorization currently does not scope records to their creator.
 
-## User link fields
+## RewardIntegrationMembership
 
-The user record stores one linked reward identity:
+Classroom-specific link between one AWS Student Hub user and one Prizeversity instance.
+
+| Field                         | Purpose                                                    |
+| ----------------------------- | ---------------------------------------------------------- |
+| `awsUserId`, `instanceKey`    | Membership identity; unique together.                      |
+| `rewardIntegrationInstanceId` | Database-backed instance reference when available.         |
+| `prizeversityUserId`          | Verified external identity found in this classroom roster. |
+| `classroomId`                 | External classroom scope.                                  |
+| `active`, `disabledByUser`    | Roster state and explicit student disconnect state.        |
+| `linkedAt`, `lastVerifiedAt`  | Connection and roster-check timestamps.                    |
+| `lastVerificationError`       | Reason an inactive membership cannot currently be used.    |
+
+Unique indexes prevent duplicate user-instance links and prevent one Prizeversity classroom member from being connected to multiple AWS Student Hub users.
+
+## User identity fields
+
+The user record stores the verified global Prizeversity identity:
 
 - `rewardIntegrationInstanceId`
 - `prizeversityUserId`
@@ -69,7 +85,7 @@ The user record stores one linked reward identity:
 - `prizeversityLinkedAt`
 - `prizeversityLastSyncedAt`
 
-These fields are cleared on unlink. Historical progress retains its assignment and instance references.
+`rewardIntegrationInstanceId` and `prizeversityClassroomId` are retained as compatibility pointers to an active membership. Runtime authorization uses `RewardIntegrationMembership`. Removing the complete identity clears these fields and all memberships; disconnecting one classroom only changes that membership. Historical progress retains its assignment and instance references.
 
 ## RewardIntegrationLinkVerification
 
@@ -78,6 +94,7 @@ Temporary ownership challenge for account linking.
 | Field                         | Purpose                                      |
 | ----------------------------- | -------------------------------------------- |
 | `awsUserId`                   | One pending request per AWS user.            |
+| `instanceKey`                 | Selected database or environment instance.   |
 | `rewardIntegrationInstanceId` | Selected classroom instance.                 |
 | Prizeversity identity fields  | The matched member awaiting ownership proof. |
 | `codeHash`, `codeSalt`        | Non-plaintext verification material.         |

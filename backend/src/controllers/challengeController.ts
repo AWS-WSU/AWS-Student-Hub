@@ -22,6 +22,9 @@ const parseChallengeDifficulty = (value: unknown): ChallengeDifficulty | undefin
   return undefined;
 };
 
+const getAssignmentId = (req: Request): string | undefined =>
+  typeof req.query.assignmentId === 'string' ? req.query.assignmentId : undefined;
+
 const getErrorBody = (error: unknown, fallback: string) => {
   if (error instanceof ChallengeServiceError) {
     return {
@@ -56,7 +59,7 @@ export const listChallenges = async (req: Request, res: Response): Promise<void>
 
 export const getChallenge = async (req: Request, res: Response): Promise<void> => {
   try {
-    const result = await getPublishedChallenge(req.params.slug, req.user?.id);
+    const result = await getPublishedChallenge(req.params.slug, req.user?.id, getAssignmentId(req));
     res.json(result);
   } catch (error: unknown) {
     res.status(getErrorStatus(error, 404)).json(getErrorBody(error, 'Unable to load challenge'));
@@ -70,7 +73,11 @@ export const getCipheredSealState = async (req: Request, res: Response): Promise
       return;
     }
 
-    const result = await getCipheredSealRouteState(req.params.routeKey, req.user.id);
+    const result = await getCipheredSealRouteState(
+      req.params.routeKey,
+      req.user.id,
+      getAssignmentId(req)
+    );
     res.json(result);
   } catch (error: unknown) {
     res
@@ -89,7 +96,8 @@ export const resolveCipheredSealSeed = async (req: Request, res: Response): Prom
     const result = await resolveCipheredSealRouteSeed(
       req.params.routeKey,
       req.user.id,
-      req.body?.seedNumber
+      req.body?.seedNumber,
+      getAssignmentId(req)
     );
     res.json(result);
   } catch (error: unknown) {
@@ -106,7 +114,11 @@ export const getSqlInjectionSandbox = async (req: Request, res: Response): Promi
       return;
     }
 
-    const result = await getSqlInjectionSandboxState(req.params.slug, req.user.id);
+    const result = await getSqlInjectionSandboxState(
+      req.params.slug,
+      req.user.id,
+      getAssignmentId(req)
+    );
     res.json(result);
   } catch (error: unknown) {
     res
@@ -122,7 +134,12 @@ export const searchSqlInjection = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    const result = await searchSqlInjectionSandbox(req.params.slug, req.user.id, req.body?.query);
+    const result = await searchSqlInjectionSandbox(
+      req.params.slug,
+      req.user.id,
+      req.body?.query,
+      getAssignmentId(req)
+    );
     res.json(result);
   } catch (error: unknown) {
     res
@@ -138,7 +155,11 @@ export const downloadPcapCapture = async (req: Request, res: Response): Promise<
       return;
     }
 
-    const result = await downloadPcapForensicsCapture(req.params.slug, req.user.id);
+    const result = await downloadPcapForensicsCapture(
+      req.params.slug,
+      req.user.id,
+      getAssignmentId(req)
+    );
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
     res.setHeader('Content-Length', String(result.capture.length));
@@ -159,7 +180,7 @@ export const getProgress = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const result = await getChallengeProgress(req.params.slug, req.user.id);
+    const result = await getChallengeProgress(req.params.slug, req.user.id, getAssignmentId(req));
     res.json(result);
   } catch (error: unknown) {
     res
@@ -175,7 +196,7 @@ export const start = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const result = await startChallenge(req.params.slug, req.user.id);
+    const result = await startChallenge(req.params.slug, req.user.id, getAssignmentId(req));
     res.json(result);
   } catch (error: unknown) {
     res.status(getErrorStatus(error, 400)).json(getErrorBody(error, 'Unable to start challenge'));
@@ -189,7 +210,12 @@ export const submit = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const result = await submitChallenge(req.params.slug, req.user.id, req.body?.payload);
+    const result = await submitChallenge(
+      req.params.slug,
+      req.user.id,
+      req.body?.payload,
+      getAssignmentId(req)
+    );
     res.json(result);
   } catch (error: unknown) {
     res.status(getErrorStatus(error, 400)).json(getErrorBody(error, 'Unable to submit challenge'));

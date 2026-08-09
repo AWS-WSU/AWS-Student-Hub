@@ -55,6 +55,10 @@ The migration is idempotent. It:
 
 Run it once for every existing environment. A new empty environment using current models does not require legacy records to be converted.
 
+## Classroom membership compatibility
+
+Deployments created before multi-classroom linking stored one instance pointer directly on each user. The current reward service converts that legacy pointer into a `RewardIntegrationMembership` the next time the user's Prizeversity status or challenge access is loaded. No separate destructive migration is required. Keep the legacy user fields during this compatibility period; runtime authorization and reward delivery use the membership record.
+
 ## Curated challenge registration
 
 Seeding is environment-specific because catalog definitions live in MongoDB. Examples:
@@ -104,9 +108,9 @@ After deployment, verify:
 1. Admin and superuser access to catalog and instances.
 2. Instance connection against a non-sensitive roster account.
 3. Link-code delivery through production SMTP.
-4. A student's classroom-specific challenge list.
+4. A student's combined challenge list across two connected classrooms.
 5. Correct submission and manual review behavior.
-6. Exactly one Prizeversity reward.
+6. Exactly one Prizeversity reward delivered through the assignment's classroom instance.
 7. Reward emission status and external balance agreement.
 8. Archived assignments remain hidden but retain history.
 

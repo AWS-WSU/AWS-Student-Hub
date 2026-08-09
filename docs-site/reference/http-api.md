@@ -32,7 +32,7 @@ Error responses generally contain `error`. Challenge-domain errors also include 
 
 ### `GET /integrations/prizeversity/status`
 
-Returns active instances, configuration state, and the current user's linked account.
+Returns active instances, the verified Prizeversity identity, and all active, inactive, or explicitly disconnected classroom memberships.
 
 ### `POST /integrations/prizeversity/link`
 
@@ -47,7 +47,7 @@ Starts verified linking.
 
 `identifier` may be omitted. `instanceId` should be supplied when the user selects among multiple classrooms.
 
-Successful response includes `verificationRequired`, a masked destination email, and `expiresAt`. It does not establish the permanent link yet.
+For the first classroom, a successful response includes `verificationRequired`, a masked destination email, and `expiresAt`; it does not establish the permanent link yet. If the user already verified the same Prizeversity identity, the classroom membership is created immediately and `verificationRequired` is `false`.
 
 ### `POST /integrations/prizeversity/link/verify`
 
@@ -57,23 +57,29 @@ Successful response includes `verificationRequired`, a masked destination email,
 }
 ```
 
-Verifies the pending ownership code and stores the linked external identity.
+Verifies the pending ownership code, stores the external identity, and creates the selected classroom membership.
+
+### `DELETE /integrations/prizeversity/link/:instanceId`
+
+Disconnects one classroom membership while retaining the verified identity, other memberships, and historical challenge data.
 
 ### `DELETE /integrations/prizeversity/link`
 
-Clears the user's linked identity and pending verification request.
+Clears the user's verified identity, all classroom memberships, and any pending verification request. Historical challenge data and completed rewards are retained.
 
 ## Student challenge routes
 
 ### `GET /challenges`
 
-Returns only active assignments for the user's linked instance. An unlinked user receives an empty challenge array plus reward-link state.
+Returns active assignments across every roster-verified classroom membership. An unlinked user receives an empty challenge array plus reward-link state.
 
 Optional query filters: `tag`, `difficulty`.
 
 ### `GET /challenges/:slug`
 
-Returns one assigned challenge, assignment-specific settings, progress, and reward-link state. Challenges outside the user's classroom resolve as not found.
+Returns one assigned challenge, assignment-specific settings, progress, and reward-link state. Challenges outside the user's connected classrooms resolve as not found.
+
+When the same challenge definition is assigned to multiple connected classrooms, challenge detail, progress, start, submit, specialized lab, and download routes accept `assignmentId` as a query parameter. The backend verifies that assignment against the authenticated user's memberships; it never trusts a client-supplied classroom ID.
 
 ### `GET /challenges/:slug/progress`
 
@@ -102,7 +108,7 @@ GET  /challenges/ciphered-seal/route/:routeKey
 POST /challenges/ciphered-seal/route/:routeKey/resolve
 ```
 
-The resolve body contains `seedNumber`. Both endpoints enforce linked instance and active assignment scope.
+The resolve body contains `seedNumber`. Both endpoints enforce active membership and assignment scope.
 
 ### SQL Injection Sandbox routes
 
@@ -129,7 +135,7 @@ The response contains the executed synthetic statement, bounded result rows, tru
 }
 ```
 
-Both sandbox routes enforce authentication, active account linking, published definition state, and the student's active classroom assignment.
+Both sandbox routes enforce authentication, active classroom membership, published definition state, and the student's assignment.
 
 ### PCAP Forensics route
 
@@ -137,7 +143,7 @@ Both sandbox routes enforce authentication, active account linking, published de
 GET /challenges/:slug/pcap
 ```
 
-Returns a personalized `.pcap` file as `application/octet-stream`. The response is an authenticated, rate-limited binary download with private, no-store caching. Access enforces the student's active Prizeversity link and classroom assignment and starts progress if necessary.
+Returns a personalized `.pcap` file as `application/octet-stream`. The response is an authenticated, rate-limited binary download with private, no-store caching. Access enforces the student's active membership for the assignment classroom and starts progress if necessary.
 
 The recovered flag is submitted through the standard endpoint:
 

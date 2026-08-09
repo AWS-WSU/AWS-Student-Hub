@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import {
   ArrowLeft,
@@ -68,6 +68,8 @@ const getRewardStatusCopy = (
 
 function ChallengeDetail({ theme: _theme }: ThemeProps) {
   const { slug = '' } = useParams();
+  const [searchParams] = useSearchParams();
+  const assignmentId = searchParams.get('assignmentId');
   const navigate = useNavigate();
   const { user } = useAuth();
   const [challenge, setChallenge] = useState<ChallengeDetailType | null>(null);
@@ -82,6 +84,9 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
   const [success, setSuccess] = useState('');
   const [rewardModalOpen, setRewardModalOpen] = useState(false);
   const [lastSubmitReward, setLastSubmitReward] = useState<ChallengeSubmitResponse['reward']>();
+  const assignmentQuery = assignmentId ? `?assignmentId=${encodeURIComponent(assignmentId)}` : '';
+  const challengePath = `/challenges/${slug}${assignmentQuery}`;
+  const labPath = `/challenges/${slug}/lab${assignmentQuery}`;
 
   useEffect(() => {
     let shouldUpdate = true;
@@ -89,7 +94,7 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
     setError('');
 
     challengeAPI
-      .get(slug)
+      .get(slug, assignmentId)
       .then((response) => {
         if (!shouldUpdate) return;
         setChallenge(response.challenge);
@@ -108,7 +113,7 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
     return () => {
       shouldUpdate = false;
     };
-  }, [slug]);
+  }, [assignmentId, slug]);
 
   const isCompleted = completedStatuses.has(progress?.status || '');
   const isManualReview = challenge?.validationType === 'manual_review';
@@ -124,7 +129,7 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
   );
   const handleStart = async () => {
     if (!user) {
-      navigate(`/auth?redirect=/challenges/${slug}`);
+      navigate(`/auth?redirect=${encodeURIComponent(challengePath)}`);
       return;
     }
 
@@ -133,11 +138,11 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
     setSuccess('');
 
     try {
-      const response = await challengeAPI.start(slug);
+      const response = await challengeAPI.start(slug, assignmentId);
       setChallenge(response.challenge);
       setProgress(response.progress);
       if (response.challenge.experience?.type === 'sql_injection') {
-        navigate(`/challenges/${slug}/lab`);
+        navigate(labPath);
         return;
       }
       setSuccess('Challenge started.');
@@ -168,7 +173,8 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
     try {
       const response = await challengeAPI.submit(
         slug,
-        isManualReview ? { proof: secret } : isPcapForensics ? { flag: secret } : { secret }
+        isManualReview ? { proof: secret } : isPcapForensics ? { flag: secret } : { secret },
+        assignmentId
       );
       setProgress(response.progress);
       setSuccess(response.message);
@@ -190,7 +196,7 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
     setDownloadingCapture(true);
     setError('');
     try {
-      const capture = await challengeAPI.downloadPcapCapture(slug);
+      const capture = await challengeAPI.downloadPcapCapture(slug, assignmentId);
       const downloadUrl = URL.createObjectURL(capture);
       const link = document.createElement('a');
       link.href = downloadUrl;
@@ -242,7 +248,12 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
           animate={{ opacity: 1, y: 0 }}
         >
           <div>
-            <span className="challenge-detail-eyebrow">{challenge.difficulty}</span>
+            <span className="challenge-detail-eyebrow">
+              {challenge.difficulty}
+              {challenge.classroom
+                ? ` / ${challenge.classroom.classroomName || challenge.classroom.instanceName}`
+                : ''}
+            </span>
             <h1>{challenge.title}</h1>
             <p>{challenge.summary}</p>
           </div>
@@ -390,7 +401,7 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
                 <p>Sign in to start this challenge and submit proof.</p>
                 <button
                   type="button"
-                  onClick={() => navigate(`/auth?redirect=/challenges/${slug}`)}
+                  onClick={() => navigate(`/auth?redirect=${encodeURIComponent(challengePath)}`)}
                 >
                   Sign in
                 </button>
@@ -416,7 +427,7 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
                 )}
                 {progress.lastValidationMessage && <small>{progress.lastValidationMessage}</small>}
                 {isSqlInjection && (
-                  <button type="button" onClick={() => navigate(`/challenges/${slug}/lab`)}>
+                  <button type="button" onClick={() => navigate(labPath)}>
                     <Database size={16} aria-hidden="true" /> Reopen sandbox
                   </button>
                 )}
@@ -452,7 +463,7 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
                   Open the synthetic archive database, manipulate its vulnerable search query, and
                   recover your personalized completion flag.
                 </small>
-                <button type="button" onClick={() => navigate(`/challenges/${slug}/lab`)}>
+                <button type="button" onClick={() => navigate(labPath)}>
                   Open SQL sandbox
                 </button>
               </div>

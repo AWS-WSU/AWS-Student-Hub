@@ -31,11 +31,29 @@ export interface RewardIntegrationInstance {
   updatedAt?: string;
 }
 
+export interface RewardIntegrationMembership {
+  id: string;
+  instanceId: string;
+  instanceName?: string;
+  classroomId: string;
+  classroomName?: string;
+  userId: string;
+  email?: string;
+  matchedName?: string;
+  shortId?: string;
+  active: boolean;
+  disabledByUser: boolean;
+  linkedAt: string;
+  lastVerifiedAt?: string | null;
+  lastVerificationError?: string;
+}
+
 export interface RewardIntegrationStatusResponse {
   configured: boolean;
   linked: boolean;
   missingConfig: string[];
   account: LinkedRewardAccount | null;
+  memberships: RewardIntegrationMembership[];
   instances: RewardIntegrationInstance[];
 }
 
@@ -46,6 +64,7 @@ export interface RewardIntegrationLinkResponse {
   verificationRequired?: boolean;
   maskedEmail?: string;
   expiresAt?: string;
+  membership?: RewardIntegrationMembership;
 }
 
 export interface RewardIntegrationInstancePayload {

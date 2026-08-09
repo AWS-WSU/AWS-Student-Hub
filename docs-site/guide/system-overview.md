@@ -2,10 +2,11 @@
 
 This guide is for instructors and operators who have the AWS Student Hub `admin` or `superuser` role. It explains the system in operational terms without requiring knowledge of MongoDB, Express, or the frontend implementation.
 
-## The four records that matter
+## The five records that matter
 
 <div class="doc-model">
   <div><strong>Instance</strong><span>The AWS Student Hub connection to one Prizeversity classroom.</span></div>
+  <div><strong>Membership</strong><span>One verified student identity connected to one instance roster.</span></div>
   <div><strong>Definition</strong><span>A reusable challenge in the global catalog.</span></div>
   <div><strong>Assignment</strong><span>A definition configured for one instance.</span></div>
   <div><strong>Progress</strong><span>One student's work for one assignment.</span></div>
@@ -16,6 +17,10 @@ This guide is for instructors and operators who have the AWS Student Hub `admin`
 An instance represents exactly one Prizeversity classroom. It stores the classroom ID, a server-side API key, the expected API scopes, connection status, and a cached roster count.
 
 If an instructor runs two sections of the same course, create two instances. Do not reuse one instance across multiple Prizeversity classrooms.
+
+### Student membership
+
+A student verifies one Prizeversity identity, then connects each configured classroom they have joined. One student may therefore have several active memberships. Each membership is independently revalidated against its classroom roster and controls that classroom's challenge visibility and rewards.
 
 ### Catalog definition
 
@@ -46,10 +51,10 @@ Progress belongs to a student and an assignment, not merely to a student and a c
 
 A student can see a challenge only when every condition below is true:
 
-1. The student has linked a Prizeversity account.
-2. The linked AWS account points to an active instance.
+1. The student has verified a Prizeversity identity.
+2. The student has an active roster membership for the instance.
 3. The catalog definition is published.
-4. That definition has an assignment for the student's instance.
+4. That definition has an assignment for one of the student's connected instances.
 5. The assignment is published.
 6. The current time is inside the assignment's opening and closing window.
 

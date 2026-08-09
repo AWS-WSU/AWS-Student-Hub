@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import {
   ArrowLeft,
@@ -44,6 +44,8 @@ const getRewardStatus = (reward?: ChallengeSubmitResponse['reward']): string => 
 
 function SqlInjectionSandbox() {
   const { slug = '' } = useParams();
+  const [searchParams] = useSearchParams();
+  const assignmentId = searchParams.get('assignmentId');
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [state, setState] = useState<SqlInjectionSandboxStateResponse | null>(null);
@@ -58,11 +60,13 @@ function SqlInjectionSandbox() {
   const [copiedValue, setCopiedValue] = useState('');
   const [rewardModalOpen, setRewardModalOpen] = useState(false);
   const [submitReward, setSubmitReward] = useState<ChallengeSubmitResponse['reward']>();
+  const assignmentQuery = assignmentId ? `?assignmentId=${encodeURIComponent(assignmentId)}` : '';
+  const labPath = `/challenges/${slug}/lab${assignmentQuery}`;
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      navigate(`/auth?redirect=${encodeURIComponent(`/challenges/${slug}/lab`)}`, {
+      navigate(`/auth?redirect=${encodeURIComponent(labPath)}`, {
         replace: true,
       });
       return;
@@ -72,7 +76,7 @@ function SqlInjectionSandbox() {
     setLoading(true);
     setError('');
     challengeAPI
-      .getSqlInjectionSandbox(slug)
+      .getSqlInjectionSandbox(slug, assignmentId)
       .then((response) => {
         if (active) setState(response);
       })
@@ -92,7 +96,7 @@ function SqlInjectionSandbox() {
     return () => {
       active = false;
     };
-  }, [authLoading, navigate, slug, user]);
+  }, [assignmentId, authLoading, labPath, navigate, slug, user]);
 
   const isCompleted = completedStatuses.has(state?.progress.status || '');
 
@@ -107,7 +111,11 @@ function SqlInjectionSandbox() {
     setError('');
     setSubmitMessage('');
     try {
-      const response = await challengeAPI.searchSqlInjectionSandbox(slug, searchInput);
+      const response = await challengeAPI.searchSqlInjectionSandbox(
+        slug,
+        searchInput,
+        assignmentId
+      );
       setSearchResult(response);
     } catch (requestError: unknown) {
       setError(
@@ -135,7 +143,7 @@ function SqlInjectionSandbox() {
     setError('');
     setSubmitMessage('');
     try {
-      const response = await challengeAPI.submit(slug, { flag });
+      const response = await challengeAPI.submit(slug, { flag }, assignmentId);
       setState((current) => (current ? { ...current, progress: response.progress } : current));
       setSubmitMessage(response.message);
       if (response.accepted && response.completed) {
@@ -184,7 +192,10 @@ function SqlInjectionSandbox() {
       <section className="sql-lab-shell">
         <header className="sql-lab-header">
           <div className="sql-lab-header-copy">
-            <Link to={`/challenges/${challenge.slug}`} className="sql-lab-back-link">
+            <Link
+              to={`/challenges/${challenge.slug}${assignmentQuery}`}
+              className="sql-lab-back-link"
+            >
               <ArrowLeft size={15} /> Challenge briefing
             </Link>
             <span className="sql-lab-kicker">Isolated training environment</span>

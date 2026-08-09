@@ -16,12 +16,13 @@ AWS Student Hub does not maintain a second wallet. It sends a completion reward 
 
 <div class="doc-model">
   <div><strong>RewardIntegrationInstance</strong><span>Maps server-side credentials to one Prizeversity classroom.</span></div>
+  <div><strong>RewardIntegrationMembership</strong><span>Maps one verified AWS user to one instance roster membership.</span></div>
   <div><strong>ChallengeAssignment</strong><span>Maps one published definition to one instance.</span></div>
   <div><strong>ChallengeProgress</strong><span>Maps one user to one assignment.</span></div>
   <div><strong>RewardIntegrationEmission</strong><span>Records one external reward attempt and response.</span></div>
 </div>
 
-`ChallengeAssignment` also references `Challenge`. `User` references the selected reward instance and external Prizeversity identity. `ChallengeSubmission` references the user, definition, assignment, and progress record.
+`ChallengeAssignment` also references `Challenge`. `User` retains the verified external Prizeversity identity, while `RewardIntegrationMembership` records each classroom connection. Legacy single-instance fields remain as a compatibility pointer. `ChallengeSubmission` references the user, definition, assignment, and progress record.
 
 ## Application layers
 
@@ -50,20 +51,20 @@ The React application renders the global catalog, instance workspace, student ch
 `GET /challenges` follows this path:
 
 1. Resolve the authenticated AWS user when available.
-2. Require a stored reward instance link.
-3. Confirm the instance exists and is active.
-4. Load published assignments in the current availability window for that instance.
+2. Load the user's active Prizeversity classroom memberships.
+3. Revalidate stale memberships and retain only active configured instances.
+4. Load published assignments in the current availability window for all connected instances.
 5. Load only published definitions referenced by those assignments.
 6. Load progress by user and assignment.
-7. Return assignment values for reward, dates, and attempts alongside reusable definition content.
+7. Return assignment values and classroom context for reward, dates, and attempts alongside reusable definition content.
 
-The response does not expose assignments belonging to another instance.
+The response does not expose assignments belonging to an instance the student has not connected. When one definition is assigned to multiple connected classrooms, each assignment is returned separately and carries its assignment ID.
 
 ## Submission flow
 
 `POST /challenges/:slug/submit` performs:
 
-1. Linked-user and active-instance enforcement.
+1. Verified user, active membership, and assignment-instance enforcement.
 2. Published definition and active assignment resolution.
 3. Reward identity enforcement for rewardable assignments.
 4. Progress creation or retrieval by user and assignment.
@@ -90,7 +91,8 @@ If no active database-backed instances exist, the reward service can expose one 
 
 ## Important implementation constraints
 
-- An AWS user links to one instance at a time.
+- An AWS user has one verified Prizeversity identity and may connect multiple classroom instances.
+- Each connected instance must resolve to the same verified Prizeversity user ID.
 - One definition may be assigned at most once to a given instance.
 - One progress record exists per user and assignment.
 - One completion event exists per user and assignment.

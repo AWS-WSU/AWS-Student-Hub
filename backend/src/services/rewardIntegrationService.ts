@@ -8,7 +8,10 @@ import RewardIntegrationLinkVerification from '../models/RewardIntegrationLinkVe
 import RewardIntegrationInstance, {
   IRewardIntegrationInstanceDocument,
 } from '../models/RewardIntegrationInstance';
-import User, { type IUserDocument } from '../models/User';
+import RewardIntegrationMembership, {
+  type IRewardIntegrationMembershipDocument,
+} from '../models/RewardIntegrationMembership';
+import type { IUserDocument } from '../models/User';
 import { sendPrizeversityLinkCode } from './emailService';
 
 const log = logger.child({ module: 'reward-integration-service' });
@@ -19,6 +22,7 @@ const MAX_LINK_CODE_ATTEMPTS = 5;
 const DEFAULT_PROVIDER = 'prizeversity';
 const DEFAULT_API_BASE_URL = 'https://www.prizeversity.com';
 const DEFAULT_SCOPES = ['users:read', 'users:match', 'reward:grant'];
+const MEMBERSHIP_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 export interface PublicRewardIntegrationInstance {
   id: string;
@@ -73,19 +77,42 @@ export interface PrizeversityLinkedAccount {
   lastSyncedAt?: Date | null;
 }
 
+export interface PublicRewardIntegrationMembership {
+  id: string;
+  instanceId: string;
+  instanceName?: string;
+  classroomId: string;
+  classroomName?: string;
+  userId: string;
+  email?: string;
+  matchedName?: string;
+  shortId?: string;
+  active: boolean;
+  disabledByUser: boolean;
+  linkedAt: Date;
+  lastVerifiedAt?: Date | null;
+  lastVerificationError?: string;
+}
+
 export interface PrizeversityStatus {
   configured: boolean;
   linked: boolean;
   missingConfig: string[];
   account: PrizeversityLinkedAccount | null;
+  memberships: PublicRewardIntegrationMembership[];
   instances: PublicRewardIntegrationInstance[];
 }
 
-export interface PrizeversityLinkVerificationStart {
-  verificationRequired: true;
-  maskedEmail: string;
-  expiresAt: Date;
-}
+export type PrizeversityLinkVerificationStart =
+  | {
+      verificationRequired: true;
+      maskedEmail: string;
+      expiresAt: Date;
+    }
+  | {
+      verificationRequired: false;
+      membership: PublicRewardIntegrationMembership;
+    };
 
 interface PrizeversityUserListResponse {
   classroomId: string;
@@ -506,32 +533,202 @@ const getInstanceConfigForClassroom = async (
   return getInstanceConfigById();
 };
 
+const toPublicMembership = (
+  membership: IRewardIntegrationMembershipDocument,
+  instance?: PublicRewardIntegrationInstance
+): PublicRewardIntegrationMembership => ({
+  id: String(membership._id),
+  instanceId: membership.instanceKey,
+  instanceName: instance?.name,
+  classroomId: membership.classroomId,
+  classroomName: instance?.classroomName,
+  userId: membership.prizeversityUserId,
+  email: membership.email,
+  matchedName: membership.matchedName,
+  shortId: membership.shortId,
+  active: membership.active,
+  disabledByUser: membership.disabledByUser,
+  linkedAt: membership.linkedAt,
+  lastVerifiedAt: membership.lastVerifiedAt,
+  lastVerificationError: membership.lastVerificationError,
+});
+
+const ensureLegacyMembership = async (user: IUserDocument): Promise<void> => {
+  if (!user.prizeversityUserId || !user.prizeversityClassroomId) return;
+
+  const configuredInstance = await getInstanceConfigForClassroom(
+    user.prizeversityClassroomId,
+    user.rewardIntegrationInstanceId?.toString()
+  );
+  if (!configuredInstance) return;
+
+  const existing = await RewardIntegrationMembership.exists({
+    awsUserId: user._id,
+    instanceKey: configuredInstance.id,
+  });
+  if (existing) return;
+
+  try {
+    await RewardIntegrationMembership.findOneAndUpdate(
+      { awsUserId: user._id, instanceKey: configuredInstance.id },
+      {
+        $set: {
+          rewardIntegrationInstanceId:
+            configuredInstance.source === 'database'
+              ? new Types.ObjectId(configuredInstance.id)
+              : null,
+          prizeversityUserId: user.prizeversityUserId,
+          classroomId: user.prizeversityClassroomId,
+          email: user.prizeversityEmail,
+          matchedName: user.prizeversityMatchedName,
+          shortId: user.prizeversityShortId,
+          active: true,
+          disabledByUser: false,
+          lastVerifiedAt: user.prizeversityLastSyncedAt || user.prizeversityLinkedAt || new Date(),
+          inactiveAt: null,
+        },
+        $setOnInsert: {
+          linkedAt: user.prizeversityLinkedAt || new Date(),
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+  } catch (error: unknown) {
+    log.warn('unable to migrate legacy Prizeversity link to classroom membership.', {
+      userId: String(user._id),
+      instanceId: configuredInstance.id,
+      error: error instanceof Error ? error.message : error,
+    });
+  }
+};
+
+const refreshMembership = async (
+  membership: IRewardIntegrationMembershipDocument,
+  force = false
+): Promise<IRewardIntegrationMembershipDocument> => {
+  if (membership.disabledByUser) return membership;
+
+  const lastVerifiedAt = membership.lastVerifiedAt?.getTime() || 0;
+  if (!force && Date.now() - lastVerifiedAt < MEMBERSHIP_REFRESH_INTERVAL_MS) {
+    return membership;
+  }
+
+  const config = await getInstanceConfigById(membership.instanceKey);
+  if (!config) {
+    membership.active = false;
+    membership.inactiveAt = membership.inactiveAt || new Date();
+    membership.lastVerificationError = 'The classroom integration is not active.';
+    membership.lastVerifiedAt = new Date();
+    await membership.save();
+    return membership;
+  }
+
+  try {
+    const response = await usersList(config);
+    const classroomMember = (response.users || []).find(
+      (candidate) => String(candidate.userId) === membership.prizeversityUserId
+    );
+
+    membership.lastVerifiedAt = new Date();
+    if (!classroomMember) {
+      membership.active = false;
+      membership.inactiveAt = membership.inactiveAt || new Date();
+      membership.lastVerificationError = 'This account is no longer in the classroom roster.';
+    } else {
+      membership.active = true;
+      membership.inactiveAt = null;
+      membership.lastVerificationError = undefined;
+      membership.classroomId = config.classroomId;
+      membership.email = classroomMember.email || membership.email;
+      membership.matchedName =
+        classroomMember.name ||
+        `${classroomMember.firstName || ''} ${classroomMember.lastName || ''}`.trim() ||
+        membership.matchedName;
+      membership.shortId = classroomMember.shortId || membership.shortId;
+    }
+    await membership.save();
+  } catch (error: unknown) {
+    membership.lastVerificationError =
+      error instanceof Error ? error.message : 'Unable to verify classroom membership.';
+    await membership.save();
+  }
+
+  return membership;
+};
+
+export const getPrizeversityMemberships = async (
+  user: IUserDocument,
+  options: { refreshStale?: boolean; forceRefresh?: boolean } = {}
+): Promise<IRewardIntegrationMembershipDocument[]> => {
+  await ensureLegacyMembership(user);
+  const memberships = await RewardIntegrationMembership.find({ awsUserId: user._id }).sort({
+    linkedAt: 1,
+  });
+
+  if (!options.refreshStale && !options.forceRefresh) return memberships;
+  return Promise.all(
+    memberships.map((membership) => refreshMembership(membership, options.forceRefresh === true))
+  );
+};
+
+export const getActivePrizeversityMemberships = async (
+  user: IUserDocument,
+  options: { refreshStale?: boolean; forceRefresh?: boolean } = {}
+): Promise<IRewardIntegrationMembershipDocument[]> => {
+  const memberships = await getPrizeversityMemberships(user, options);
+  return memberships.filter((membership) => membership.active && !membership.disabledByUser);
+};
+
+export const getPrizeversityMembershipForInstance = async (
+  user: IUserDocument,
+  instanceId: string,
+  options: { forceRefresh?: boolean } = {}
+): Promise<IRewardIntegrationMembershipDocument | null> => {
+  await ensureLegacyMembership(user);
+  const membership = await RewardIntegrationMembership.findOne({
+    awsUserId: user._id,
+    instanceKey: instanceId,
+  });
+  if (!membership || membership.disabledByUser) return null;
+
+  const refreshed = await refreshMembership(membership, options.forceRefresh === true);
+  return refreshed.active ? refreshed : null;
+};
+
 export const getPrizeversityStatus = async (
   user: IUserDocument | null
 ): Promise<PrizeversityStatus> => {
   const instances = await listActiveRewardIntegrationInstances();
   const missingConfig = instances.length > 0 ? [] : getPrizeversityMissingConfig();
-  const account =
-    user?.prizeversityUserId && user.prizeversityClassroomId
-      ? {
-          instanceId:
-            user.rewardIntegrationInstanceId?.toString() ||
-            instances.find((instance) => instance.classroomId === user.prizeversityClassroomId)?.id,
-          userId: user.prizeversityUserId,
-          classroomId: user.prizeversityClassroomId,
-          email: user.prizeversityEmail,
-          matchedName: user.prizeversityMatchedName,
-          shortId: user.prizeversityShortId,
-          linkedAt: user.prizeversityLinkedAt,
-          lastSyncedAt: user.prizeversityLastSyncedAt,
-        }
-      : null;
+  const membershipDocuments = user
+    ? await getPrizeversityMemberships(user, { refreshStale: true })
+    : [];
+  const instanceById = new Map(instances.map((instance) => [instance.id, instance]));
+  const memberships = membershipDocuments.map((membership) =>
+    toPublicMembership(membership, instanceById.get(membership.instanceKey))
+  );
+  const firstActiveMembership = memberships.find(
+    (membership) => membership.active && !membership.disabledByUser
+  );
+  const account = user?.prizeversityUserId
+    ? {
+        instanceId: firstActiveMembership?.instanceId,
+        userId: user.prizeversityUserId,
+        classroomId: firstActiveMembership?.classroomId || user.prizeversityClassroomId || '',
+        email: user.prizeversityEmail,
+        matchedName: user.prizeversityMatchedName,
+        shortId: user.prizeversityShortId,
+        linkedAt: user.prizeversityLinkedAt,
+        lastSyncedAt: user.prizeversityLastSyncedAt,
+      }
+    : null;
 
   return {
     configured: instances.length > 0,
-    linked: Boolean(account),
+    linked: Boolean(firstActiveMembership),
     missingConfig,
     account,
+    memberships,
     instances,
   };
 };
@@ -699,14 +896,19 @@ export const listRewardIntegrationInstanceMembers = async (
   if (!instance) throw new PrizeversityError('Integration instance not found.');
 
   const response = await usersList(toConfig(instance));
-  const linkedUsers = await User.find({
-    rewardIntegrationInstanceId: instance._id,
+  const linkedMemberships = await RewardIntegrationMembership.find({
+    instanceKey: instanceId,
+    active: true,
+    disabledByUser: false,
     prizeversityUserId: { $in: (response.users || []).map((member) => String(member.userId)) },
   })
-    .select('_id prizeversityUserId')
+    .select('awsUserId prizeversityUserId')
     .lean();
   const awsUserByPrizeversityId = new Map(
-    linkedUsers.map((linkedUser) => [String(linkedUser.prizeversityUserId), String(linkedUser._id)])
+    linkedMemberships.map((membership) => [
+      String(membership.prizeversityUserId),
+      String(membership.awsUserId),
+    ])
   );
 
   return {
@@ -776,8 +978,9 @@ const resolvePrizeversityAccount = async (
   }
 
   if (!matchedAccount) {
+    const classroomLabel = config.classroomName || config.name;
     throw new PrizeversityError(
-      `No Prizeversity classroom member matched ${options.identifier || getUserDisplayName(user)}.`
+      `No Prizeversity member matched ${options.identifier || getUserDisplayName(user)} in ${classroomLabel}. Join that exact classroom, then try again.`
     );
   }
 
@@ -787,9 +990,52 @@ const resolvePrizeversityAccount = async (
 const applyPrizeversityLink = async (
   user: IUserDocument,
   matchedAccount: PrizeversityLinkedAccount,
+  instanceKey: string,
   rewardIntegrationInstanceId?: Types.ObjectId | null
-): Promise<PrizeversityLinkedAccount> => {
+): Promise<{
+  account: PrizeversityLinkedAccount;
+  membership: IRewardIntegrationMembershipDocument;
+}> => {
   const now = new Date();
+
+  const conflictingMembership = await RewardIntegrationMembership.findOne({
+    instanceKey,
+    prizeversityUserId: matchedAccount.userId,
+    awsUserId: { $ne: user._id },
+  });
+  if (conflictingMembership) {
+    throw new PrizeversityError(
+      'This Prizeversity classroom member is already connected to another AWS Student Hub account.',
+      409
+    );
+  }
+
+  const membership = await RewardIntegrationMembership.findOneAndUpdate(
+    { awsUserId: user._id, instanceKey },
+    {
+      $set: {
+        rewardIntegrationInstanceId: rewardIntegrationInstanceId || null,
+        prizeversityUserId: matchedAccount.userId,
+        classroomId: matchedAccount.classroomId,
+        email: matchedAccount.email,
+        matchedName: matchedAccount.matchedName,
+        shortId: matchedAccount.shortId,
+        active: true,
+        disabledByUser: false,
+        lastVerifiedAt: now,
+        lastVerificationError: undefined,
+        inactiveAt: null,
+      },
+      $setOnInsert: {
+        linkedAt: now,
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+  if (!membership) {
+    throw new PrizeversityError('Unable to save the Prizeversity classroom connection.', 500);
+  }
+
   user.rewardIntegrationInstanceId = rewardIntegrationInstanceId || null;
   user.prizeversityUserId = matchedAccount.userId;
   user.prizeversityClassroomId = matchedAccount.classroomId;
@@ -801,9 +1047,13 @@ const applyPrizeversityLink = async (
   await user.save();
 
   return {
-    ...matchedAccount,
-    linkedAt: user.prizeversityLinkedAt,
-    lastSyncedAt: user.prizeversityLastSyncedAt,
+    account: {
+      ...matchedAccount,
+      instanceId: instanceKey,
+      linkedAt: user.prizeversityLinkedAt,
+      lastSyncedAt: user.prizeversityLastSyncedAt,
+    },
+    membership,
   };
 };
 
@@ -812,6 +1062,29 @@ export const startPrizeversityAccountLink = async (
   options: { identifier?: string; instanceId?: string } = {}
 ): Promise<PrizeversityLinkVerificationStart> => {
   const { config, matchedAccount } = await resolvePrizeversityAccount(user, options);
+
+  if (user.prizeversityUserId) {
+    if (user.prizeversityUserId !== matchedAccount.userId) {
+      throw new PrizeversityError(
+        'This classroom member does not match your verified Prizeversity identity. Use the same Prizeversity account or remove all classroom connections first.',
+        409
+      );
+    }
+
+    const rewardIntegrationInstanceId =
+      config.source === 'database' ? new Types.ObjectId(config.id) : null;
+    const applied = await applyPrizeversityLink(
+      user,
+      matchedAccount,
+      config.id,
+      rewardIntegrationInstanceId
+    );
+    return {
+      verificationRequired: false,
+      membership: toPublicMembership(applied.membership, config),
+    };
+  }
+
   const email = cleanPastedValue(matchedAccount.email).toLowerCase();
 
   if (!email) {
@@ -830,6 +1103,7 @@ export const startPrizeversityAccountLink = async (
     { awsUserId: user._id },
     {
       awsUserId: user._id,
+      instanceKey: config.id,
       rewardIntegrationInstanceId,
       prizeversityUserId: matchedAccount.userId,
       classroomId: matchedAccount.classroomId,
@@ -903,17 +1177,20 @@ export const verifyPrizeversityAccountLink = async (
   const account = await applyPrizeversityLink(
     user,
     {
+      instanceId:
+        pending.instanceKey || pending.rewardIntegrationInstanceId?.toString() || undefined,
       userId: pending.prizeversityUserId,
       classroomId: pending.classroomId,
       email: pending.email,
       matchedName: pending.matchedName,
       shortId: pending.shortId,
     },
+    pending.instanceKey || pending.rewardIntegrationInstanceId?.toString() || 'env',
     pending.rewardIntegrationInstanceId || null
   );
 
   await pending.deleteOne();
-  return account;
+  return account.account;
 };
 
 export const linkPrizeversityAccount = async (
@@ -923,11 +1200,64 @@ export const linkPrizeversityAccount = async (
   const { config, matchedAccount } = await resolvePrizeversityAccount(user, options);
   const rewardIntegrationInstanceId =
     config.source === 'database' ? new Types.ObjectId(config.id) : null;
-  return applyPrizeversityLink(user, matchedAccount, rewardIntegrationInstanceId);
+  const applied = await applyPrizeversityLink(
+    user,
+    matchedAccount,
+    config.id,
+    rewardIntegrationInstanceId
+  );
+  return applied.account;
+};
+
+const syncLegacyClassroomPointer = async (user: IUserDocument): Promise<void> => {
+  const fallbackMembership = await RewardIntegrationMembership.findOne({
+    awsUserId: user._id,
+    active: true,
+    disabledByUser: false,
+  }).sort({ linkedAt: 1 });
+
+  user.rewardIntegrationInstanceId = fallbackMembership?.rewardIntegrationInstanceId || null;
+  user.prizeversityClassroomId = fallbackMembership?.classroomId;
+  user.prizeversityLastSyncedAt =
+    fallbackMembership?.lastVerifiedAt || user.prizeversityLastSyncedAt;
+  await user.save();
+};
+
+export const unlinkPrizeversityMembership = async (
+  user: IUserDocument,
+  instanceId: string
+): Promise<void> => {
+  const membership = await RewardIntegrationMembership.findOne({
+    awsUserId: user._id,
+    instanceKey: instanceId,
+  });
+  if (!membership) {
+    throw new PrizeversityError('Classroom connection not found.', 404);
+  }
+
+  membership.active = false;
+  membership.disabledByUser = true;
+  membership.inactiveAt = new Date();
+  membership.lastVerificationError = 'Disconnected by user.';
+  await membership.save();
+  await RewardIntegrationLinkVerification.deleteOne({
+    awsUserId: user._id,
+    instanceKey: instanceId,
+  });
+  await syncLegacyClassroomPointer(user);
+};
+
+export const deletePrizeversityAccountData = async (
+  awsUserId: Types.ObjectId | string
+): Promise<void> => {
+  await Promise.all([
+    RewardIntegrationLinkVerification.deleteMany({ awsUserId }),
+    RewardIntegrationMembership.deleteMany({ awsUserId }),
+  ]);
 };
 
 export const unlinkPrizeversityAccount = async (user: IUserDocument): Promise<void> => {
-  await RewardIntegrationLinkVerification.deleteOne({ awsUserId: user._id });
+  await deletePrizeversityAccountData(user._id);
   user.rewardIntegrationInstanceId = null;
   user.prizeversityUserId = undefined;
   user.prizeversityClassroomId = undefined;

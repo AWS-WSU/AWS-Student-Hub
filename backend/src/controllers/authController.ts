@@ -399,7 +399,9 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
     if (providedUsername) {
       const existingUsername = await User.findOne({ username: providedUsername });
       if (existingUsername) {
-        res.status(409).json({ error: 'That username is already in use. Choose another username.' });
+        res
+          .status(409)
+          .json({ error: 'That username is already in use. Choose another username.' });
         return;
       }
     }

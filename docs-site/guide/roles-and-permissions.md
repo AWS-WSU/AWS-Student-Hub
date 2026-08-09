@@ -13,7 +13,7 @@ A higher role inherits the capabilities of every role below it. Backend middlewa
 | Capability                                          | Member | Moderator | Admin | Superuser |
 | --------------------------------------------------- | :----: | :-------: | :---: | :-------: |
 | Manage own profile and preferences                  |  Yes   |    Yes    |  Yes  |    Yes    |
-| Link a Prizeversity classroom account               |  Yes   |    Yes    |  Yes  |    Yes    |
+| Verify Prizeversity identity and connect classrooms |  Yes   |    Yes    |  Yes  |    Yes    |
 | View, start, and submit assigned challenges         |  Yes   |    Yes    |  Yes  |    Yes    |
 | View dashboard statistics and user details          |   No   |    Yes    |  Yes  |    Yes    |
 | Ban or unban a lower-role account                   |   No   |    Yes    |  Yes  |    Yes    |
@@ -26,9 +26,9 @@ A higher role inherits the capabilities of every role below it. Backend middlewa
 
 ## Member
 
-`member` is the default role for students and general site users. Members manage their own account, link a Prizeversity identity, and participate in challenges assigned to that linked classroom.
+`member` is the default role for students and general site users. Members manage their own account, verify a Prizeversity identity, connect one or more configured classrooms, and participate in challenges assigned to those classrooms.
 
-A member cannot open protected administration routes. Challenge access is still determined by the linked instance and assignment state, not by role alone.
+A member cannot open protected administration routes. Challenge access is still determined by active classroom membership and assignment state, not by role alone.
 
 ## Moderator
 
