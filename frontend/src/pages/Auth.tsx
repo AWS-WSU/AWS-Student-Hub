@@ -82,10 +82,14 @@ type ForgotPasswordStep =
 type AuthRequestData = Omit<AuthFormData, 'confirmPassword'>;
 
 interface ForgotPasswordResponse {
+  success?: boolean;
+  message?: string;
   needsEmailVerification?: boolean;
   censoredEmail?: string;
-  [key: string]: any;
 }
+
+const PASSWORD_RESET_REQUEST_MESSAGE =
+  'If an account exists for that email, a verification code is on its way. If it does not arrive, check your spam or junk folder.';
 
 const initialResetData: ResetData = {
   identifier: '',
@@ -402,7 +406,7 @@ function Auth({ theme: _theme }: AuthProps) {
         setForgotPasswordStep('verify-email');
       } else {
         setForgotPasswordStep('verify-code');
-        showToast('Reset code sent to your email address', 'success');
+        showToast(data.message || PASSWORD_RESET_REQUEST_MESSAGE, 'success');
       }
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to send reset code'));
@@ -417,10 +421,13 @@ function Auth({ theme: _theme }: AuthProps) {
     setIsLoading(true);
 
     try {
-      await authAPI.verifyEmail(resetData.identifier, resetData.email);
+      const data = (await authAPI.verifyEmail(
+        resetData.identifier,
+        resetData.email
+      )) as ForgotPasswordResponse;
 
       setForgotPasswordStep('verify-code');
-      showToast('Reset code sent to your email address', 'success');
+      showToast(data.message || PASSWORD_RESET_REQUEST_MESSAGE, 'success');
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to verify email'));
     } finally {
@@ -679,6 +686,7 @@ function Auth({ theme: _theme }: AuthProps) {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
+              <p className="verify-email-text">{PASSWORD_RESET_REQUEST_MESSAGE}</p>
               <div className="form-group">
                 <input
                   type="text"
