@@ -202,7 +202,7 @@ function Navbar({ theme, toggleTheme }: LayoutProps) {
       </nav>
 
       <div className="header-controls">
-        {!isAuth0Authenticated && !authUser && (
+        {!isAuthenticated && (
           <div className="auth-buttons">
             <motion.button
               className="auth-option secondary"
@@ -449,7 +449,7 @@ function Navbar({ theme, toggleTheme }: LayoutProps) {
               </motion.li>
             </ul>
 
-            {!isAuth0Authenticated && !authUser && (
+            {!isAuthenticated && (
               <motion.div
                 className="mobile-menu-auth"
                 aria-label="Account actions"
