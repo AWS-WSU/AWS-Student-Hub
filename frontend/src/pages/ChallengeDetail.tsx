@@ -8,6 +8,7 @@ import {
   Database,
   Download,
   Link2,
+  Lightbulb,
   Lock,
   ScanSearch,
   Send,
@@ -288,6 +289,15 @@ function ChallengeDetail({ theme: _theme }: ThemeProps) {
             <p>{challenge.description}</p>
             {challenge.instructions && (
               <div className="challenge-instructions">{challenge.instructions}</div>
+            )}
+            {challenge.hint && (
+              <aside className="challenge-assignment-hint" aria-label="Instructor hint">
+                <Lightbulb size={20} aria-hidden="true" />
+                <div>
+                  <strong>Instructor hint</strong>
+                  <p>{challenge.hint}</p>
+                </div>
+              </aside>
             )}
 
             {cipheredSealExperience && (

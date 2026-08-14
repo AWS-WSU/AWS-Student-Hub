@@ -95,6 +95,7 @@ export interface ChallengeListItem {
   experience?: ChallengeExperience;
   startsAt?: string | null;
   endsAt?: string | null;
+  hint?: string;
   rewardIntegrationInstanceId?: string | null;
   classroom?: {
     instanceId: string;
@@ -301,6 +302,7 @@ export interface AdminChallengeAssignment {
   startsAt?: string | null;
   endsAt?: string | null;
   maxAttempts?: number;
+  hint?: string;
   reward: ChallengeRewardConfig;
   publishedAt?: string | null;
   archivedAt?: string | null;
@@ -318,6 +320,7 @@ export interface AdminChallengeAssignmentPayload {
   startsAt?: string | null;
   endsAt?: string | null;
   maxAttempts?: number | null;
+  hint?: string | null;
   reward?: Partial<ChallengeRewardConfig>;
 }
 

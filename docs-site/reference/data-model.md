@@ -32,6 +32,7 @@ Connects one definition to one reward instance.
 | `status`                      | Classroom delivery lifecycle.                 |
 | `startsAt`, `endsAt`          | Availability window.                          |
 | `maxAttempts`                 | Classroom-specific attempt limit.             |
+| `hint`                        | Optional classroom-specific student guidance. |
 | `reward`                      | Concrete classroom reward configuration.      |
 | `assignedBy`, `updatedBy`     | Admin audit references.                       |
 

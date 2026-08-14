@@ -112,6 +112,7 @@ const emptyAssignmentForm: ChallengeAssignmentFormData = {
   startsAt: '',
   endsAt: '',
   maxAttempts: '',
+  hint: '',
   rewardEnabled: true,
   rewardBits: '0',
   rewardXpAmount: '0',
@@ -756,6 +757,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       startsAt: toDateTimeInput(assignment?.startsAt),
       endsAt: toDateTimeInput(assignment?.endsAt),
       maxAttempts: String(assignment?.maxAttempts || challenge.maxAttempts || ''),
+      hint: assignment?.hint || '',
       rewardEnabled: reward.enabled,
       rewardBits: String(reward.bits || 0),
       rewardXpAmount: String(reward.xpAmount || 0),
@@ -776,6 +778,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
     startsAt: toIsoDate(assignmentForm.startsAt),
     endsAt: toIsoDate(assignmentForm.endsAt),
     maxAttempts: assignmentForm.maxAttempts ? Number(assignmentForm.maxAttempts) : null,
+    hint: assignmentForm.hint.trim() || null,
     reward: {
       enabled: assignmentForm.rewardEnabled,
       bits: Number(assignmentForm.rewardBits) || 0,
@@ -1883,6 +1886,11 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                                       {assignment.endsAt
                                         ? `Closes ${new Date(assignment.endsAt).toLocaleString()}`
                                         : 'No deadline'}
+                                    </small>
+                                  )}
+                                  {assignment.hint && (
+                                    <small className="assignment-hint-preview">
+                                      <strong>Student hint:</strong> {assignment.hint}
                                     </small>
                                   )}
                                 </div>

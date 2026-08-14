@@ -216,7 +216,7 @@ The full API key is never included in instance responses.
 | -------- | ---------------------------------------------------------------------------- | ------------------------------------------------------ |
 | `GET`    | `/admin/reward-integrations/:instanceId/challenge-assignments`               | List assignments and progress summaries.               |
 | `POST`   | `/admin/reward-integrations/:instanceId/challenge-assignments`               | Assign one published catalog definition.               |
-| `PATCH`  | `/admin/reward-integrations/:instanceId/challenge-assignments/:assignmentId` | Update status, dates, attempts, or reward.             |
+| `PATCH`  | `/admin/reward-integrations/:instanceId/challenge-assignments/:assignmentId` | Update status, dates, attempts, hint, or reward.       |
 | `DELETE` | `/admin/reward-integrations/:instanceId/challenge-assignments/:assignmentId` | Delete unused assignment or archive one with progress. |
 
 Create/update body:
@@ -228,6 +228,7 @@ Create/update body:
   "startsAt": "2026-09-08T13:00:00.000Z",
   "endsAt": "2026-09-22T03:59:59.000Z",
   "maxAttempts": 3,
+  "hint": "Review the request headers before focusing on the response body.",
   "reward": {
     "enabled": true,
     "bits": 50,
@@ -239,7 +240,9 @@ Create/update body:
 }
 ```
 
-Use `null` to clear dates. A missing field leaves the existing value unchanged during update.
+Use `null` to clear dates or the assignment hint. A missing field leaves the existing value
+unchanged during update. Hints are scoped to the selected classroom assignment and limited to
+2,000 characters.
 
 ## Challenge error codes
 

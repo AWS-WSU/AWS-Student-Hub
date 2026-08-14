@@ -12,6 +12,7 @@ export interface IChallengeAssignment {
   startsAt?: Date | null;
   endsAt?: Date | null;
   maxAttempts?: number;
+  hint?: string;
   reward: IChallengeRewardConfig;
   publishedAt?: Date | null;
   archivedAt?: Date | null;
@@ -60,6 +61,12 @@ const challengeAssignmentSchema = new Schema<IChallengeAssignment, ChallengeAssi
     maxAttempts: {
       type: Number,
       min: 1,
+    },
+    hint: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+      default: '',
     },
     reward: {
       type: challengeRewardSchema,

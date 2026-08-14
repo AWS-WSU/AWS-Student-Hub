@@ -437,6 +437,7 @@ const toPublicChallengeDto = (
   startsAt: assignment ? assignment.startsAt : challenge.startsAt,
   endsAt: assignment ? assignment.endsAt : challenge.endsAt,
   maxAttempts: assignment ? assignment.maxAttempts : challenge.maxAttempts,
+  hint: assignment?.hint || undefined,
   rewardIntegrationInstanceId: getAssignmentScopeId(assignment),
   classroom: classroom || undefined,
   reward: toRewardPreview(assignment ? assignment.reward : challenge.reward),

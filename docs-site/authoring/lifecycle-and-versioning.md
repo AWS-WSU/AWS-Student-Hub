@@ -43,7 +43,7 @@ Usually safe during an active run:
 - Correcting spelling
 - Clarifying instructions without changing the solution
 - Updating tags or estimated time
-- Adjusting one classroom's schedule, attempts, or rewards through its assignment
+- Adjusting one classroom's schedule, attempts, hint, or rewards through its assignment
 
 Require testing and coordination:
 
@@ -62,6 +62,7 @@ For a breaking change, create a new definition with a new key and slug. Assign i
 | Fix instructions for every class             | Catalog definition        |
 | Change reward for one section                | Classroom assignment      |
 | Close one section early                      | Classroom assignment      |
+| Add guidance for one section                 | Classroom assignment      |
 | Stop the challenge everywhere                | Catalog definition status |
 | Stop all challenges for one classroom        | Instance status           |
 | Change the validator for future cohorts only | New catalog definition    |

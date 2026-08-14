@@ -15,6 +15,7 @@ interface ChallengeAssignmentMutationInput {
   startsAt?: string | Date | null;
   endsAt?: string | Date | null;
   maxAttempts?: number | null;
+  hint?: string | null;
   reward?: Partial<IChallengeRewardConfig>;
 }
 
@@ -32,6 +33,7 @@ interface AssignmentProgressAggregation {
 }
 
 const assignmentStatuses: ChallengeAssignmentStatus[] = ['draft', 'published', 'archived'];
+const MAX_ASSIGNMENT_HINT_LENGTH = 2000;
 const completedStatuses: ChallengeProgressStatus[] = [
   'completed',
   'reward_pending',
@@ -79,6 +81,23 @@ const normalizeMaxAttempts = (value: unknown): number | undefined => {
     );
   }
   return normalized;
+};
+
+const normalizeHint = (value: unknown): string => {
+  if (value === null || value === undefined) return '';
+  if (typeof value !== 'string') {
+    throw new ChallengeServiceError('Challenge hint must be text.', 'INVALID_CHALLENGE_INPUT', 400);
+  }
+
+  const hint = value.trim();
+  if (hint.length > MAX_ASSIGNMENT_HINT_LENGTH) {
+    throw new ChallengeServiceError(
+      `Challenge hint cannot exceed ${MAX_ASSIGNMENT_HINT_LENGTH} characters.`,
+      'INVALID_CHALLENGE_INPUT',
+      400
+    );
+  }
+  return hint;
 };
 
 const parseDate = (value: string | Date | null | undefined): Date | null | undefined => {
@@ -231,6 +250,7 @@ const toAssignmentDto = (
     startsAt: assignment.startsAt,
     endsAt: assignment.endsAt,
     maxAttempts: assignment.maxAttempts,
+    hint: assignment.hint || undefined,
     reward: assignment.reward,
     publishedAt: assignment.publishedAt,
     archivedAt: assignment.archivedAt,
@@ -321,6 +341,7 @@ export const createInstanceChallengeAssignment = async (
       ? challenge.maxAttempts
       : normalizeMaxAttempts(input.maxAttempts);
   const reward = normalizeReward(input.reward, challenge.reward);
+  const hint = normalizeHint(input.hint);
   const now = new Date();
 
   const assignment = await ChallengeAssignment.create({
@@ -331,6 +352,7 @@ export const createInstanceChallengeAssignment = async (
     startsAt,
     endsAt,
     maxAttempts,
+    hint,
     reward,
     publishedAt: status === 'published' ? now : null,
     archivedAt: status === 'archived' ? now : null,
@@ -382,6 +404,9 @@ export const updateInstanceChallengeAssignment = async (
   validateWindow(assignment.startsAt, assignment.endsAt);
   if (input.maxAttempts !== undefined) {
     assignment.maxAttempts = normalizeMaxAttempts(input.maxAttempts);
+  }
+  if (input.hint !== undefined) {
+    assignment.hint = normalizeHint(input.hint);
   }
   if (input.reward !== undefined) {
     assignment.reward = normalizeReward(input.reward, assignment.reward);

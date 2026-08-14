@@ -28,7 +28,7 @@ After registration:
 1. An admin verifies that the definition is published in the catalog.
 2. The admin opens a Prizeversity instance.
 3. The admin adds the definition from the catalog.
-4. The assignment supplies dates, attempts, and rewards for that classroom.
+4. The assignment supplies dates, attempts, an optional student hint, and rewards for that classroom.
 
 Run seed scripts separately for each environment whose catalog should contain that curated definition.
 

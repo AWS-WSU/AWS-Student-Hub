@@ -7,6 +7,7 @@ export interface ChallengeAssignmentFormData {
   startsAt: string;
   endsAt: string;
   maxAttempts: string;
+  hint: string;
   rewardEnabled: boolean;
   rewardBits: string;
   rewardXpAmount: string;
@@ -118,6 +119,19 @@ function ChallengeAssignmentForm({
               onChange={(event) => onChange('maxAttempts', event.target.value)}
               placeholder="Unlimited"
             />
+          </label>
+
+          <label>
+            Student hint
+            <textarea
+              value={form.hint}
+              onChange={(event) => onChange('hint', event.target.value)}
+              maxLength={2000}
+              placeholder="Optional guidance for students in this classroom"
+            />
+            <small className="field-note">
+              Optional. This appears only on this classroom's challenge assignment.
+            </small>
           </label>
 
           <div className="challenge-admin-two-col">
