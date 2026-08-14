@@ -159,20 +159,23 @@ const validateWindow = (startsAt?: Date | null, endsAt?: Date | null): void => {
   }
 };
 
-const ensureInstance = async (instanceId: string) => {
-  if (!Types.ObjectId.isValid(instanceId)) {
+const ensureInstance = async (instanceId: string, adminUserId: string) => {
+  if (!Types.ObjectId.isValid(instanceId) || !Types.ObjectId.isValid(adminUserId)) {
     throw new ChallengeServiceError(
       'Reward integration instance was not found.',
-      'INVALID_CHALLENGE_INPUT',
+      'REWARD_INTEGRATION_INSTANCE_NOT_FOUND',
       404
     );
   }
 
-  const instance = await RewardIntegrationInstance.findById(instanceId);
+  const instance = await RewardIntegrationInstance.findOne({
+    _id: new Types.ObjectId(instanceId),
+    createdBy: new Types.ObjectId(adminUserId),
+  });
   if (!instance) {
     throw new ChallengeServiceError(
       'Reward integration instance was not found.',
-      'INVALID_CHALLENGE_INPUT',
+      'REWARD_INTEGRATION_INSTANCE_NOT_FOUND',
       404
     );
   }
@@ -263,8 +266,8 @@ const toAssignmentDto = (
   };
 };
 
-export const listInstanceChallengeAssignments = async (instanceId: string) => {
-  await ensureInstance(instanceId);
+export const listInstanceChallengeAssignments = async (instanceId: string, adminUserId: string) => {
+  await ensureInstance(instanceId, adminUserId);
   const assignments = await ChallengeAssignment.find({
     rewardIntegrationInstanceId: new Types.ObjectId(instanceId),
   }).sort({ updatedAt: -1 });
@@ -295,7 +298,7 @@ export const createInstanceChallengeAssignment = async (
   input: ChallengeAssignmentMutationInput,
   adminUserId: string
 ) => {
-  const instance = await ensureInstance(instanceId);
+  const instance = await ensureInstance(instanceId, adminUserId);
   if (!instance.active) {
     throw new ChallengeServiceError(
       'Activate this reward instance before assigning challenges.',
@@ -368,7 +371,7 @@ export const updateInstanceChallengeAssignment = async (
   input: ChallengeAssignmentMutationInput,
   adminUserId: string
 ) => {
-  const instance = await ensureInstance(instanceId);
+  const instance = await ensureInstance(instanceId, adminUserId);
   const assignment = await ensureAssignment(instanceId, assignmentId);
   const challenge = await Challenge.findById(assignment.challengeId);
   if (!challenge) {
@@ -426,6 +429,7 @@ export const removeInstanceChallengeAssignment = async (
   assignmentId: string,
   adminUserId: string
 ) => {
+  await ensureInstance(instanceId, adminUserId);
   const assignment = await ensureAssignment(instanceId, assignmentId);
   const progressCount = await ChallengeProgress.countDocuments({ assignmentId: assignment._id });
 

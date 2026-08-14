@@ -19,7 +19,7 @@ A higher role inherits the capabilities of every role below it. Backend middlewa
 | Ban or unban a lower-role account                   |   No   |    Yes    |  Yes  |    Yes    |
 | Create, update, publish, or delete events           |   No   |    No     |  Yes  |    Yes    |
 | Manage challenge catalog and manual reviews         |   No   |    No     |  Yes  |    Yes    |
-| Manage Prizeversity instances and assignments       |   No   |    No     |  Yes  |    Yes    |
+| Manage own Prizeversity instances and assignments   |   No   |    No     |  Yes  |    Yes    |
 | Inspect and retry email queue operations            |   No   |    No     |  Yes  |    Yes    |
 | Assign `member` or `moderator` to a lower-role user |   No   |    No     |  Yes  |    Yes    |
 | Assign `admin` or `superuser`                       |   No   |    No     |  No   |    Yes    |
@@ -46,7 +46,9 @@ Moderators cannot manage events, challenges, Prizeversity instances, rewards, th
 - Email queue inspection and retry operations
 - Lower-role user accounts and promotion between `member` and `moderator`
 
-Admins currently have organization-wide access to every instance and challenge. The platform does not yet restrict an instructor to selected classrooms.
+Challenge definitions form a shared organization-wide catalog. Prizeversity instances and all
+derived classroom data are private to the admin who created the instance. This includes rosters,
+assignments, progress, submissions, manual reviews, and reward operations.
 
 An admin cannot grant `admin` or `superuser`, cannot manage an equal- or higher-role account, and does not receive separate database or infrastructure credentials.
 
@@ -55,6 +57,9 @@ An admin cannot grant `admin` or `superuser`, cannot manage an equal- or higher-
 `superuser` is the highest application role. It passes every admin authorization check and is the only role allowed to grant `admin` or `superuser` to another eligible lower-role account.
 
 Superuser does not mean AWS account root, MongoDB owner, Auth0 tenant owner, or deployment administrator. Those are separate infrastructure identities. A superuser should not receive production secrets solely because of the application role.
+
+Superusers also remain subject to instance ownership. Their elevated role allows role provisioning;
+it does not silently grant access to another instructor's classroom data.
 
 Equal-role protection still applies: one superuser cannot modify or delete another superuser through normal user-management routes.
 

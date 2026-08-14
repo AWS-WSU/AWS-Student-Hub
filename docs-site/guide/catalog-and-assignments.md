@@ -16,6 +16,7 @@ A definition contains:
 - Version marker
 
 Definitions are global. Editing one affects the content used by every assignment that references it.
+Only instance owners can create or manage assignments for their classrooms.
 
 ## Classroom assignments
 
@@ -30,6 +31,9 @@ An assignment contains:
 - Assignment and update audit fields
 
 There can be only one assignment for a given definition and instance. Assigning the same challenge to a second classroom creates a separate assignment.
+
+Assignment records and their progress summaries are visible only to the owner of the target instance,
+even though the underlying definition is visible in the shared catalog.
 
 ## Assignment workflow
 

@@ -17,6 +17,10 @@ Content-Type: application/json
 
 Student account and challenge mutations require a valid JWT. Every route under `/admin` listed here requires `admin` or `superuser`.
 
+The challenge catalog is shared across admins. Instance routes and all classroom-derived data require
+the authenticated admin or superuser to match the instance's immutable `createdBy` owner. Foreign
+instance IDs return `404` and superusers do not bypass this ownership check.
+
 Google sign-in first returns an Auth0 identity token to the browser. The frontend exchanges it through `POST /auth/auth0`; the backend verifies the issuer, signature, audience, provider, and verified email before linking or provisioning a local user and issuing the same Student Hub access and refresh tokens used by password login. Auth0 identity tokens are not accepted directly by challenge or admin routes.
 
 Error responses generally contain `error`. Challenge-domain errors also include a stable `code` and optional `details`.
@@ -168,7 +172,7 @@ Capture download does not consume an attempt. Final flag submission does.
 | `POST`   | `/admin/challenges/:challengeId/publish`         | Publish definition.                                                                   |
 | `POST`   | `/admin/challenges/:challengeId/archive`         | Archive definition globally.                                                          |
 | `DELETE` | `/admin/challenges/:challengeId`                 | Delete eligible custom definition.                                                    |
-| `GET`    | `/admin/challenges/:challengeId/progress`        | Paginated progress list.                                                              |
+| `GET`    | `/admin/challenges/:challengeId/progress`        | Paginated progress from owned instances; supports status and instance filters.        |
 | `POST`   | `/admin/challenges/:challengeId/test-validation` | Execute validator for an admin-selected user without normal submission orchestration. |
 
 Custom creation accepts only `static_secret` and `manual_review` validation. Curated definitions are seeded from source control.
@@ -187,7 +191,7 @@ Review bodies may contain a `message` string.
 
 | Method   | Path                                             | Purpose                                                |
 | -------- | ------------------------------------------------ | ------------------------------------------------------ |
-| `GET`    | `/admin/reward-integrations`                     | List every database-backed instance.                   |
+| `GET`    | `/admin/reward-integrations`                     | List the signed-in instructor's database instances.    |
 | `POST`   | `/admin/reward-integrations`                     | Create and live-verify an instance.                    |
 | `GET`    | `/admin/reward-integrations/:instanceId/members` | Read external roster plus AWS link status.             |
 | `PUT`    | `/admin/reward-integrations/:instanceId`         | Update metadata, credentials, scopes, or active state. |
@@ -246,16 +250,17 @@ unchanged during update. Hints are scoped to the selected classroom assignment a
 
 ## Challenge error codes
 
-| Code                             | Meaning                                                        |
-| -------------------------------- | -------------------------------------------------------------- |
-| `CHALLENGE_NOT_FOUND`            | Missing definition or challenge unavailable to this classroom. |
-| `CHALLENGE_NOT_PUBLISHED`        | Assignment operation requires a published definition.          |
-| `REWARD_LINK_REQUIRED`           | User lacks the required active instance link.                  |
-| `MAX_ATTEMPTS_REACHED`           | Assignment attempt limit exhausted.                            |
-| `VALIDATOR_ERROR`                | Validator could not execute safely.                            |
-| `CHALLENGE_DELETE_BLOCKED`       | Definition has protected source, status, or assignments.       |
-| `CHALLENGE_ASSIGNMENT_NOT_FOUND` | Assignment is missing from the specified instance.             |
-| `CHALLENGE_ASSIGNMENT_EXISTS`    | Definition already assigned to that instance.                  |
-| `SUBMISSION_NOT_FOUND`           | Submission or related progress/user is missing.                |
-| `SUBMISSION_NOT_REVIEWABLE`      | Submission is not currently pending review.                    |
-| `INVALID_CHALLENGE_INPUT`        | Request fields violate domain validation.                      |
+| Code                                    | Meaning                                                        |
+| --------------------------------------- | -------------------------------------------------------------- |
+| `CHALLENGE_NOT_FOUND`                   | Missing definition or challenge unavailable to this classroom. |
+| `CHALLENGE_NOT_PUBLISHED`               | Assignment operation requires a published definition.          |
+| `REWARD_LINK_REQUIRED`                  | User lacks the required active instance link.                  |
+| `MAX_ATTEMPTS_REACHED`                  | Assignment attempt limit exhausted.                            |
+| `VALIDATOR_ERROR`                       | Validator could not execute safely.                            |
+| `CHALLENGE_DELETE_BLOCKED`              | Definition has protected source, status, or assignments.       |
+| `CHALLENGE_ASSIGNMENT_NOT_FOUND`        | Assignment is missing from the specified instance.             |
+| `CHALLENGE_ASSIGNMENT_EXISTS`           | Definition already assigned to that instance.                  |
+| `REWARD_INTEGRATION_INSTANCE_NOT_FOUND` | Instance is missing or belongs to another instructor.          |
+| `SUBMISSION_NOT_FOUND`                  | Submission or related progress/user is missing.                |
+| `SUBMISSION_NOT_REVIEWABLE`             | Submission is not currently pending review.                    |
+| `INVALID_CHALLENGE_INPUT`               | Request fields violate domain validation.                      |

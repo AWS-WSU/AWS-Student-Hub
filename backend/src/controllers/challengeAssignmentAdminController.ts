@@ -22,7 +22,11 @@ const sendError = (res: Response, error: unknown, fallback: string): void => {
 
 export const listAssignments = async (req: Request, res: Response): Promise<void> => {
   try {
-    res.json(await listInstanceChallengeAssignments(req.params.instanceId));
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+    res.json(await listInstanceChallengeAssignments(req.params.instanceId, req.user.id));
   } catch (error: unknown) {
     sendError(res, error, 'Unable to list challenge assignments');
   }

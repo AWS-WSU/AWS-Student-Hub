@@ -5,6 +5,7 @@ import {
   deactivateRewardIntegrationInstance,
   listRewardIntegrationInstanceMembers,
   listRewardIntegrationInstances,
+  PrizeversityError,
   testRewardIntegrationInstance,
   updateRewardIntegrationInstance,
 } from '../services/rewardIntegrationService';
@@ -15,12 +16,22 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
   return error instanceof Error ? error.message : fallback;
 };
 
+const getErrorStatus = (error: unknown, fallback: number): number => {
+  return error instanceof PrizeversityError && error.status ? error.status : fallback;
+};
+
 export const listInstances = async (req: Request, res: Response): Promise<void> => {
   try {
-    const instances = await listRewardIntegrationInstances();
+    const adminUserId = getAdminUserId(req);
+    if (!adminUserId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const instances = await listRewardIntegrationInstances(adminUserId);
     res.json({ instances });
   } catch (error: unknown) {
-    res.status(500).json({
+    res.status(getErrorStatus(error, 500)).json({
       error: getErrorMessage(error, 'Unable to list reward integration instances'),
     });
   }
@@ -40,7 +51,7 @@ export const createInstance = async (req: Request, res: Response): Promise<void>
       instance,
     });
   } catch (error: unknown) {
-    res.status(400).json({
+    res.status(getErrorStatus(error, 400)).json({
       error: getErrorMessage(error, 'Unable to create reward integration instance'),
     });
   }
@@ -48,10 +59,16 @@ export const createInstance = async (req: Request, res: Response): Promise<void>
 
 export const listInstanceMembers = async (req: Request, res: Response): Promise<void> => {
   try {
-    const result = await listRewardIntegrationInstanceMembers(req.params.instanceId);
+    const adminUserId = getAdminUserId(req);
+    if (!adminUserId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const result = await listRewardIntegrationInstanceMembers(req.params.instanceId, adminUserId);
     res.json(result);
   } catch (error: unknown) {
-    res.status(400).json({
+    res.status(getErrorStatus(error, 400)).json({
       error: getErrorMessage(error, 'Unable to list classroom members'),
     });
   }
@@ -75,7 +92,7 @@ export const updateInstance = async (req: Request, res: Response): Promise<void>
       instance,
     });
   } catch (error: unknown) {
-    res.status(400).json({
+    res.status(getErrorStatus(error, 400)).json({
       error: getErrorMessage(error, 'Unable to update reward integration instance'),
     });
   }
@@ -95,7 +112,7 @@ export const testInstance = async (req: Request, res: Response): Promise<void> =
       ...result,
     });
   } catch (error: unknown) {
-    res.status(400).json({
+    res.status(getErrorStatus(error, 400)).json({
       error: getErrorMessage(error, 'Unable to verify reward integration instance'),
     });
   }
@@ -115,7 +132,7 @@ export const deactivateInstance = async (req: Request, res: Response): Promise<v
       instance,
     });
   } catch (error: unknown) {
-    res.status(400).json({
+    res.status(getErrorStatus(error, 400)).json({
       error: getErrorMessage(error, 'Unable to deactivate reward integration instance'),
     });
   }

@@ -188,7 +188,13 @@ export const deleteChallenge = async (req: Request, res: Response): Promise<void
 
 export const listSubmissions = async (req: Request, res: Response): Promise<void> => {
   try {
-    const result = await listAdminChallengeSubmissions(req.params.challengeId, {
+    const adminUserId = getAdminUserId(req);
+    if (!adminUserId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const result = await listAdminChallengeSubmissions(req.params.challengeId, adminUserId, {
       page: Number(req.query.page),
       limit: Number(req.query.limit),
       status: parseSubmissionStatus(req.query.status),
@@ -247,10 +253,20 @@ export const rejectSubmission = async (req: Request, res: Response): Promise<voi
 
 export const listProgress = async (req: Request, res: Response): Promise<void> => {
   try {
-    const result = await listAdminChallengeProgress(req.params.challengeId, {
+    const adminUserId = getAdminUserId(req);
+    if (!adminUserId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const result = await listAdminChallengeProgress(req.params.challengeId, adminUserId, {
       page: Number(req.query.page),
       limit: Number(req.query.limit),
       status: parseProgressStatus(req.query.status),
+      rewardIntegrationInstanceId:
+        typeof req.query.rewardIntegrationInstanceId === 'string'
+          ? req.query.rewardIntegrationInstanceId
+          : undefined,
     });
     res.json(result);
   } catch (error: unknown) {
