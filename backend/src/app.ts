@@ -69,8 +69,6 @@ const defaultAllowedOrigins = [
   'https://www.wayneaws.dev',
   'https://prizeversity.com',
   'https://www.prizeversity.com',
-  'http://localhost:5173',
-  'http://localhost:3000',
 ];
 
 const corsOptions: CorsOptions = {
@@ -80,16 +78,16 @@ const corsOptions: CorsOptions = {
       return;
     }
 
-    const allowedOrigins = env.CORS_ORIGINS ?? defaultAllowedOrigins;
+    const allowedOrigins = [...defaultAllowedOrigins, ...(env.CORS_ORIGINS ?? [])];
+    const isLocalDevOrigin =
+      !env.IS_LAMBDA && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
 
-    const isAmplifyDomain = origin.includes('.amplifyapp.com');
-
-    if (allowedOrigins.includes(origin) || isAmplifyDomain) {
+    if (allowedOrigins.includes(origin) || isLocalDevOrigin) {
       callback(null, true);
       return;
     }
 
-    callback(new Error('Not allowed by CORS'));
+    callback(new Error('Not allowed by CORS: ${origin}'));
   },
   methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   credentials: true,
