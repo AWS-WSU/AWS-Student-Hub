@@ -2,6 +2,10 @@
 
 A reward integration instance is AWS Student Hub's server-side representation of one Prizeversity classroom.
 
+Each instance belongs to the instructor who creates it. Admins and superusers can list, inspect,
+update, test, deactivate, and assign challenges only for their own instances. Another instructor's
+instance resolves as not found even when its ID is supplied directly to the API.
+
 ## One instance per classroom
 
 Create a separate instance whenever Prizeversity has a separate classroom. Examples include:
@@ -12,6 +16,10 @@ Create a separate instance whenever Prizeversity has a separate classroom. Examp
 - A workshop with its own roster and rewards
 
 Two sections may assign the same catalog challenge, but they should not share an instance unless they intentionally share one Prizeversity roster and economy.
+
+If responsibility for a classroom changes, an operator must perform an explicit ownership transfer
+in the database or recreate the instance under the new instructor. Sharing an instructor login or
+Prizeversity API key is not a supported handoff mechanism.
 
 ## Instance fields
 

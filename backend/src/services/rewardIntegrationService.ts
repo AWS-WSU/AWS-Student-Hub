@@ -200,7 +200,7 @@ export interface PrizeversityRewardResult {
   response: Record<string, unknown> | null;
 }
 
-class PrizeversityError extends Error {
+export class PrizeversityError extends Error {
   status?: number;
 
   constructor(message: string, status?: number) {
@@ -463,10 +463,33 @@ const toLinkedAccount = (
   };
 };
 
-export const listRewardIntegrationInstances = async (): Promise<
-  PublicRewardIntegrationInstance[]
-> => {
-  const instances = await RewardIntegrationInstance.find().sort({ createdAt: -1 });
+const findOwnedRewardIntegrationInstance = async (
+  instanceId: string,
+  adminUserId: string
+): Promise<IRewardIntegrationInstanceDocument> => {
+  if (!Types.ObjectId.isValid(instanceId) || !Types.ObjectId.isValid(adminUserId)) {
+    throw new PrizeversityError('Integration instance not found.', 404);
+  }
+
+  const instance = await RewardIntegrationInstance.findOne({
+    _id: new Types.ObjectId(instanceId),
+    createdBy: new Types.ObjectId(adminUserId),
+  }).select('+apiKey');
+
+  if (!instance) throw new PrizeversityError('Integration instance not found.', 404);
+  return instance;
+};
+
+export const listRewardIntegrationInstances = async (
+  adminUserId: string
+): Promise<PublicRewardIntegrationInstance[]> => {
+  if (!Types.ObjectId.isValid(adminUserId)) {
+    throw new PrizeversityError('Authentication required.', 401);
+  }
+
+  const instances = await RewardIntegrationInstance.find({
+    createdBy: new Types.ObjectId(adminUserId),
+  }).sort({ createdAt: -1 });
   return instances.map(toPublicInstance);
 };
 
@@ -751,6 +774,10 @@ export const createRewardIntegrationInstance = async (
   input: RewardIntegrationInstanceInput,
   adminUserId: string
 ): Promise<PublicRewardIntegrationInstance> => {
+  if (!Types.ObjectId.isValid(adminUserId)) {
+    throw new PrizeversityError('Authentication required.', 401);
+  }
+
   const name = cleanPastedValue(input.name);
   const apiKey = cleanPastedValue(input.apiKey);
   const classroomId = cleanPastedValue(input.classroomId);
@@ -803,12 +830,7 @@ export const updateRewardIntegrationInstance = async (
   input: RewardIntegrationInstanceInput,
   adminUserId: string
 ): Promise<PublicRewardIntegrationInstance> => {
-  if (!Types.ObjectId.isValid(instanceId)) {
-    throw new PrizeversityError('Invalid integration instance ID.');
-  }
-
-  const instance = await RewardIntegrationInstance.findById(instanceId).select('+apiKey');
-  if (!instance) throw new PrizeversityError('Integration instance not found.');
+  const instance = await findOwnedRewardIntegrationInstance(instanceId, adminUserId);
 
   const nextApiBaseUrl = input.apiBaseUrl
     ? normalizeBaseUrl(input.apiBaseUrl)
@@ -856,12 +878,7 @@ export const testRewardIntegrationInstance = async (
   instanceId: string,
   adminUserId: string
 ): Promise<{ instance: PublicRewardIntegrationInstance; test: RewardIntegrationTestResult }> => {
-  if (!Types.ObjectId.isValid(instanceId)) {
-    throw new PrizeversityError('Invalid integration instance ID.');
-  }
-
-  const instance = await RewardIntegrationInstance.findById(instanceId).select('+apiKey');
-  if (!instance) throw new PrizeversityError('Integration instance not found.');
+  const instance = await findOwnedRewardIntegrationInstance(instanceId, adminUserId);
 
   try {
     const test = await testRewardIntegrationConfig(toConfig(instance));
@@ -886,14 +903,10 @@ export const testRewardIntegrationInstance = async (
 };
 
 export const listRewardIntegrationInstanceMembers = async (
-  instanceId: string
+  instanceId: string,
+  adminUserId: string
 ): Promise<RewardIntegrationClassroomMembersResult> => {
-  if (!Types.ObjectId.isValid(instanceId)) {
-    throw new PrizeversityError('Invalid integration instance ID.');
-  }
-
-  const instance = await RewardIntegrationInstance.findById(instanceId).select('+apiKey');
-  if (!instance) throw new PrizeversityError('Integration instance not found.');
+  const instance = await findOwnedRewardIntegrationInstance(instanceId, adminUserId);
 
   const response = await usersList(toConfig(instance));
   const linkedMemberships = await RewardIntegrationMembership.find({

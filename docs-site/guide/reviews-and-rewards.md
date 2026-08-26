@@ -30,6 +30,8 @@ From the instance's challenge list, open the pending review queue. Review the ev
 Rejection does not refund an attempt. The attempt was consumed when the proof was submitted.
 
 Review the queue from the relevant instance so submissions from separate classes remain operationally distinct.
+The backend returns and permits decisions only for submissions belonging to instances created by the
+signed-in instructor. Superusers do not receive an implicit cross-classroom review view.
 
 ## Reward configuration
 

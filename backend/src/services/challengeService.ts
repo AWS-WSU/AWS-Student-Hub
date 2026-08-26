@@ -62,6 +62,7 @@ export type ChallengeErrorCode =
   | 'CHALLENGE_DELETE_BLOCKED'
   | 'CHALLENGE_ASSIGNMENT_NOT_FOUND'
   | 'CHALLENGE_ASSIGNMENT_EXISTS'
+  | 'REWARD_INTEGRATION_INSTANCE_NOT_FOUND'
   | 'SUBMISSION_NOT_FOUND'
   | 'SUBMISSION_NOT_REVIEWABLE'
   | 'INVALID_CHALLENGE_INPUT';
@@ -146,7 +147,7 @@ interface ChallengeMutationInput {
   status?: ChallengeStatus;
   kind?: ChallengeKind;
   difficulty?: ChallengeDifficulty;
-  estimatedMinutes?: number;
+  estimatedMinutes?: number | null;
   tags?: unknown;
   startsAt?: string | Date | null;
   endsAt?: string | Date | null;
@@ -286,6 +287,17 @@ const ensureUniqueCipheredSealRoute = async (
   }
 };
 
+const normalizeStat = (value: unknown): number | undefined => {
+  const parsed = normalizeNumber(value);
+  return parsed === undefined ? undefined : Math.max(0, parsed);
+};
+
+// display-only metadata; values below the schema minimum of 1 mean "no estimate"
+const normalizeEstimatedMinutes = (value: unknown): number | undefined => {
+  const parsed = normalizeNumber(value);
+  return parsed !== undefined && parsed >= 1 ? parsed : undefined;
+};
+
 const normalizeReward = (reward: unknown): IChallengeRewardConfig => {
   if (!isRecord(reward)) {
     return {
@@ -304,10 +316,10 @@ const normalizeReward = (reward: unknown): IChallengeRewardConfig => {
     : 'custom';
   const stats = isRecord(reward.stats)
     ? {
-        multiplier: normalizeNumber(reward.stats.multiplier),
-        luck: normalizeNumber(reward.stats.luck),
-        shield: normalizeNumber(reward.stats.shield),
-        discount: normalizeNumber(reward.stats.discount),
+        multiplier: normalizeStat(reward.stats.multiplier),
+        luck: normalizeStat(reward.stats.luck),
+        shield: normalizeStat(reward.stats.shield),
+        discount: normalizeStat(reward.stats.discount),
       }
     : undefined;
 
@@ -437,6 +449,7 @@ const toPublicChallengeDto = (
   startsAt: assignment ? assignment.startsAt : challenge.startsAt,
   endsAt: assignment ? assignment.endsAt : challenge.endsAt,
   maxAttempts: assignment ? assignment.maxAttempts : challenge.maxAttempts,
+  hint: assignment?.hint || undefined,
   rewardIntegrationInstanceId: getAssignmentScopeId(assignment),
   classroom: classroom || undefined,
   reward: toRewardPreview(assignment ? assignment.reward : challenge.reward),
@@ -1362,7 +1375,7 @@ export const createAdminChallenge = async (
     difficulty: challengeDifficulties.includes(input.difficulty as ChallengeDifficulty)
       ? input.difficulty
       : 'easy',
-    estimatedMinutes: normalizeNumber(input.estimatedMinutes),
+    estimatedMinutes: normalizeEstimatedMinutes(input.estimatedMinutes),
     tags: normalizeTags(input.tags),
     version: 1,
     assignmentMigrationVersion: 1,
@@ -1400,7 +1413,7 @@ export const updateAdminChallenge = async (
     challenge.difficulty = input.difficulty;
   }
   if (input.estimatedMinutes !== undefined) {
-    challenge.estimatedMinutes = normalizeNumber(input.estimatedMinutes);
+    challenge.estimatedMinutes = normalizeEstimatedMinutes(input.estimatedMinutes);
   }
   if (input.tags !== undefined) challenge.tags = normalizeTags(input.tags);
   if (input.startsAt !== undefined) challenge.startsAt = parseDate(input.startsAt) || null;
@@ -1502,8 +1515,48 @@ export const deleteAdminChallenge = async (
   };
 };
 
+const listOwnedRewardIntegrationInstanceIds = async (
+  adminUserId: string
+): Promise<Types.ObjectId[]> => {
+  if (!Types.ObjectId.isValid(adminUserId)) return [];
+
+  const instances = await RewardIntegrationInstance.find({
+    createdBy: new Types.ObjectId(adminUserId),
+  }).select('_id');
+  return instances.map((instance) => instance._id);
+};
+
+const ensureOwnedRewardIntegrationInstanceId = async (
+  instanceId: string,
+  adminUserId: string
+): Promise<Types.ObjectId> => {
+  if (!Types.ObjectId.isValid(instanceId) || !Types.ObjectId.isValid(adminUserId)) {
+    throw new ChallengeServiceError(
+      'Reward integration instance was not found.',
+      'REWARD_INTEGRATION_INSTANCE_NOT_FOUND',
+      404
+    );
+  }
+
+  const objectId = new Types.ObjectId(instanceId);
+  const instanceExists = await RewardIntegrationInstance.exists({
+    _id: objectId,
+    createdBy: new Types.ObjectId(adminUserId),
+  });
+  if (!instanceExists) {
+    throw new ChallengeServiceError(
+      'Reward integration instance was not found.',
+      'REWARD_INTEGRATION_INSTANCE_NOT_FOUND',
+      404
+    );
+  }
+
+  return objectId;
+};
+
 export const listAdminChallengeSubmissions = async (
   challengeId: string,
+  adminUserId: string,
   options: {
     page?: number;
     limit?: number;
@@ -1517,14 +1570,14 @@ export const listAdminChallengeSubmissions = async (
 
   if (options.status) query.status = options.status;
   if (options.rewardIntegrationInstanceId) {
-    if (!Types.ObjectId.isValid(options.rewardIntegrationInstanceId)) {
-      throw new ChallengeServiceError(
-        'Reward integration instance was not found.',
-        'INVALID_CHALLENGE_INPUT',
-        404
-      );
-    }
-    query.rewardIntegrationInstanceId = new Types.ObjectId(options.rewardIntegrationInstanceId);
+    query.rewardIntegrationInstanceId = await ensureOwnedRewardIntegrationInstanceId(
+      options.rewardIntegrationInstanceId,
+      adminUserId
+    );
+  } else {
+    query.rewardIntegrationInstanceId = {
+      $in: await listOwnedRewardIntegrationInstanceIds(adminUserId),
+    };
   }
 
   const [items, total] = await Promise.all([
@@ -1542,7 +1595,8 @@ export const listAdminChallengeSubmissions = async (
 
 const ensureReviewableSubmission = async (
   challengeId: string,
-  submissionId: string
+  submissionId: string,
+  adminUserId: string
 ): Promise<{
   challenge: IChallengeDocument;
   submission: IChallengeSubmissionDocument;
@@ -1555,6 +1609,9 @@ const ensureReviewableSubmission = async (
   const submission = await ChallengeSubmission.findOne({
     _id: new Types.ObjectId(submissionId),
     challengeId: challenge._id,
+    rewardIntegrationInstanceId: {
+      $in: await listOwnedRewardIntegrationInstanceIds(adminUserId),
+    },
   });
 
   if (!submission) {
@@ -1579,9 +1636,20 @@ export const approveAdminChallengeSubmission = async (
   adminUserId: string,
   reviewMessage?: string
 ): Promise<ChallengeReviewResult> => {
-  const { challenge, submission } = await ensureReviewableSubmission(challengeId, submissionId);
+  const { challenge, submission } = await ensureReviewableSubmission(
+    challengeId,
+    submissionId,
+    adminUserId
+  );
+  const rewardIntegrationInstanceId = submission.rewardIntegrationInstanceId;
+  if (!rewardIntegrationInstanceId) {
+    throw new ChallengeServiceError('Submission not found.', 'SUBMISSION_NOT_FOUND', 404);
+  }
   const [progress, submittedUser] = await Promise.all([
-    ChallengeProgress.findById(submission.progressId),
+    ChallengeProgress.findOne({
+      _id: submission.progressId,
+      rewardIntegrationInstanceId,
+    }),
     User.findById(submission.userId),
   ]);
 
@@ -1595,7 +1663,11 @@ export const approveAdminChallengeSubmission = async (
 
   const assignmentId = submission.assignmentId || progress.assignmentId;
   const assignment = assignmentId
-    ? await ChallengeAssignment.findOne({ _id: assignmentId, challengeId: challenge._id })
+    ? await ChallengeAssignment.findOne({
+        _id: assignmentId,
+        challengeId: challenge._id,
+        rewardIntegrationInstanceId,
+      })
     : null;
   if (!assignment) {
     throw new ChallengeServiceError(
@@ -1635,8 +1707,15 @@ export const rejectAdminChallengeSubmission = async (
   adminUserId: string,
   reviewMessage?: string
 ): Promise<ChallengeReviewResult> => {
-  const { submission } = await ensureReviewableSubmission(challengeId, submissionId);
-  const progress = await ChallengeProgress.findById(submission.progressId);
+  const { submission } = await ensureReviewableSubmission(challengeId, submissionId, adminUserId);
+  const rewardIntegrationInstanceId = submission.rewardIntegrationInstanceId;
+  if (!rewardIntegrationInstanceId) {
+    throw new ChallengeServiceError('Submission not found.', 'SUBMISSION_NOT_FOUND', 404);
+  }
+  const progress = await ChallengeProgress.findOne({
+    _id: submission.progressId,
+    rewardIntegrationInstanceId,
+  });
 
   if (!progress) {
     throw new ChallengeServiceError(
@@ -1673,13 +1752,29 @@ export const rejectAdminChallengeSubmission = async (
 
 export const listAdminChallengeProgress = async (
   challengeId: string,
-  options: { page?: number; limit?: number; status?: ChallengeProgressStatus } = {}
+  adminUserId: string,
+  options: {
+    page?: number;
+    limit?: number;
+    status?: ChallengeProgressStatus;
+    rewardIntegrationInstanceId?: string;
+  } = {}
 ): Promise<ListResult<ReturnType<typeof toProgressDto>>> => {
   const challenge = await ensureChallengeById(challengeId);
   const { page, limit, skip } = normalizePagination(options.page, options.limit);
   const query: Record<string, unknown> = { challengeId: challenge._id };
 
   if (options.status) query.status = options.status;
+  if (options.rewardIntegrationInstanceId) {
+    query.rewardIntegrationInstanceId = await ensureOwnedRewardIntegrationInstanceId(
+      options.rewardIntegrationInstanceId,
+      adminUserId
+    );
+  } else {
+    query.rewardIntegrationInstanceId = {
+      $in: await listOwnedRewardIntegrationInstanceIds(adminUserId),
+    };
+  }
 
   const [items, total] = await Promise.all([
     ChallengeProgress.find(query).sort({ updatedAt: -1 }).skip(skip).limit(limit),

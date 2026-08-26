@@ -275,7 +275,9 @@ function Challenges({ theme: _theme }: ThemeProps) {
 
                   <div className="challenge-card-meta">
                     <span>{challenge.kind === 'multi_part' ? 'Multi-part' : 'Single goal'}</span>
-                    {challenge.estimatedMinutes && <span>{challenge.estimatedMinutes} min</span>}
+                    {challenge.estimatedMinutes ? (
+                      <span>{challenge.estimatedMinutes} min</span>
+                    ) : null}
                     <span>{getChallengeStatusLabel(challenge)}</span>
                   </div>
 

@@ -16,9 +16,17 @@ The site-wide distinction between member, moderator, admin, and superuser is doc
 
 The middleware reloads role and account status from MongoDB for each admin request rather than trusting a role embedded in the browser state.
 
-::: warning Global admin scope
-All admins currently manage all instances. There is no instructor-to-instance ACL. Treat admin membership as organization-wide challenge administration.
-:::
+## Instructor ownership
+
+The challenge catalog is shared across authorized instructors, but classroom operations are not.
+`RewardIntegrationInstance.createdBy` is an immutable authorization boundary for both admins and
+superusers. Instance lists, settings, connection tests, rosters, assignments, progress, submissions,
+manual reviews, and reward completion handling are filtered server-side to that owner.
+
+Supplying another instructor's instance, assignment, or submission ID does not grant access. These
+requests return the same not-found response as a missing record so the API does not disclose whether
+the foreign classroom exists. A superuser does not bypass classroom ownership through normal admin
+routes; superuser-only role management remains a separate capability.
 
 ## API key handling
 
@@ -50,7 +58,7 @@ SMTP availability is therefore part of the account-security boundary, not merely
 
 Challenge access is derived from persisted, roster-verified memberships. Services query assignments across those membership instance IDs and do not accept a classroom ID supplied by the student.
 
-Student navigation carries an assignment ID when the same definition exists in multiple classes. The backend verifies that the assignment belongs to an active membership before loading progress. Reward delivery independently refreshes that exact membership, selects credentials from the assignment instance, and uses the classroom and Prizeversity user IDs stored on the membership.
+Student navigation carries an assignment ID when the same definition exists in multiple classes. The backend verifies that the assignment belongs to an active membership before loading progress. Reward delivery independently refreshes that exact membership, selects credentials from the assignment instance, and uses the classroom and Prizeversity user IDs stored on the membership. Instructor access to the same assignment and its student records independently requires ownership of that instance.
 
 ## Validation and proof handling
 

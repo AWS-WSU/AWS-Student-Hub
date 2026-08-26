@@ -107,6 +107,7 @@ const rewardIntegrationInstanceSchema = new Schema<
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+      immutable: true,
       index: true,
     },
     updatedBy: {
@@ -120,6 +121,7 @@ const rewardIntegrationInstanceSchema = new Schema<
 );
 
 rewardIntegrationInstanceSchema.index({ provider: 1, classroomId: 1, active: 1 });
+rewardIntegrationInstanceSchema.index({ createdBy: 1, createdAt: -1 });
 
 const RewardIntegrationInstance = mongoose.model<
   IRewardIntegrationInstance,

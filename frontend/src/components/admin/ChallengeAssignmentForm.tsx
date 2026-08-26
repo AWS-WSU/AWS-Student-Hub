@@ -2,14 +2,14 @@ import { X } from 'lucide-react';
 
 import type { AdminChallenge, ChallengeAssignmentStatus } from '../../types/challenge';
 
-export interface ChallengeAssignmentFormData {
+import ChallengeRewardFields, { type ChallengeRewardFormData } from './ChallengeRewardFields';
+
+export interface ChallengeAssignmentFormData extends ChallengeRewardFormData {
   status: ChallengeAssignmentStatus;
   startsAt: string;
   endsAt: string;
   maxAttempts: string;
-  rewardEnabled: boolean;
-  rewardBits: string;
-  rewardXpAmount: string;
+  hint: string;
 }
 
 interface ChallengeAssignmentFormProps {
@@ -120,35 +120,24 @@ function ChallengeAssignmentForm({
             />
           </label>
 
-          <div className="challenge-admin-two-col">
-            <label>
-              Reward bits
-              <input
-                type="number"
-                min="0"
-                value={form.rewardBits}
-                onChange={(event) => onChange('rewardBits', event.target.value)}
-              />
-            </label>
-            <label>
-              Reward XP
-              <input
-                type="number"
-                min="0"
-                value={form.rewardXpAmount}
-                onChange={(event) => onChange('rewardXpAmount', event.target.value)}
-              />
-            </label>
-          </div>
-
-          <label className="challenge-admin-checkbox">
-            <input
-              type="checkbox"
-              checked={form.rewardEnabled}
-              onChange={(event) => onChange('rewardEnabled', event.target.checked)}
+          <label>
+            Student hint
+            <textarea
+              value={form.hint}
+              onChange={(event) => onChange('hint', event.target.value)}
+              maxLength={2000}
+              placeholder="Optional guidance for students in this classroom"
             />
-            Grant the configured Prizeversity reward on completion
+            <small className="field-note">
+              Optional. This appears only on this classroom's challenge assignment.
+            </small>
           </label>
+
+          <ChallengeRewardFields
+            form={form}
+            onChange={onChange}
+            enabledLabel="Grant the configured Prizeversity reward on completion"
+          />
 
           <button
             type="button"

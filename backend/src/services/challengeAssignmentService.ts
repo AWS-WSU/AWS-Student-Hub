@@ -15,6 +15,7 @@ interface ChallengeAssignmentMutationInput {
   startsAt?: string | Date | null;
   endsAt?: string | Date | null;
   maxAttempts?: number | null;
+  hint?: string | null;
   reward?: Partial<IChallengeRewardConfig>;
 }
 
@@ -32,6 +33,7 @@ interface AssignmentProgressAggregation {
 }
 
 const assignmentStatuses: ChallengeAssignmentStatus[] = ['draft', 'published', 'archived'];
+const MAX_ASSIGNMENT_HINT_LENGTH = 2000;
 const completedStatuses: ChallengeProgressStatus[] = [
   'completed',
   'reward_pending',
@@ -81,6 +83,23 @@ const normalizeMaxAttempts = (value: unknown): number | undefined => {
   return normalized;
 };
 
+const normalizeHint = (value: unknown): string => {
+  if (value === null || value === undefined) return '';
+  if (typeof value !== 'string') {
+    throw new ChallengeServiceError('Challenge hint must be text.', 'INVALID_CHALLENGE_INPUT', 400);
+  }
+
+  const hint = value.trim();
+  if (hint.length > MAX_ASSIGNMENT_HINT_LENGTH) {
+    throw new ChallengeServiceError(
+      `Challenge hint cannot exceed ${MAX_ASSIGNMENT_HINT_LENGTH} characters.`,
+      'INVALID_CHALLENGE_INPUT',
+      400
+    );
+  }
+  return hint;
+};
+
 const parseDate = (value: string | Date | null | undefined): Date | null | undefined => {
   if (value === null) return null;
   if (value === undefined || value === '') return undefined;
@@ -91,6 +110,11 @@ const parseDate = (value: string | Date | null | undefined): Date | null | undef
   return date;
 };
 
+const normalizeStat = (value: unknown): number | undefined => {
+  const parsed = normalizeNumber(value);
+  return parsed === undefined ? undefined : Math.max(0, parsed);
+};
+
 const normalizeReward = (
   reward: unknown,
   fallback: IChallengeRewardConfig
@@ -99,10 +123,10 @@ const normalizeReward = (
 
   const stats = isRecord(reward.stats)
     ? {
-        multiplier: normalizeNumber(reward.stats.multiplier),
-        luck: normalizeNumber(reward.stats.luck),
-        shield: normalizeNumber(reward.stats.shield),
-        discount: normalizeNumber(reward.stats.discount),
+        multiplier: normalizeStat(reward.stats.multiplier),
+        luck: normalizeStat(reward.stats.luck),
+        shield: normalizeStat(reward.stats.shield),
+        discount: normalizeStat(reward.stats.discount),
       }
     : fallback.stats;
   const xpMode = ['none', 'classroom', 'custom'].includes(String(reward.xpMode))
@@ -116,8 +140,13 @@ const normalizeReward = (
     bits: bits === undefined ? fallback.bits : Math.max(0, bits),
     xpAmount: xpAmount === undefined ? fallback.xpAmount : Math.max(0, xpAmount),
     xpMode,
-    activityName: cleanString(reward.activityName) || fallback.activityName,
-    description: cleanString(reward.description) || fallback.description,
+    // key present but blank = explicit clear; key absent = inherit the fallback
+    activityName:
+      'activityName' in reward
+        ? cleanString(reward.activityName) || undefined
+        : fallback.activityName,
+    description:
+      'description' in reward ? cleanString(reward.description) || undefined : fallback.description,
     stats,
     applyGroupMultipliers:
       typeof reward.applyGroupMultipliers === 'boolean'
@@ -140,20 +169,23 @@ const validateWindow = (startsAt?: Date | null, endsAt?: Date | null): void => {
   }
 };
 
-const ensureInstance = async (instanceId: string) => {
-  if (!Types.ObjectId.isValid(instanceId)) {
+const ensureInstance = async (instanceId: string, adminUserId: string) => {
+  if (!Types.ObjectId.isValid(instanceId) || !Types.ObjectId.isValid(adminUserId)) {
     throw new ChallengeServiceError(
       'Reward integration instance was not found.',
-      'INVALID_CHALLENGE_INPUT',
+      'REWARD_INTEGRATION_INSTANCE_NOT_FOUND',
       404
     );
   }
 
-  const instance = await RewardIntegrationInstance.findById(instanceId);
+  const instance = await RewardIntegrationInstance.findOne({
+    _id: new Types.ObjectId(instanceId),
+    createdBy: new Types.ObjectId(adminUserId),
+  });
   if (!instance) {
     throw new ChallengeServiceError(
       'Reward integration instance was not found.',
-      'INVALID_CHALLENGE_INPUT',
+      'REWARD_INTEGRATION_INSTANCE_NOT_FOUND',
       404
     );
   }
@@ -231,6 +263,7 @@ const toAssignmentDto = (
     startsAt: assignment.startsAt,
     endsAt: assignment.endsAt,
     maxAttempts: assignment.maxAttempts,
+    hint: assignment.hint || undefined,
     reward: assignment.reward,
     publishedAt: assignment.publishedAt,
     archivedAt: assignment.archivedAt,
@@ -243,8 +276,8 @@ const toAssignmentDto = (
   };
 };
 
-export const listInstanceChallengeAssignments = async (instanceId: string) => {
-  await ensureInstance(instanceId);
+export const listInstanceChallengeAssignments = async (instanceId: string, adminUserId: string) => {
+  await ensureInstance(instanceId, adminUserId);
   const assignments = await ChallengeAssignment.find({
     rewardIntegrationInstanceId: new Types.ObjectId(instanceId),
   }).sort({ updatedAt: -1 });
@@ -275,7 +308,7 @@ export const createInstanceChallengeAssignment = async (
   input: ChallengeAssignmentMutationInput,
   adminUserId: string
 ) => {
-  const instance = await ensureInstance(instanceId);
+  const instance = await ensureInstance(instanceId, adminUserId);
   if (!instance.active) {
     throw new ChallengeServiceError(
       'Activate this reward instance before assigning challenges.',
@@ -321,6 +354,7 @@ export const createInstanceChallengeAssignment = async (
       ? challenge.maxAttempts
       : normalizeMaxAttempts(input.maxAttempts);
   const reward = normalizeReward(input.reward, challenge.reward);
+  const hint = normalizeHint(input.hint);
   const now = new Date();
 
   const assignment = await ChallengeAssignment.create({
@@ -331,6 +365,7 @@ export const createInstanceChallengeAssignment = async (
     startsAt,
     endsAt,
     maxAttempts,
+    hint,
     reward,
     publishedAt: status === 'published' ? now : null,
     archivedAt: status === 'archived' ? now : null,
@@ -346,7 +381,7 @@ export const updateInstanceChallengeAssignment = async (
   input: ChallengeAssignmentMutationInput,
   adminUserId: string
 ) => {
-  const instance = await ensureInstance(instanceId);
+  const instance = await ensureInstance(instanceId, adminUserId);
   const assignment = await ensureAssignment(instanceId, assignmentId);
   const challenge = await Challenge.findById(assignment.challengeId);
   if (!challenge) {
@@ -383,6 +418,9 @@ export const updateInstanceChallengeAssignment = async (
   if (input.maxAttempts !== undefined) {
     assignment.maxAttempts = normalizeMaxAttempts(input.maxAttempts);
   }
+  if (input.hint !== undefined) {
+    assignment.hint = normalizeHint(input.hint);
+  }
   if (input.reward !== undefined) {
     assignment.reward = normalizeReward(input.reward, assignment.reward);
   }
@@ -401,6 +439,7 @@ export const removeInstanceChallengeAssignment = async (
   assignmentId: string,
   adminUserId: string
 ) => {
+  await ensureInstance(instanceId, adminUserId);
   const assignment = await ensureAssignment(instanceId, assignmentId);
   const progressCount = await ChallengeProgress.countDocuments({ assignmentId: assignment._id });
 

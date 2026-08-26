@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { BookOpen, CircleHelp, X } from 'lucide-react';
@@ -9,6 +9,7 @@ import ChallengeCatalogPicker from '../components/admin/ChallengeCatalogPicker';
 import ChallengeCreateForm, {
   type ChallengeFormData,
 } from '../components/admin/ChallengeCreateForm';
+import type { ChallengeRewardFormData } from '../components/admin/ChallengeRewardFields';
 import RewardInstanceForm, {
   type RewardIntegrationFormData,
 } from '../components/admin/RewardInstanceForm';
@@ -23,6 +24,7 @@ import type {
   AdminChallengeAssignmentPayload,
   AdminChallengePayload,
   AdminChallengeSubmission,
+  ChallengeRewardConfig,
   ChallengeStatus,
   ChallengeValidationType,
 } from '../types/challenge';
@@ -80,6 +82,93 @@ const emptyRewardForm: RewardIntegrationFormData = {
   scopes: defaultRewardScopes,
 };
 
+const defaultRewardFormFields: ChallengeRewardFormData = {
+  rewardEnabled: true,
+  rewardBits: '0',
+  rewardXpMode: 'custom',
+  rewardXpAmount: '0',
+  rewardActivityName: '',
+  rewardDescription: '',
+  rewardStatMultiplier: '',
+  rewardStatLuck: '',
+  rewardStatShield: '',
+  rewardStatDiscount: '',
+  rewardApplyGroupMultipliers: true,
+  rewardApplyPersonalMultipliers: true,
+};
+
+const parseOptionalNumber = (value: string): number | undefined => {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+// stats is always sent: the backend treats a present stats record as a wholesale
+// replace, so the payload must mirror the visible inputs (blank input = cleared stat).
+const buildChallengeRewardPayload = (
+  form: ChallengeRewardFormData
+): Partial<ChallengeRewardConfig> => {
+  const stats: NonNullable<ChallengeRewardConfig['stats']> = {};
+  const multiplier = parseOptionalNumber(form.rewardStatMultiplier);
+  if (multiplier !== undefined) stats.multiplier = multiplier;
+  const luck = parseOptionalNumber(form.rewardStatLuck);
+  if (luck !== undefined) stats.luck = luck;
+  const shield = parseOptionalNumber(form.rewardStatShield);
+  if (shield !== undefined) stats.shield = shield;
+  const discount = parseOptionalNumber(form.rewardStatDiscount);
+  if (discount !== undefined) stats.discount = discount;
+  return {
+    enabled: form.rewardEnabled,
+    bits: Math.max(0, Number(form.rewardBits) || 0),
+    xpMode: form.rewardXpMode,
+    xpAmount: form.rewardXpMode === 'custom' ? Math.max(0, Number(form.rewardXpAmount) || 0) : 0,
+    // sent even when blank: an explicit empty string clears the assignment override
+    activityName: form.rewardActivityName.trim(),
+    description: form.rewardDescription.trim(),
+    stats,
+    applyGroupMultipliers: form.rewardApplyGroupMultipliers,
+    applyPersonalMultipliers: form.rewardApplyPersonalMultipliers,
+  };
+};
+
+const seedRewardForm = (reward: ChallengeRewardConfig): ChallengeRewardFormData => ({
+  rewardEnabled: reward.enabled,
+  rewardBits: String(reward.bits ?? 0),
+  rewardXpMode: reward.xpMode || 'custom',
+  rewardXpAmount: reward.xpAmount != null ? String(reward.xpAmount) : '',
+  rewardActivityName: reward.activityName || '',
+  rewardDescription: reward.description || '',
+  rewardStatMultiplier: reward.stats?.multiplier != null ? String(reward.stats.multiplier) : '',
+  rewardStatLuck: reward.stats?.luck != null ? String(reward.stats.luck) : '',
+  rewardStatShield: reward.stats?.shield != null ? String(reward.stats.shield) : '',
+  rewardStatDiscount: reward.stats?.discount != null ? String(reward.stats.discount) : '',
+  rewardApplyGroupMultipliers: reward.applyGroupMultipliers !== false,
+  rewardApplyPersonalMultipliers: reward.applyPersonalMultipliers !== false,
+});
+
+const formatRewardXp = (reward: ChallengeRewardConfig): string => {
+  if (reward.xpMode === 'classroom') return 'Classroom XP';
+  if (reward.xpMode === 'none') return 'No XP';
+  return `${reward.xpAmount || 0} XP`;
+};
+
+const countRewardStats = (reward: ChallengeRewardConfig): number =>
+  [
+    reward.stats?.multiplier,
+    reward.stats?.luck,
+    reward.stats?.shield,
+    reward.stats?.discount,
+  ].filter((value) => value != null).length;
+
+const formatRewardSummary = (reward: ChallengeRewardConfig): string => {
+  if (!reward.enabled) return 'Off';
+  const parts = [`${reward.bits} bits`, formatRewardXp(reward)];
+  const statCount = countRewardStats(reward);
+  if (statCount > 0) parts.push(`${statCount} stat adj.`);
+  return parts.join(' · ');
+};
+
 const emptyChallengeForm: ChallengeFormData = {
   key: '',
   slug: '',
@@ -102,7 +191,7 @@ const emptyChallengeForm: ChallengeFormData = {
     null,
     2
   ),
-  rewardEnabled: true,
+  ...defaultRewardFormFields,
   rewardBits: '25',
   rewardXpAmount: '15',
 };
@@ -112,9 +201,8 @@ const emptyAssignmentForm: ChallengeAssignmentFormData = {
   startsAt: '',
   endsAt: '',
   maxAttempts: '',
-  rewardEnabled: true,
-  rewardBits: '0',
-  rewardXpAmount: '0',
+  hint: '',
+  ...defaultRewardFormFields,
 };
 
 const getErrorMessage = (err: unknown, fallback: string): string =>
@@ -304,22 +392,27 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       .some((value) => String(value).toLowerCase().includes(query));
   });
 
+  const isAuthorized = Boolean(user?.role && adminRoles.includes(user.role));
+  const accessRedirectedRef = useRef(false);
+
   useEffect(() => {
-    if (authLoading) {
+    if (authLoading || accessRedirectedRef.current) {
       return;
     }
 
     if (!user) {
+      accessRedirectedRef.current = true;
       navigate('/auth');
       return;
     }
 
-    if (!user.role || !adminRoles.includes(user.role)) {
-      navigate('/');
+    if (!isAuthorized) {
+      // one-shot: user/showToast identity changes must not re-trigger the toast
+      accessRedirectedRef.current = true;
       showToast('Access denied. Admin privileges required.', 'error');
-      return;
+      navigate('/');
     }
-  }, [user, navigate, showToast, authLoading]);
+  }, [user, isAuthorized, navigate, showToast, authLoading]);
 
   const loadUsers = useCallback(async () => {
     setUsersLoading(true);
@@ -354,16 +447,16 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       }
     };
 
-    if (user?.role && adminRoles.includes(user.role)) {
+    if (isAuthorized) {
       loadStats();
     }
-  }, [user]);
+  }, [isAuthorized]);
 
   useEffect(() => {
-    if (activeTab === 'users') {
+    if (isAuthorized && activeTab === 'users') {
       loadUsers();
     }
-  }, [activeTab, loadUsers]);
+  }, [isAuthorized, activeTab, loadUsers]);
 
   // Load email queue data
   const loadQueueStats = useCallback(async () => {
@@ -394,11 +487,11 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   }, [queueStatusFilter, queuePage]);
 
   useEffect(() => {
-    if (activeTab === 'queue') {
+    if (isAuthorized && activeTab === 'queue') {
       loadQueueStats();
       loadQueueEntries();
     }
-  }, [activeTab, loadQueueStats, loadQueueEntries]);
+  }, [isAuthorized, activeTab, loadQueueStats, loadQueueEntries]);
 
   const loadRewardIntegrations = useCallback(async () => {
     setRewardLoading(true);
@@ -419,10 +512,10 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'rewards' || activeTab === 'challenges') {
+    if (isAuthorized && (activeTab === 'rewards' || activeTab === 'challenges')) {
       loadRewardIntegrations();
     }
-  }, [activeTab, loadRewardIntegrations]);
+  }, [isAuthorized, activeTab, loadRewardIntegrations]);
 
   const loadAdminChallenges = useCallback(async () => {
     setChallengeLoading(true);
@@ -447,14 +540,14 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'challenges' || activeTab === 'rewards') {
+    if (isAuthorized && (activeTab === 'challenges' || activeTab === 'rewards')) {
       loadAdminChallenges();
     }
-  }, [activeTab, loadAdminChallenges]);
+  }, [isAuthorized, activeTab, loadAdminChallenges]);
 
   useEffect(() => {
-    if (activeTab === 'rewards') loadAssignableChallenges();
-  }, [activeTab, loadAssignableChallenges]);
+    if (isAuthorized && activeTab === 'rewards') loadAssignableChallenges();
+  }, [isAuthorized, activeTab, loadAssignableChallenges]);
 
   const loadChallengeAssignments = useCallback(async (instanceId: string) => {
     if (!instanceId) {
@@ -476,10 +569,10 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'rewards' && selectedRewardInstanceId) {
+    if (isAuthorized && activeTab === 'rewards' && selectedRewardInstanceId) {
       loadChallengeAssignments(selectedRewardInstanceId);
     }
-  }, [activeTab, selectedRewardInstanceId, loadChallengeAssignments]);
+  }, [isAuthorized, activeTab, selectedRewardInstanceId, loadChallengeAssignments]);
 
   useEffect(() => {
     if (!selectedRewardInstance) return;
@@ -510,10 +603,15 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'rewards' && rewardWorkspaceTab === 'students' && selectedRewardInstanceId) {
+    if (
+      isAuthorized &&
+      activeTab === 'rewards' &&
+      rewardWorkspaceTab === 'students' &&
+      selectedRewardInstanceId
+    ) {
       loadRewardMembers(selectedRewardInstanceId);
     }
-  }, [activeTab, rewardWorkspaceTab, selectedRewardInstanceId, loadRewardMembers]);
+  }, [isAuthorized, activeTab, rewardWorkspaceTab, selectedRewardInstanceId, loadRewardMembers]);
 
   const handleRetryEmail = async (queueId: string) => {
     if (!queueId) {
@@ -708,14 +806,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
         .filter(Boolean),
       maxAttempts: Number(challengeForm.maxAttempts) || undefined,
       validation,
-      reward: {
-        enabled: challengeForm.rewardEnabled,
-        bits: Number(challengeForm.rewardBits) || 0,
-        xpMode: challengeForm.rewardXpAmount ? 'custom' : 'none',
-        xpAmount: Number(challengeForm.rewardXpAmount) || undefined,
-        activityName: challengeForm.title.trim(),
-        description: `Completed ${challengeForm.title.trim()}`,
-      },
+      reward: buildChallengeRewardPayload(challengeForm),
     };
   };
 
@@ -756,9 +847,8 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       startsAt: toDateTimeInput(assignment?.startsAt),
       endsAt: toDateTimeInput(assignment?.endsAt),
       maxAttempts: String(assignment?.maxAttempts || challenge.maxAttempts || ''),
-      rewardEnabled: reward.enabled,
-      rewardBits: String(reward.bits || 0),
-      rewardXpAmount: String(reward.xpAmount || 0),
+      hint: assignment?.hint || '',
+      ...seedRewardForm(reward),
     });
     setShowCatalogPicker(false);
   };
@@ -776,14 +866,8 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
     startsAt: toIsoDate(assignmentForm.startsAt),
     endsAt: toIsoDate(assignmentForm.endsAt),
     maxAttempts: assignmentForm.maxAttempts ? Number(assignmentForm.maxAttempts) : null,
-    reward: {
-      enabled: assignmentForm.rewardEnabled,
-      bits: Number(assignmentForm.rewardBits) || 0,
-      xpMode: Number(assignmentForm.rewardXpAmount) > 0 ? 'custom' : 'none',
-      xpAmount: Number(assignmentForm.rewardXpAmount) || 0,
-      activityName: assignmentChallenge?.title,
-      description: assignmentChallenge ? `Completed ${assignmentChallenge.title}` : undefined,
-    },
+    hint: assignmentForm.hint.trim() || null,
+    reward: buildChallengeRewardPayload(assignmentForm),
   });
 
   const closeAssignmentEditor = () => {
@@ -878,6 +962,20 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       loadAssignableChallenges();
     } catch (err) {
       showToast(getErrorMessage(err, 'Failed to publish challenge'), 'error');
+    } finally {
+      setUpdatingChallengeId(null);
+    }
+  };
+
+  const handleClearChallengeDuration = async (challengeId: string) => {
+    setUpdatingChallengeId(challengeId);
+    try {
+      await adminAPI.updateChallenge(challengeId, { estimatedMinutes: null });
+      showToast('Estimated duration cleared', 'success');
+      loadAdminChallenges();
+      loadAssignableChallenges();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to clear estimated duration'), 'error');
     } finally {
       setUpdatingChallengeId(null);
     }
@@ -1042,7 +1140,9 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || !isAuthorized) {
+    // unauthorized visitors get one toast and a redirect from the effect above;
+    // render the stable shell instead of the dashboard while that happens
     return (
       <div className="admin-dashboard-container">
         <div className="admin-content">
@@ -1438,10 +1538,16 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                             <strong>{challenge.difficulty}</strong>
                           </div>
                           <div>
-                            <span>Reward</span>
+                            <span>Duration</span>
                             <strong>
-                              {challenge.reward.enabled ? `${challenge.reward.bits} bits` : 'Off'}
+                              {challenge.estimatedMinutes
+                                ? `${challenge.estimatedMinutes} min`
+                                : 'None'}
                             </strong>
+                          </div>
+                          <div>
+                            <span>Reward</span>
+                            <strong>{formatRewardSummary(challenge.reward)}</strong>
                           </div>
                           <div>
                             <span>Attempts</span>
@@ -1472,6 +1578,17 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                               disabled={updatingChallengeId === challenge.id}
                             >
                               Publish
+                            </button>
+                          )}
+                          {Boolean(challenge.estimatedMinutes) && (
+                            <button
+                              type="button"
+                              className="action-btn role-btn"
+                              onClick={() => handleClearChallengeDuration(challenge.id)}
+                              disabled={updatingChallengeId === challenge.id}
+                              title="Remove the estimated-duration badge. It is display metadata only and never acts as a deadline."
+                            >
+                              Clear duration
                             </button>
                           )}
                           {challenge.status !== 'archived' && (
@@ -1858,8 +1975,18 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                                       <strong>{assignment.reward.bits}</strong> bits
                                     </span>
                                     <span>
-                                      <strong>{assignment.reward.xpAmount || 0}</strong> XP
+                                      <strong>{formatRewardXp(assignment.reward)}</strong>
                                     </span>
+                                    {countRewardStats(assignment.reward) > 0 && (
+                                      <span>
+                                        <strong>{countRewardStats(assignment.reward)}</strong> stat
+                                        adj.
+                                      </span>
+                                    )}
+                                    {(assignment.reward.applyGroupMultipliers === false ||
+                                      assignment.reward.applyPersonalMultipliers === false) && (
+                                      <span>multipliers off</span>
+                                    )}
                                     <span>
                                       <strong>{assignment.maxAttempts || 'Unlimited'}</strong>{' '}
                                       attempts
@@ -1883,6 +2010,11 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                                       {assignment.endsAt
                                         ? `Closes ${new Date(assignment.endsAt).toLocaleString()}`
                                         : 'No deadline'}
+                                    </small>
+                                  )}
+                                  {assignment.hint && (
+                                    <small className="assignment-hint-preview">
+                                      <strong>Student hint:</strong> {assignment.hint}
                                     </small>
                                   )}
                                 </div>

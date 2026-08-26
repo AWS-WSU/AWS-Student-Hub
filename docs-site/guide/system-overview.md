@@ -18,6 +18,9 @@ An instance represents exactly one Prizeversity classroom. It stores the classro
 
 If an instructor runs two sections of the same course, create two instances. Do not reuse one instance across multiple Prizeversity classrooms.
 
+The instructor who creates an instance owns it. Other admins and superusers can still use the shared
+challenge catalog, but cannot view or operate that instance or its classroom records.
+
 ### Student membership
 
 A student verifies one Prizeversity identity, then connects each configured classroom they have joined. One student may therefore have several active memberships. Each membership is independently revalidated against its classroom roster and controls that classroom's challenge visibility and rewards.
@@ -89,9 +92,9 @@ MONGODB_URI='<target-mongodb-uri>' bun run create-superuser -- instructor@exampl
 
 Run that command against the intended environment. Instructors should not receive database credentials merely to promote accounts.
 
-::: warning Current ownership model
-All admins can currently view and manage all reward instances and challenge definitions. `createdBy` is retained for auditing, but it is not a per-instructor authorization boundary. Do not grant the admin role to someone who should only manage one classroom.
-:::
+Challenge definitions are organization-wide so instructors can reuse the same catalog. Instances,
+assignments, rosters, progress, submissions, reviews, and reward operations are scoped to the
+instructor who created the instance. Superusers follow the same classroom ownership boundary.
 
 ## Where data lives
 

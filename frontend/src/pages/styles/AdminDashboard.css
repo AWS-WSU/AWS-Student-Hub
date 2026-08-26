@@ -791,6 +791,22 @@
   margin-top: 8px;
 }
 
+.assignment-hint-preview {
+  color: var(--text-secondary);
+  display: -webkit-box;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  margin-top: 8px;
+  max-width: 680px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.assignment-hint-preview strong {
+  color: var(--text-primary);
+}
+
 .assignment-edit-btn {
   background: rgba(var(--text-secondary-rgb), 0.1);
   color: var(--text-primary);

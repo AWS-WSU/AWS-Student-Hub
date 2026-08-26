@@ -537,6 +537,34 @@
   white-space: pre-wrap;
 }
 
+.challenge-assignment-hint {
+  align-items: flex-start;
+  background: rgba(var(--accent-rgb), 0.08);
+  border: 1px solid rgba(var(--accent-rgb), 0.24);
+  border-radius: 14px;
+  color: var(--accent-color);
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 1rem;
+}
+
+.challenge-assignment-hint svg {
+  flex: 0 0 auto;
+  margin-top: 0.15rem;
+}
+
+.challenge-assignment-hint strong {
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.challenge-assignment-hint p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
 .challenge-detail-meta-grid {
   display: grid;
   gap: 0.8rem;

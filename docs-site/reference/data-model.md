@@ -32,6 +32,7 @@ Connects one definition to one reward instance.
 | `status`                      | Classroom delivery lifecycle.                 |
 | `startsAt`, `endsAt`          | Availability window.                          |
 | `maxAttempts`                 | Classroom-specific attempt limit.             |
+| `hint`                        | Optional classroom-specific student guidance. |
 | `reward`                      | Concrete classroom reward configuration.      |
 | `assignedBy`, `updatedBy`     | Admin audit references.                       |
 
@@ -53,8 +54,11 @@ Server-side Prizeversity classroom connection.
 | `active`            | Master operational switch.                            |
 | `lastVerification*` | Connection-test state.                                |
 | `lastUserCount`     | Last roster size observed.                            |
+| `createdBy`         | Immutable instructor ownership boundary.              |
 
-The model records `createdBy`, but service authorization currently does not scope records to their creator.
+Admin instance queries require `createdBy` to match the authenticated instructor. Assignments,
+progress, submissions, reviews, and reward operations derive their administrative scope through this
+owned instance reference. Catalog definitions remain global and reusable.
 
 ## RewardIntegrationMembership
 
