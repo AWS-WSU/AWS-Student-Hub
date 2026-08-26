@@ -287,6 +287,11 @@ const ensureUniqueCipheredSealRoute = async (
   }
 };
 
+const normalizeStat = (value: unknown): number | undefined => {
+  const parsed = normalizeNumber(value);
+  return parsed === undefined ? undefined : Math.max(0, parsed);
+};
+
 const normalizeReward = (reward: unknown): IChallengeRewardConfig => {
   if (!isRecord(reward)) {
     return {
@@ -305,10 +310,10 @@ const normalizeReward = (reward: unknown): IChallengeRewardConfig => {
     : 'custom';
   const stats = isRecord(reward.stats)
     ? {
-        multiplier: normalizeNumber(reward.stats.multiplier),
-        luck: normalizeNumber(reward.stats.luck),
-        shield: normalizeNumber(reward.stats.shield),
-        discount: normalizeNumber(reward.stats.discount),
+        multiplier: normalizeStat(reward.stats.multiplier),
+        luck: normalizeStat(reward.stats.luck),
+        shield: normalizeStat(reward.stats.shield),
+        discount: normalizeStat(reward.stats.discount),
       }
     : undefined;
 

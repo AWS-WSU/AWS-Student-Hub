@@ -63,6 +63,8 @@ An instance must also be active and linked to the student.
 
 When an assignment is first created, it copies the definition's default dates, attempt limit, reward values, and current version. Those copied values belong to the assignment afterward.
 
+Both the catalog create form and the assignment editor expose the full Prizeversity reward configuration: bits, completion XP mode (none, classroom default, or a custom amount), the activity name and description shown in the student's Prizeversity feed, stat adjustments (multiplier, luck, shield, discount), and the group/personal multiplier toggles. Leaving the activity name or description blank falls back to the challenge title; leaving a stat blank sends no adjustment for it.
+
 Changing a definition's default reward does not automatically rewrite every existing classroom assignment. Edit each assignment when classroom delivery should change.
 
 Updating an assignment refreshes its stored challenge-version marker to the definition's current version.

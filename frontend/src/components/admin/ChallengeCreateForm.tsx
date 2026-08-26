@@ -1,6 +1,8 @@
 import type { ChallengeDifficulty, ChallengeKind } from '../../types/challenge';
 
-export interface ChallengeFormData {
+import ChallengeRewardFields, { type ChallengeRewardFormData } from './ChallengeRewardFields';
+
+export interface ChallengeFormData extends ChallengeRewardFormData {
   key: string;
   slug: string;
   title: string;
@@ -13,9 +15,6 @@ export interface ChallengeFormData {
   tags: string;
   maxAttempts: string;
   validationJson: string;
-  rewardEnabled: boolean;
-  rewardBits: string;
-  rewardXpAmount: string;
 }
 
 type ValidationTemplate = 'static_secret' | 'manual_review';
@@ -163,35 +162,7 @@ function ChallengeCreateForm({
         />
       </label>
 
-      <div className="challenge-admin-two-col">
-        <label>
-          Reward bits
-          <input
-            type="number"
-            min="0"
-            value={form.rewardBits}
-            onChange={(event) => onChange('rewardBits', event.target.value)}
-          />
-        </label>
-        <label>
-          Reward XP
-          <input
-            type="number"
-            min="0"
-            value={form.rewardXpAmount}
-            onChange={(event) => onChange('rewardXpAmount', event.target.value)}
-          />
-        </label>
-      </div>
-
-      <label className="challenge-admin-checkbox">
-        <input
-          type="checkbox"
-          checked={form.rewardEnabled}
-          onChange={(event) => onChange('rewardEnabled', event.target.checked)}
-        />
-        Reward enabled
-      </label>
+      <ChallengeRewardFields form={form} onChange={onChange} />
 
       <button
         type="button"

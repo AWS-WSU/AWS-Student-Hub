@@ -110,6 +110,11 @@ const parseDate = (value: string | Date | null | undefined): Date | null | undef
   return date;
 };
 
+const normalizeStat = (value: unknown): number | undefined => {
+  const parsed = normalizeNumber(value);
+  return parsed === undefined ? undefined : Math.max(0, parsed);
+};
+
 const normalizeReward = (
   reward: unknown,
   fallback: IChallengeRewardConfig
@@ -118,10 +123,10 @@ const normalizeReward = (
 
   const stats = isRecord(reward.stats)
     ? {
-        multiplier: normalizeNumber(reward.stats.multiplier),
-        luck: normalizeNumber(reward.stats.luck),
-        shield: normalizeNumber(reward.stats.shield),
-        discount: normalizeNumber(reward.stats.discount),
+        multiplier: normalizeStat(reward.stats.multiplier),
+        luck: normalizeStat(reward.stats.luck),
+        shield: normalizeStat(reward.stats.shield),
+        discount: normalizeStat(reward.stats.discount),
       }
     : fallback.stats;
   const xpMode = ['none', 'classroom', 'custom'].includes(String(reward.xpMode))
@@ -135,8 +140,13 @@ const normalizeReward = (
     bits: bits === undefined ? fallback.bits : Math.max(0, bits),
     xpAmount: xpAmount === undefined ? fallback.xpAmount : Math.max(0, xpAmount),
     xpMode,
-    activityName: cleanString(reward.activityName) || fallback.activityName,
-    description: cleanString(reward.description) || fallback.description,
+    // key present but blank = explicit clear; key absent = inherit the fallback
+    activityName:
+      'activityName' in reward
+        ? cleanString(reward.activityName) || undefined
+        : fallback.activityName,
+    description:
+      'description' in reward ? cleanString(reward.description) || undefined : fallback.description,
     stats,
     applyGroupMultipliers:
       typeof reward.applyGroupMultipliers === 'boolean'

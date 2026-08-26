@@ -86,10 +86,10 @@ export const challengeRewardSchema = new Schema<IChallengeRewardConfig>(
       maxlength: 500,
     },
     stats: {
-      multiplier: { type: Number },
-      luck: { type: Number },
-      shield: { type: Number },
-      discount: { type: Number },
+      multiplier: { type: Number, min: 0 },
+      luck: { type: Number, min: 0 },
+      shield: { type: Number, min: 0 },
+      discount: { type: Number, min: 0 },
     },
     applyGroupMultipliers: {
       type: Boolean,

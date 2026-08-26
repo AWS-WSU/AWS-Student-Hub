@@ -238,6 +238,12 @@ Create/update body:
     "bits": 50,
     "xpMode": "custom",
     "xpAmount": 30,
+    "activityName": "Header hunt",
+    "description": "Completed the header hunt challenge.",
+    "stats": {
+      "multiplier": 1.5,
+      "shield": 2
+    },
     "applyGroupMultipliers": true,
     "applyPersonalMultipliers": true
   }
@@ -247,6 +253,17 @@ Create/update body:
 Use `null` to clear dates or the assignment hint. A missing field leaves the existing value
 unchanged during update. Hints are scoped to the selected classroom assignment and limited to
 2,000 characters.
+
+Reward semantics:
+
+- `xpMode` is one of `none`, `classroom` (Prizeversity's classroom default), or `custom`
+  (uses `xpAmount`).
+- A present `stats` object replaces the stored stat adjustments wholesale; omitting `stats`
+  keeps (on update) or inherits (on create) the existing values. Stat values are clamped to be
+  non-negative.
+- Sending `activityName` or `description` as an empty string clears the override so the
+  completion event falls back to the challenge title / `Completed <title>`. Omitting the key
+  keeps the existing value.
 
 ## Challenge error codes
 
