@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { BookOpen, CircleHelp, X } from 'lucide-react';
@@ -392,22 +392,27 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       .some((value) => String(value).toLowerCase().includes(query));
   });
 
+  const isAuthorized = Boolean(user?.role && adminRoles.includes(user.role));
+  const accessRedirectedRef = useRef(false);
+
   useEffect(() => {
-    if (authLoading) {
+    if (authLoading || accessRedirectedRef.current) {
       return;
     }
 
     if (!user) {
+      accessRedirectedRef.current = true;
       navigate('/auth');
       return;
     }
 
-    if (!user.role || !adminRoles.includes(user.role)) {
-      navigate('/');
+    if (!isAuthorized) {
+      // one-shot: user/showToast identity changes must not re-trigger the toast
+      accessRedirectedRef.current = true;
       showToast('Access denied. Admin privileges required.', 'error');
-      return;
+      navigate('/');
     }
-  }, [user, navigate, showToast, authLoading]);
+  }, [user, isAuthorized, navigate, showToast, authLoading]);
 
   const loadUsers = useCallback(async () => {
     setUsersLoading(true);
@@ -442,16 +447,16 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
       }
     };
 
-    if (user?.role && adminRoles.includes(user.role)) {
+    if (isAuthorized) {
       loadStats();
     }
-  }, [user]);
+  }, [isAuthorized]);
 
   useEffect(() => {
-    if (activeTab === 'users') {
+    if (isAuthorized && activeTab === 'users') {
       loadUsers();
     }
-  }, [activeTab, loadUsers]);
+  }, [isAuthorized, activeTab, loadUsers]);
 
   // Load email queue data
   const loadQueueStats = useCallback(async () => {
@@ -482,11 +487,11 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   }, [queueStatusFilter, queuePage]);
 
   useEffect(() => {
-    if (activeTab === 'queue') {
+    if (isAuthorized && activeTab === 'queue') {
       loadQueueStats();
       loadQueueEntries();
     }
-  }, [activeTab, loadQueueStats, loadQueueEntries]);
+  }, [isAuthorized, activeTab, loadQueueStats, loadQueueEntries]);
 
   const loadRewardIntegrations = useCallback(async () => {
     setRewardLoading(true);
@@ -507,10 +512,10 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'rewards' || activeTab === 'challenges') {
+    if (isAuthorized && (activeTab === 'rewards' || activeTab === 'challenges')) {
       loadRewardIntegrations();
     }
-  }, [activeTab, loadRewardIntegrations]);
+  }, [isAuthorized, activeTab, loadRewardIntegrations]);
 
   const loadAdminChallenges = useCallback(async () => {
     setChallengeLoading(true);
@@ -535,14 +540,14 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'challenges' || activeTab === 'rewards') {
+    if (isAuthorized && (activeTab === 'challenges' || activeTab === 'rewards')) {
       loadAdminChallenges();
     }
-  }, [activeTab, loadAdminChallenges]);
+  }, [isAuthorized, activeTab, loadAdminChallenges]);
 
   useEffect(() => {
-    if (activeTab === 'rewards') loadAssignableChallenges();
-  }, [activeTab, loadAssignableChallenges]);
+    if (isAuthorized && activeTab === 'rewards') loadAssignableChallenges();
+  }, [isAuthorized, activeTab, loadAssignableChallenges]);
 
   const loadChallengeAssignments = useCallback(async (instanceId: string) => {
     if (!instanceId) {
@@ -564,10 +569,10 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'rewards' && selectedRewardInstanceId) {
+    if (isAuthorized && activeTab === 'rewards' && selectedRewardInstanceId) {
       loadChallengeAssignments(selectedRewardInstanceId);
     }
-  }, [activeTab, selectedRewardInstanceId, loadChallengeAssignments]);
+  }, [isAuthorized, activeTab, selectedRewardInstanceId, loadChallengeAssignments]);
 
   useEffect(() => {
     if (!selectedRewardInstance) return;
@@ -598,10 +603,15 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'rewards' && rewardWorkspaceTab === 'students' && selectedRewardInstanceId) {
+    if (
+      isAuthorized &&
+      activeTab === 'rewards' &&
+      rewardWorkspaceTab === 'students' &&
+      selectedRewardInstanceId
+    ) {
       loadRewardMembers(selectedRewardInstanceId);
     }
-  }, [activeTab, rewardWorkspaceTab, selectedRewardInstanceId, loadRewardMembers]);
+  }, [isAuthorized, activeTab, rewardWorkspaceTab, selectedRewardInstanceId, loadRewardMembers]);
 
   const handleRetryEmail = async (queueId: string) => {
     if (!queueId) {
@@ -1130,7 +1140,9 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || !isAuthorized) {
+    // unauthorized visitors get one toast and a redirect from the effect above;
+    // render the stable shell instead of the dashboard while that happens
     return (
       <div className="admin-dashboard-container">
         <div className="admin-content">
