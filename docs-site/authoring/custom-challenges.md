@@ -16,7 +16,7 @@ New custom definitions begin as drafts. Publishing makes them selectable from cl
 | Instructions      | Concrete steps and proof format without disclosing the answer.                                          |
 | Kind              | `single` for current custom validators; reserve `multi_part` for an implemented multi-stage experience. |
 | Difficulty        | `easy`, `medium`, `hard`, or `expert`.                                                                  |
-| Estimated minutes | Planning estimate, not an enforced timer.                                                               |
+| Estimated minutes | Optional planning estimate, not an enforced timer. Leave blank for open-ended or semester-long work.    |
 | Tags              | Search and categorization labels.                                                                       |
 | Maximum attempts  | Definition default copied into new assignments.                                                         |
 | Reward            | Definition default copied into new assignments.                                                         |

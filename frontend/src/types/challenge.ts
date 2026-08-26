@@ -267,7 +267,7 @@ export interface AdminChallengePayload {
   status?: ChallengeStatus;
   kind?: ChallengeKind;
   difficulty?: ChallengeDifficulty;
-  estimatedMinutes?: number;
+  estimatedMinutes?: number | null;
   tags?: string[];
   maxAttempts?: number;
   validation: Record<string, unknown>;

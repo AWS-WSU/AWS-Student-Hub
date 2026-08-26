@@ -147,7 +147,7 @@ interface ChallengeMutationInput {
   status?: ChallengeStatus;
   kind?: ChallengeKind;
   difficulty?: ChallengeDifficulty;
-  estimatedMinutes?: number;
+  estimatedMinutes?: number | null;
   tags?: unknown;
   startsAt?: string | Date | null;
   endsAt?: string | Date | null;
@@ -290,6 +290,12 @@ const ensureUniqueCipheredSealRoute = async (
 const normalizeStat = (value: unknown): number | undefined => {
   const parsed = normalizeNumber(value);
   return parsed === undefined ? undefined : Math.max(0, parsed);
+};
+
+// display-only metadata; values below the schema minimum of 1 mean "no estimate"
+const normalizeEstimatedMinutes = (value: unknown): number | undefined => {
+  const parsed = normalizeNumber(value);
+  return parsed !== undefined && parsed >= 1 ? parsed : undefined;
 };
 
 const normalizeReward = (reward: unknown): IChallengeRewardConfig => {
@@ -1369,7 +1375,7 @@ export const createAdminChallenge = async (
     difficulty: challengeDifficulties.includes(input.difficulty as ChallengeDifficulty)
       ? input.difficulty
       : 'easy',
-    estimatedMinutes: normalizeNumber(input.estimatedMinutes),
+    estimatedMinutes: normalizeEstimatedMinutes(input.estimatedMinutes),
     tags: normalizeTags(input.tags),
     version: 1,
     assignmentMigrationVersion: 1,
@@ -1407,7 +1413,7 @@ export const updateAdminChallenge = async (
     challenge.difficulty = input.difficulty;
   }
   if (input.estimatedMinutes !== undefined) {
-    challenge.estimatedMinutes = normalizeNumber(input.estimatedMinutes);
+    challenge.estimatedMinutes = normalizeEstimatedMinutes(input.estimatedMinutes);
   }
   if (input.tags !== undefined) challenge.tags = normalizeTags(input.tags);
   if (input.startsAt !== undefined) challenge.startsAt = parseDate(input.startsAt) || null;

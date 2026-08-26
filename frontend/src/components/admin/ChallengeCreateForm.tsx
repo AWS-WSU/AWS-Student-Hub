@@ -122,6 +122,7 @@ function ChallengeCreateForm({
             min="1"
             value={form.estimatedMinutes}
             onChange={(event) => onChange('estimatedMinutes', event.target.value)}
+            placeholder="Optional"
           />
         </label>
         <label>

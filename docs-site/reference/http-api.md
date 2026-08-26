@@ -175,7 +175,11 @@ Capture download does not consume an attempt. Final flag submission does.
 | `GET`    | `/admin/challenges/:challengeId/progress`        | Paginated progress from owned instances; supports status and instance filters.        |
 | `POST`   | `/admin/challenges/:challengeId/test-validation` | Execute validator for an admin-selected user without normal submission orchestration. |
 
-Custom creation accepts only `static_secret` and `manual_review` validation. Curated definitions are seeded from source control.
+Custom creation accepts only `static_secret` and `manual_review` validation. Curated definitions are seeded from source control, but their metadata may still be updated through `PATCH /admin/challenges/:challengeId`.
+
+`estimatedMinutes` is optional display metadata — it never acts as an availability window or
+submission deadline. Send `"estimatedMinutes": null` on update to clear it (the admin catalog
+card exposes this as **Clear duration**); values below 1 are treated as no estimate.
 
 ## Admin review routes
 

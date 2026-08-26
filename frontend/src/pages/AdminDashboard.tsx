@@ -957,6 +957,20 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
     }
   };
 
+  const handleClearChallengeDuration = async (challengeId: string) => {
+    setUpdatingChallengeId(challengeId);
+    try {
+      await adminAPI.updateChallenge(challengeId, { estimatedMinutes: null });
+      showToast('Estimated duration cleared', 'success');
+      loadAdminChallenges();
+      loadAssignableChallenges();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to clear estimated duration'), 'error');
+    } finally {
+      setUpdatingChallengeId(null);
+    }
+  };
+
   const handleArchiveChallenge = async (challengeId: string) => {
     setUpdatingChallengeId(challengeId);
     try {
@@ -1512,6 +1526,14 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                             <strong>{challenge.difficulty}</strong>
                           </div>
                           <div>
+                            <span>Duration</span>
+                            <strong>
+                              {challenge.estimatedMinutes
+                                ? `${challenge.estimatedMinutes} min`
+                                : 'None'}
+                            </strong>
+                          </div>
+                          <div>
                             <span>Reward</span>
                             <strong>{formatRewardSummary(challenge.reward)}</strong>
                           </div>
@@ -1544,6 +1566,17 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                               disabled={updatingChallengeId === challenge.id}
                             >
                               Publish
+                            </button>
+                          )}
+                          {Boolean(challenge.estimatedMinutes) && (
+                            <button
+                              type="button"
+                              className="action-btn role-btn"
+                              onClick={() => handleClearChallengeDuration(challenge.id)}
+                              disabled={updatingChallengeId === challenge.id}
+                              title="Remove the estimated-duration badge. It is display metadata only and never acts as a deadline."
+                            >
+                              Clear duration
                             </button>
                           )}
                           {challenge.status !== 'archived' && (
