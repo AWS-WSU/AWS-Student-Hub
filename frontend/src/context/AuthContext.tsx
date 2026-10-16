@@ -41,7 +41,7 @@ export const useAuth = (): AuthContextValue => {
 };
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'https://bx7226tmz2.execute-api.us-east-1.amazonaws.com/prod';
+  import.meta.env.VITE_API_URL || 'https://cxj1v57w5d.execute-api.us-east-1.amazonaws.com/prod';
 
 const getStoredItem = (key: string): string | null => {
   return localStorage.getItem(key) || sessionStorage.getItem(key);
