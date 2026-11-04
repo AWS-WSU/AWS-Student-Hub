@@ -487,6 +487,7 @@ function Auth({ theme: _theme }: AuthProps) {
       }
 
       sessionStorage.setItem('auth0PolicyAcknowledged', 'true');
+      sessionStorage.setItem('auth0RememberMe', formData.rememberMe ? 'true' : 'false');
       setIsLoading(true);
       await loginWithRedirect({
         appState: { returnTo: window.location.origin },

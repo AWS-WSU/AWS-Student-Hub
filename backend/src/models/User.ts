@@ -12,6 +12,9 @@ export interface RefreshTokenEntry {
   expiresAt: Date;
   deviceId: string;
   rememberMe?: boolean;
+  /** Set once this token has been used; points at the token that replaced it. */
+  replacedBy?: string;
+  rotatedAt?: Date;
 }
 
 export interface IUser {
@@ -92,6 +95,12 @@ const refreshTokenSchema = new Schema<RefreshTokenEntry>(
     rememberMe: {
       type: Boolean,
       default: false,
+    },
+    replacedBy: {
+      type: String,
+    },
+    rotatedAt: {
+      type: Date,
     },
   },
   { _id: false }
@@ -402,15 +411,22 @@ userSchema.methods.generateRefreshToken = function (deviceId: string, rememberMe
 userSchema.methods.validateRefreshToken = function (token: string, deviceId: string): boolean {
   const tokenEntry = ensureRefreshTokens(this).find(
     (entry: RefreshTokenEntry) =>
-      entry.token === token && entry.deviceId === deviceId && entry.expiresAt > new Date()
+      entry.token === token &&
+      entry.deviceId === deviceId &&
+      entry.expiresAt > new Date() &&
+      !entry.replacedBy
   );
   return Boolean(tokenEntry);
 };
 
+/** Revokes a token and, if it was recently rotated, the token that replaced it. */
 userSchema.methods.revokeRefreshToken = function (token: string): void {
-  this.refreshTokens = ensureRefreshTokens(this).filter(
-    (entry: RefreshTokenEntry) => entry.token !== token
-  );
+  const entries = ensureRefreshTokens(this);
+  const doomed = new Set<string>([token]);
+  const entry = entries.find((item: RefreshTokenEntry) => item.token === token);
+  if (entry?.replacedBy) doomed.add(entry.replacedBy);
+
+  this.refreshTokens = entries.filter((item: RefreshTokenEntry) => !doomed.has(item.token));
 };
 
 userSchema.methods.revokeAllRefreshTokens = function (): void {
@@ -419,8 +435,12 @@ userSchema.methods.revokeAllRefreshTokens = function (): void {
 };
 
 userSchema.methods.cleanExpiredRefreshTokens = function (): void {
+  const now = Date.now();
+  const graceCutoff = now - 60 * 1000;
   this.refreshTokens = ensureRefreshTokens(this).filter(
-    (token: RefreshTokenEntry) => token.expiresAt > new Date()
+    (token: RefreshTokenEntry) =>
+      token.expiresAt.getTime() > now &&
+      (!token.replacedBy || (token.rotatedAt?.getTime() ?? 0) > graceCutoff)
   );
 };
 
