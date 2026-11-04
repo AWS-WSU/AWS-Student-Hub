@@ -13,6 +13,7 @@ export interface EmailEventSnapshot {
   description?: string;
   thumbnailUrl?: string;
   meetupUrl?: string;
+  customMessage?: string;
 }
 
 export interface IEmailQueue {
@@ -46,6 +47,7 @@ const eventSnapshotSchema = new Schema<EmailEventSnapshot>(
     description: String,
     thumbnailUrl: String,
     meetupUrl: String,
+    customMessage: String,
   },
   { _id: false }
 );
@@ -100,6 +102,7 @@ const emailQueueSchema = new Schema<IEmailQueue, EmailQueueModel>(
 );
 
 emailQueueSchema.index({ status: 1, nextAttempt: 1 });
+emailQueueSchema.index({ status: 1, lastAttempt: 1 });
 emailQueueSchema.index({ eventId: 1 });
 emailQueueSchema.index({ email: 1, eventId: 1 }, { unique: true });
 
