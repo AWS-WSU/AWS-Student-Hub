@@ -6,6 +6,13 @@ import { validationResult } from 'express-validator';
 
 import env from '../config/env';
 import User from '../models/User';
+import type { IUserDocument } from '../models/User';
+import {
+  buildRefreshTokenEntry,
+  inferRememberMe,
+  resolveRefreshToken,
+  rotateRefreshToken,
+} from '../services/refreshTokenService';
 import type { UserGrade } from '../models/User';
 import { createChallengeUser } from '../services/awsProvision';
 import { sendResetCode } from '../services/emailService';
@@ -93,14 +100,8 @@ const generateDeviceId = (): string => {
   return crypto.randomBytes(16).toString('hex');
 };
 
-const generateTokens = (user: TokenUser, deviceId: string, rememberMe = false) => {
-  if (env.IS_LAMBDA) {
-    log.info('lambda environment detected.');
-    log.info('jwt secret exists.', !!env.JWT_SECRET);
-    log.info('jwt secret length.', env.JWT_SECRET ? env.JWT_SECRET.length : 0);
-  }
-
-  const accessToken = jwt.sign(
+const signAccessToken = (user: TokenUser): string =>
+  jwt.sign(
     {
       id: user._id,
       email: user.email,
@@ -110,6 +111,14 @@ const generateTokens = (user: TokenUser, deviceId: string, rememberMe = false) =
     { expiresIn: '15m' }
   );
 
+const generateTokens = (user: TokenUser, deviceId: string, rememberMe = false) => {
+  if (env.IS_LAMBDA) {
+    log.info('lambda environment detected.');
+    log.info('jwt secret exists.', !!env.JWT_SECRET);
+    log.info('jwt secret length.', env.JWT_SECRET ? env.JWT_SECRET.length : 0);
+  }
+
+  const accessToken = signAccessToken(user);
   const refreshToken = user.generateRefreshToken(deviceId, rememberMe);
 
   return { accessToken, refreshToken };
@@ -148,30 +157,6 @@ const applyPolicyAcknowledgement = (user: {
   user.privacyPolicyAcknowledgedAt = acknowledgedAt;
   user.privacyPolicyVersion = CURRENT_POLICY_VERSION;
   user.codeOfConductAcknowledgedAt = acknowledgedAt;
-};
-
-const getRefreshTokenRememberMe = (
-  user: {
-    refreshTokens?: Array<{
-      token: string;
-      deviceId: string;
-      expiresAt: Date;
-      rememberMe?: boolean;
-    }>;
-  },
-  refreshToken: string,
-  deviceId: string
-): boolean => {
-  const tokenEntry = user.refreshTokens?.find(
-    (entry) => entry.token === refreshToken && entry.deviceId === deviceId
-  );
-  if (!tokenEntry) return false;
-  if (typeof tokenEntry.rememberMe === 'boolean') return tokenEntry.rememberMe;
-
-  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-  const expiresAt =
-    tokenEntry.expiresAt instanceof Date ? tokenEntry.expiresAt : new Date(tokenEntry.expiresAt);
-  return expiresAt.getTime() - Date.now() > sevenDaysMs;
 };
 
 const generateUsername = async (email: string): Promise<string> => {
@@ -1098,6 +1083,16 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
+    const respond = (user: IUserDocument, token: string, rememberMe: boolean): void => {
+      res.json({
+        accessToken: signAccessToken(user),
+        refreshToken: token,
+        deviceId,
+        rememberMe,
+        user: user.toSafeObject(),
+      });
+    };
+
     const user = await User.findOne({
       'refreshTokens.token': refreshToken,
       'refreshTokens.deviceId': deviceId,
@@ -1110,33 +1105,47 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    if (!user.validateRefreshToken(refreshToken, deviceId)) {
+    const now = new Date();
+    const resolution = resolveRefreshToken(user.refreshTokens, refreshToken, deviceId, now);
+
+    if (resolution.kind === 'invalid') {
       res.status(401).json({
-        error: 'Refresh token expired or invalid',
+        error:
+          resolution.reason === 'expired'
+            ? 'Refresh token expired or invalid'
+            : 'Invalid refresh token',
       });
       return;
     }
 
-    const rememberMe = getRefreshTokenRememberMe(user, refreshToken, deviceId);
+    if (resolution.kind === 'replay') {
+      // Another request on this device rotated the token moments ago. Hand
+      // back the same replacement so both callers end up on the same session.
+      respond(user, resolution.replacement.token, inferRememberMe(resolution.replacement, now));
+      return;
+    }
 
-    user.cleanExpiredRefreshTokens();
+    const rememberMe = inferRememberMe(resolution.entry, now);
+    const replacement = buildRefreshTokenEntry(deviceId, rememberMe, now);
+    const rotated = await rotateRefreshToken(user._id, refreshToken, deviceId, replacement, now);
 
-    const { accessToken, refreshToken: newRefreshToken } = generateTokens(
-      user,
-      deviceId,
-      rememberMe
-    );
+    if (rotated) {
+      respond(user, replacement.token, rememberMe);
+      return;
+    }
 
-    user.revokeRefreshToken(refreshToken);
+    // Lost the race: re-read and we should find a replay.
+    const fresh = await User.findById(user._id);
+    const retry = fresh
+      ? resolveRefreshToken(fresh.refreshTokens, refreshToken, deviceId, new Date())
+      : null;
+    if (fresh && retry?.kind === 'replay') {
+      respond(fresh, retry.replacement.token, inferRememberMe(retry.replacement));
+      return;
+    }
 
-    await user.save();
-
-    res.json({
-      accessToken,
-      refreshToken: newRefreshToken,
-      deviceId,
-      rememberMe,
-      user: user.toSafeObject(),
+    res.status(401).json({
+      error: 'Invalid refresh token',
     });
   } catch (error: unknown) {
     log.error('refresh token error.', error);
