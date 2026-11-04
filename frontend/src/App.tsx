@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider, useToast } from './context/ToastContext';
@@ -10,6 +10,7 @@ import About from './pages/About';
 import Resources from './pages/Resources';
 import Events from './pages/Events';
 import Challenges from './pages/Challenges';
+import BuilderWars from './pages/BuilderWars';
 import ChallengeDetail from './pages/ChallengeDetail';
 import Auth from './pages/Auth';
 import Account from './pages/Account';
@@ -69,6 +70,8 @@ function AppContent() {
           <Route path="/resources" element={<Resources />} />
           <Route path="/events" element={<Events theme={theme} />} />
           <Route path="/challenges" element={<Challenges theme={theme} />} />
+          <Route path="/builder-wars" element={<BuilderWars />} />
+          <Route path="/hackathon" element={<Navigate to="/builder-wars" replace />} />
           <Route path="/challenges/:slug/lab" element={<SqlInjectionSandbox />} />
           <Route path="/challenges/:slug" element={<ChallengeDetail theme={theme} />} />
           <Route path="/challenge/:routeKey" element={<CipheredSealProtocol />} />
