@@ -8,7 +8,8 @@ interface Props {
   broadcastKey: string;
 }
 
-const ARM_WINDOW_MS = 12_000;
+const ARM_WINDOW_MS = 45_000;
+const CONFIRM_WORD = 'SEND';
 const POLL_MS = 5_000;
 
 const formatWhen = (iso: string): string =>
@@ -29,6 +30,7 @@ function BuilderWarsBroadcastPanel({ broadcastKey }: Props) {
   const [status, setStatus] = useState<BroadcastStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [armed, setArmed] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
   const [busy, setBusy] = useState(false);
   const armTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pumping = useRef(false);
@@ -93,15 +95,24 @@ function BuilderWarsBroadcastPanel({ broadcastKey }: Props) {
     []
   );
 
-  const arm = () => {
-    setArmed(true);
-    if (armTimer.current) clearTimeout(armTimer.current);
-    armTimer.current = setTimeout(() => setArmed(false), ARM_WINDOW_MS);
+  const disarm = () => {
+    setArmed(false);
+    setConfirmText('');
   };
 
-  const fire = async () => {
+  const arm = () => {
+    setArmed(true);
+    setConfirmText('');
     if (armTimer.current) clearTimeout(armTimer.current);
-    setArmed(false);
+    armTimer.current = setTimeout(disarm, ARM_WINDOW_MS);
+  };
+
+  const confirmed = confirmText.trim().toUpperCase() === CONFIRM_WORD;
+
+  const fire = async () => {
+    if (!confirmed) return;
+    if (armTimer.current) clearTimeout(armTimer.current);
+    disarm();
     setBusy(true);
     try {
       const next = await broadcastAPI.send(broadcastKey);
@@ -169,28 +180,50 @@ function BuilderWarsBroadcastPanel({ broadcastKey }: Props) {
               </button>
             ) : (
               <div className="bw-admin__armed">
-                <button
-                  type="button"
-                  className="bw-btn bw-btn--danger"
-                  onClick={fire}
-                  disabled={busy}
-                >
-                  {busy ? (
-                    <>
-                      <Loader2 size={16} className="bw-spin" aria-hidden="true" /> Sending
-                    </>
-                  ) : (
-                    `Send to ${status.eligibleRecipients} members now`
-                  )}
-                </button>
-                <button
-                  type="button"
-                  className="bw-btn bw-btn--ghost"
-                  onClick={() => setArmed(false)}
-                  disabled={busy}
-                >
-                  Stand down
-                </button>
+                <label className="bw-admin__confirm">
+                  <span>
+                    Type <strong>{CONFIRM_WORD}</strong> to confirm emailing all{' '}
+                    {status.eligibleRecipients} members
+                  </span>
+                  <input
+                    type="text"
+                    value={confirmText}
+                    onChange={(event) => setConfirmText(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' && confirmed && !busy) void fire();
+                    }}
+                    placeholder={CONFIRM_WORD}
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    disabled={busy}
+                    aria-label={`Type ${CONFIRM_WORD} to confirm`}
+                  />
+                </label>
+                <div className="bw-admin__armed-actions">
+                  <button
+                    type="button"
+                    className="bw-btn bw-btn--danger"
+                    onClick={fire}
+                    disabled={busy || !confirmed}
+                  >
+                    {busy ? (
+                      <>
+                        <Loader2 size={16} className="bw-spin" aria-hidden="true" /> Sending
+                      </>
+                    ) : (
+                      `Send to ${status.eligibleRecipients} members now`
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="bw-btn bw-btn--ghost"
+                    onClick={disarm}
+                    disabled={busy}
+                  >
+                    Stand down
+                  </button>
+                </div>
               </div>
             )}
           </div>
