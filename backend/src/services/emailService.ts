@@ -47,6 +47,25 @@ const getErrorMessage = (error: unknown): string => {
   return error instanceof Error ? error.message : String(error);
 };
 
+export interface RawMailOptions {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+  from?: string;
+}
+
+/** Sends a fully-formed message through the shared transporter. */
+export const sendRawMail = async (options: RawMailOptions): Promise<void> => {
+  await transporter.sendMail({
+    from: options.from ?? `"AWS Student Hub" <${env.SMTP_USER}>`,
+    to: options.to,
+    subject: options.subject,
+    html: options.html,
+    text: options.text,
+  });
+};
+
 export const sendResetCode = async (
   email: string,
   code: string,
