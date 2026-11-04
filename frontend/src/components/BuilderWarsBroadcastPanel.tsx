@@ -52,17 +52,22 @@ function BuilderWarsBroadcastPanel({ broadcastKey }: Props) {
     void refresh();
   }, [refresh]);
 
-  // Keep an in-flight broadcast moving: pump batches until nothing is pending,
-  // then fall back to polling in case another invocation holds the last rows.
+  // Keep an in-flight broadcast moving. Pump another batch right away only
+  // while rows are actually due; when they are waiting on a backoff (SMTP
+  // throttling, a bad login), just poll. Hammering the endpoint would burn
+  // through Gmail's login-attempt budget for nothing.
   useEffect(() => {
     if (!status?.broadcast || status.broadcast.status !== 'sending') return;
 
     let cancelled = false;
     const remaining = status.counts.pending + status.counts.processing;
+    const nextDue = status.nextAttemptAt ? new Date(status.nextAttemptAt).getTime() : null;
+    const rowsDue = status.counts.pending > 0 && (nextDue === null || nextDue <= Date.now());
+    const lastBatchMadeProgress = (status.results?.processed ?? 1) > 0;
 
     const run = async () => {
       if (cancelled) return;
-      if (status.counts.pending > 0 && !pumping.current) {
+      if (rowsDue && lastBatchMadeProgress && !pumping.current) {
         pumping.current = true;
         try {
           const next = await broadcastAPI.process(broadcastKey);
@@ -81,7 +86,8 @@ function BuilderWarsBroadcastPanel({ broadcastKey }: Props) {
       }
     };
 
-    const timer = setTimeout(run, status.counts.pending > 0 ? 250 : POLL_MS);
+    const delay = rowsDue && lastBatchMadeProgress ? 250 : POLL_MS;
+    const timer = setTimeout(run, delay);
     return () => {
       cancelled = true;
       clearTimeout(timer);
@@ -108,6 +114,19 @@ function BuilderWarsBroadcastPanel({ broadcastKey }: Props) {
   };
 
   const confirmed = confirmText.trim().toUpperCase() === CONFIRM_WORD;
+
+  const retryFailed = async () => {
+    setBusy(true);
+    try {
+      const next = await broadcastAPI.retryFailed(broadcastKey);
+      setStatus(next);
+      showToast(`Reopened ${next.reopened ?? 0} failed deliveries.`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Retry failed', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const fire = async () => {
     if (!confirmed) return;
@@ -245,6 +264,33 @@ function BuilderWarsBroadcastPanel({ broadcastKey }: Props) {
                 <strong>{status.counts.failed}</strong> failed
               </span>
             </div>
+            {status.lastError && status.counts.sent < total && (
+              <p className="bw-admin__error" title={status.lastError.message}>
+                <ShieldAlert size={14} aria-hidden="true" />
+                Last SMTP error ({formatWhen(status.lastError.at)}):{' '}
+                {status.lastError.message.split('\n')[0]}
+              </p>
+            )}
+            {record.status === 'sending' &&
+              status.counts.pending > 0 &&
+              status.nextAttemptAt &&
+              new Date(status.nextAttemptAt).getTime() > Date.now() && (
+                <p className="bw-admin__muted">
+                  Waiting on a backoff. Next attempt {formatWhen(status.nextAttemptAt)}.
+                </p>
+              )}
+            {record.status === 'completed' && status.counts.failed > 0 && (
+              <div className="bw-admin__armed-actions">
+                <button
+                  type="button"
+                  className="bw-btn bw-btn--ghost"
+                  onClick={retryFailed}
+                  disabled={busy}
+                >
+                  Retry {status.counts.failed} failed
+                </button>
+              </div>
+            )}
             <p className="bw-admin__muted">
               {record.status === 'completed' ? (
                 <>

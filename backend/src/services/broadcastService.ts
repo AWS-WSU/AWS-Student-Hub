@@ -48,6 +48,10 @@ export interface BroadcastStatusView {
   broadcast: (Omit<IBroadcast, 'triggeredBy'> & { id: string; triggeredBy: string }) | null;
   counts: BroadcastCounts;
   eligibleRecipients: number;
+  /** Most recent SMTP error across deliveries, so admins can see a bad login without CloudWatch. */
+  lastError: { message: string; at: Date; email: string } | null;
+  /** When the earliest pending row becomes due again, if any are waiting on a backoff. */
+  nextAttemptAt: Date | null;
 }
 
 export interface ProcessOptions {
@@ -121,10 +125,18 @@ const toView = (doc: IBroadcastDocument | null) => {
 export const getBroadcastStatus = async (key: string): Promise<BroadcastStatusView> => {
   const definition = getBroadcastDefinition(key);
 
-  const [broadcast, counts, eligibleRecipients] = await Promise.all([
+  const [broadcast, counts, eligibleRecipients, latestError, nextPending] = await Promise.all([
     Broadcast.findOne({ key }),
     getCounts(key),
     countEligibleRecipients(),
+    BroadcastDelivery.findOne({ broadcastKey: key, lastError: { $exists: true, $ne: '' } })
+      .sort({ lastAttempt: -1 })
+      .select('lastError lastAttempt email')
+      .lean(),
+    BroadcastDelivery.findOne({ broadcastKey: key, status: 'pending' })
+      .sort({ nextAttempt: 1 })
+      .select('nextAttempt')
+      .lean(),
   ]);
 
   return {
@@ -132,6 +144,11 @@ export const getBroadcastStatus = async (key: string): Promise<BroadcastStatusVi
     broadcast: toView(broadcast),
     counts,
     eligibleRecipients,
+    lastError:
+      latestError?.lastError && latestError.lastAttempt
+        ? { message: latestError.lastError, at: latestError.lastAttempt, email: latestError.email }
+        : null,
+    nextAttemptAt: nextPending?.nextAttempt ?? null,
   };
 };
 
