@@ -637,8 +637,11 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
     try {
       const response = await adminAPI.processEmailQueue(10);
       const result = response.result || {};
+      const remaining = result.remaining || 0;
       showToast(
-        `Processed ${result.processed || 0} emails (${result.succeeded || 0} succeeded, ${result.failed || 0} failed)`,
+        `Processed ${result.processed || 0} emails (${result.succeeded || 0} sent, ${result.failed || 0} will retry` +
+          `${result.deferred ? ', SMTP throttled, paused' : ''})` +
+          `${remaining > 0 ? `. ${remaining} still queued.` : ''}`,
         'success'
       );
       loadQueueEntries();
@@ -2299,8 +2302,23 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
 
                         <div className="queue-event">{entry.eventSnapshot?.title || 'N/A'}</div>
 
-                        <div className="queue-status" data-status={entry.status}>
-                          {entry.status}
+                        <div className="queue-status-cell">
+                          <div className="queue-status" data-status={entry.status}>
+                            {entry.status}
+                          </div>
+                          {entry.status === 'pending' && entry.nextAttempt && (
+                            <div className="queue-status-note">
+                              next try {new Date(entry.nextAttempt).toLocaleTimeString()}
+                            </div>
+                          )}
+                          {entry.lastError && entry.status !== 'completed' && (
+                            <div
+                              className="queue-status-note queue-status-note--error"
+                              title={entry.lastError}
+                            >
+                              {entry.lastError}
+                            </div>
+                          )}
                         </div>
 
                         <div className="queue-attempts">{entry.attempts || 0}</div>
@@ -2310,7 +2328,7 @@ function AdminDashboard({ theme }: AdminDashboardProps) {
                         </div>
 
                         <div className="queue-entry-actions">
-                          {(entry.status === 'failed' || entry.status === 'pending') && (
+                          {entry.status !== 'completed' && (
                             <button
                               onClick={() => handleRetryEmail(entryId)}
                               className="action-btn retry-btn"

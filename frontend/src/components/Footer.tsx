@@ -94,6 +94,9 @@ function Footer({ theme: _theme }: ThemeProps) {
               <Link to="/resources">Resources</Link>
             </li>
             <li>
+              <Link to="/builder-wars">Builder Wars Hackathon</Link>
+            </li>
+            <li>
               <a href="/docs/">Operations Handbook</a>
             </li>
             <li>

@@ -20,6 +20,8 @@ type EmailStatus =
       success: true;
       sent: number;
       failed: number;
+      queued: number;
+      remaining: number;
     }
   | {
       success: false;
@@ -178,8 +180,10 @@ function CreateEventModal({ onClose, onEventCreated }: CreateEventModalProps) {
             success: true,
             sent: emailRes.emailsSent ?? 0,
             failed: emailRes.emailsFailed ?? 0,
+            queued: emailRes.emailsQueued ?? 0,
+            remaining: emailRes.emailsRemaining ?? 0,
           });
-          setTimeout(() => onClose(), 2000);
+          setTimeout(() => onClose(), (emailRes.emailsRemaining ?? 0) > 0 ? 4000 : 2000);
         } catch (emailError) {
           console.error('error sending email notifications.', emailError);
           setEmailStatus({
@@ -452,8 +456,10 @@ function CreateEventModal({ onClose, onEventCreated }: CreateEventModalProps) {
                   fontWeight: 500,
                 }}
               >
-                Successfully sent {emailResult.sent} emails!
-                {emailResult.failed > 0 && ` (${emailResult.failed} failed)`}
+                {emailResult.remaining > 0
+                  ? `Queued ${emailResult.queued} emails. ${emailResult.sent} sent so far; the rest go out automatically over the next few minutes.`
+                  : `Successfully sent ${emailResult.sent} emails!`}
+                {emailResult.failed > 0 && ` (${emailResult.failed} failed, will retry)`}
               </div>
             )}
             {emailResult?.success === false && (

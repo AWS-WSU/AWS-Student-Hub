@@ -3,7 +3,8 @@ import nodemailer from 'nodemailer';
 import env from '../config/env';
 import logger from '../config/logger';
 import EmailQueue from '../models/EmailQueue';
-import type { EmailEventSnapshot } from '../models/EmailQueue';
+import type { EmailEventSnapshot, IEmailQueueDocument } from '../models/EmailQueue';
+import { classifyTransientSmtpError, transientDeferMs } from './smtpErrors';
 
 const log = logger.child({ module: 'emailService' });
 
@@ -19,18 +20,28 @@ interface EmailRecipient {
   fullName: string;
 }
 
-interface BulkEmailResults {
-  sent: number;
-  failed: number;
+export interface BulkEmailResults {
+  /** Rows created for this call. */
   queued: number;
-  errors: Array<{ email: string; error: string }>;
+  /** Recipients that already had a row for this event. */
+  skipped: number;
+  /** Sent inside this call's budget. */
+  sent: number;
+  /** Failed inside this call's budget (retry scheduled or permanently failed). */
+  failed: number;
+  /** Deferred because SMTP is throttling. */
+  deferred: number;
+  /** Rows still pending or processing across the whole queue. */
+  remaining: number;
 }
 
-interface QueueProcessingResults {
+export interface QueueProcessingResults {
   processed: number;
   succeeded: number;
   failed: number;
+  deferred: number;
   permanentlyFailed: number;
+  remaining: number;
 }
 
 const transporter = nodemailer.createTransport({
@@ -41,10 +52,37 @@ const transporter = nodemailer.createTransport({
     user: env.SMTP_USER,
     pass: env.SMTP_PASS,
   },
+  // One login per invocation instead of one per message, and no call can
+  // hang long enough to eat a whole Lambda budget.
+  pool: true,
+  maxConnections: 1,
+  maxMessages: 100,
+  connectionTimeout: 10_000,
+  greetingTimeout: 10_000,
+  socketTimeout: 15_000,
 });
 
 const getErrorMessage = (error: unknown): string => {
   return error instanceof Error ? error.message : String(error);
+};
+
+export interface RawMailOptions {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+  from?: string;
+}
+
+/** Sends a fully-formed message through the shared transporter. */
+export const sendRawMail = async (options: RawMailOptions): Promise<void> => {
+  await transporter.sendMail({
+    from: options.from ?? `"AWS Student Hub" <${env.SMTP_USER}>`,
+    to: options.to,
+    subject: options.subject,
+    html: options.html,
+    text: options.text,
+  });
 };
 
 export const sendResetCode = async (
@@ -498,13 +536,39 @@ export const sendEventNotification = async (
   await transporter.sendMail(mailOptions);
 };
 
+/* -------------------------------------------------------------------------- */
+/* Event notification queue                                                    */
+/*                                                                            */
+/* The queue is the primary delivery path, not a fallback. Every recipient    */
+/* gets a row first; sending happens in budgeted batches from whichever       */
+/* invocation gets there (the notify request, the admin button, the 5-minute  */
+/* schedule). Rows are claimed atomically so two invocations never send the   */
+/* same email.                                                                */
+/* -------------------------------------------------------------------------- */
+
+const RETRY_DELAYS_SECONDS = [60, 300, 900, 3600, 14400];
+/** A `processing` row older than this is assumed orphaned by a dead invocation. */
+const STALE_PROCESSING_MS = 2 * 60 * 1000;
+const DELAY_BETWEEN_SENDS_MS = 100;
+
+export interface QueueProcessOptions {
+  /** Wall-clock budget. Processing stops once this is exhausted. */
+  budgetMs: number;
+  /** Hard cap on rows handled in one call, regardless of budget. */
+  maxEmails?: number;
+}
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
 const getNextRetryTime = (attempts: number): Date => {
-  const delays = [60, 300, 900, 3600, 14400];
-  const delaySeconds = delays[Math.min(attempts, delays.length - 1)];
-  return new Date(Date.now() + delaySeconds * 1000);
+  const index = Math.min(Math.max(attempts - 1, 0), RETRY_DELAYS_SECONDS.length - 1);
+  return new Date(Date.now() + RETRY_DELAYS_SECONDS[index] * 1000);
 };
 
-const createEventSnapshot = (event: EventNotificationData): EmailEventSnapshot => ({
+const createEventSnapshot = (
+  event: EventNotificationData,
+  customMessage = ''
+): EmailEventSnapshot => ({
   title: event.title,
   startTime: new Date(event.startTime),
   isRemote: event.isRemote === true || event.isRemote === 'true',
@@ -515,128 +579,204 @@ const createEventSnapshot = (event: EventNotificationData): EmailEventSnapshot =
   description: event.description || '',
   thumbnailUrl: event.thumbnailUrl || '',
   meetupUrl: event.meetupUrl || '',
+  customMessage,
 });
 
-const queueFailedEmail = async (
-  email: string,
-  fullName: string,
-  event: EventNotificationData,
-  error: unknown
-): Promise<void> => {
-  try {
-    await EmailQueue.findOneAndUpdate(
-      { email, eventId: event._id },
-      {
-        email,
-        fullName,
-        eventId: event._id,
-        eventSnapshot: createEventSnapshot(event),
-        status: 'pending',
-        $inc: { attempts: 1 },
-        lastAttempt: new Date(),
-        lastError: getErrorMessage(error),
-        nextAttempt: getNextRetryTime(1),
-      },
-      { upsert: true, new: true }
-    );
-    log.info(`queued failed email for retry ${email}.`);
-  } catch (queueError: unknown) {
-    log.error(`failed to queue email for ${email}.`, queueError);
-  }
-};
+const countPending = (): Promise<number> =>
+  EmailQueue.countDocuments({ status: { $in: ['pending', 'processing'] } });
 
-export const sendBulkEventNotification = async (
+/**
+ * Creates one pending row per recipient. Safe to call again for the same
+ * event: existing rows are left alone (the unique index rejects them) and
+ * previously failed rows get a fresh retry budget.
+ */
+export const enqueueEventNotifications = async (
   users: EmailRecipient[],
   event: EventNotificationData,
   customMessage = ''
-): Promise<BulkEmailResults> => {
-  const results: BulkEmailResults = {
-    sent: 0,
-    failed: 0,
-    queued: 0,
-    errors: [],
-  };
+): Promise<{ queued: number; skipped: number; reopened: number }> => {
+  if (users.length === 0) return { queued: 0, skipped: 0, reopened: 0 };
 
-  for (const user of users) {
-    try {
-      await sendEventNotification(user.email, user.fullName, event, customMessage);
-      results.sent++;
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    } catch (error: unknown) {
-      results.failed++;
-      results.errors.push({ email: user.email, error: getErrorMessage(error) });
-      await queueFailedEmail(user.email, user.fullName, event, error);
-      results.queued++;
+  const snapshot = createEventSnapshot(event, customMessage);
+  const now = new Date();
+  let queued: number;
+
+  try {
+    const inserted = await EmailQueue.insertMany(
+      users.map((user) => ({
+        email: user.email,
+        fullName: user.fullName || '',
+        eventId: event._id,
+        eventSnapshot: snapshot,
+        status: 'pending',
+        attempts: 0,
+        nextAttempt: now,
+      })),
+      { ordered: false }
+    );
+    queued = inserted.length;
+  } catch (error: unknown) {
+    // An unordered bulk write still inserts the non-conflicting rows. Duplicate
+    // keys (code 11000) just mean the recipient already has a row for this event.
+    const bulk = error as {
+      insertedDocs?: unknown[];
+      writeErrors?: Array<{ code?: number; err?: { code?: number } }>;
+    };
+    const writeErrors = Array.isArray(bulk.writeErrors) ? bulk.writeErrors : null;
+    const nonDuplicate = (writeErrors ?? []).filter((e) => (e.code ?? e.err?.code) !== 11000);
+    if (!writeErrors || !Array.isArray(bulk.insertedDocs) || nonDuplicate.length > 0) {
+      throw error;
     }
+    queued = bulk.insertedDocs.length;
   }
 
-  return results;
+  const reopened = await EmailQueue.updateMany(
+    { eventId: event._id, status: 'failed' },
+    { $set: { status: 'pending', attempts: 0, nextAttempt: now }, $unset: { lastError: '' } }
+  );
+
+  return { queued, skipped: users.length - queued, reopened: reopened.modifiedCount };
 };
 
-export const processEmailQueue = async (batchSize = 10): Promise<QueueProcessingResults> => {
+const claimNextQueuedEmail = async (): Promise<IEmailQueueDocument | null> => {
+  const now = new Date();
+  const staleBefore = new Date(now.getTime() - STALE_PROCESSING_MS);
+
+  return EmailQueue.findOneAndUpdate(
+    {
+      $or: [
+        { status: 'pending', nextAttempt: { $lte: now } },
+        { status: 'processing', lastAttempt: { $lte: staleBefore } },
+      ],
+    },
+    { $set: { status: 'processing', lastAttempt: now }, $inc: { attempts: 1 } },
+    { sort: { nextAttempt: 1 }, new: true }
+  );
+};
+
+type DeliveryOutcome = 'sent' | 'retry' | 'deferred' | 'failed';
+
+/**
+ * Sends one claimed row and persists the result. The caller has already
+ * moved it to `processing` and charged the attempt.
+ */
+const deliverQueuedEmail = async (queued: IEmailQueueDocument): Promise<DeliveryOutcome> => {
+  try {
+    await sendEventNotification(
+      queued.email,
+      queued.fullName,
+      queued.eventSnapshot as EventNotificationData,
+      queued.eventSnapshot?.customMessage ?? ''
+    );
+    queued.status = 'completed';
+    queued.completedAt = new Date();
+    queued.lastError = undefined;
+    await queued.save();
+    return 'sent';
+  } catch (error: unknown) {
+    queued.lastError = getErrorMessage(error);
+
+    const transient = classifyTransientSmtpError(error);
+    if (transient) {
+      // Not the recipient's fault: hand the attempt back and try later.
+      queued.status = 'pending';
+      queued.attempts = Math.max(0, queued.attempts - 1);
+      queued.nextAttempt = new Date(Date.now() + transientDeferMs(transient));
+      await queued.save();
+      log.warn(`email to ${queued.email} deferred (${transient}) until ${queued.nextAttempt}.`);
+      return 'deferred';
+    }
+
+    if (queued.attempts >= queued.maxAttempts) {
+      queued.status = 'failed';
+      await queued.save();
+      log.error(`email to ${queued.email} permanently failed after ${queued.attempts} attempts.`);
+      return 'failed';
+    }
+
+    queued.status = 'pending';
+    queued.nextAttempt = getNextRetryTime(queued.attempts);
+    await queued.save();
+    log.info(`email to ${queued.email} failed, retry scheduled for ${queued.nextAttempt}.`);
+    return 'retry';
+  }
+};
+
+/**
+ * Sends as many due rows as fit in the budget. Safe to call from several
+ * invocations at once. Stops early if SMTP is throttling us, since every
+ * further send would just burn time.
+ */
+export const processEmailQueue = async (
+  options: QueueProcessOptions
+): Promise<QueueProcessingResults> => {
+  const deadline = Date.now() + options.budgetMs;
+  const maxEmails = options.maxEmails ?? Number.POSITIVE_INFINITY;
+
   const results: QueueProcessingResults = {
     processed: 0,
     succeeded: 0,
     failed: 0,
+    deferred: 0,
     permanentlyFailed: 0,
+    remaining: 0,
   };
 
   try {
-    const pendingEmails = await EmailQueue.find({
-      status: 'pending',
-      nextAttempt: { $lte: new Date() },
-    })
-      .sort({ nextAttempt: 1 })
-      .limit(batchSize);
+    while (results.processed < maxEmails && Date.now() < deadline) {
+      const queued = await claimNextQueuedEmail();
+      if (!queued) break;
 
-    for (const queuedEmail of pendingEmails) {
       results.processed++;
+      const outcome = await deliverQueuedEmail(queued);
 
-      queuedEmail.status = 'processing';
-      await queuedEmail.save();
-
-      try {
-        await sendEventNotification(
-          queuedEmail.email,
-          queuedEmail.fullName,
-          queuedEmail.eventSnapshot as EventNotificationData
-        );
-
-        queuedEmail.status = 'completed';
-        queuedEmail.completedAt = new Date();
-        await queuedEmail.save();
-        results.succeeded++;
-        log.info(`successfully sent queued email to ${queuedEmail.email}.`);
-
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      } catch (error: unknown) {
-        queuedEmail.attempts += 1;
-        queuedEmail.lastAttempt = new Date();
-        queuedEmail.lastError = getErrorMessage(error);
-
-        if (queuedEmail.attempts >= queuedEmail.maxAttempts) {
-          queuedEmail.status = 'failed';
-          results.permanentlyFailed++;
-          log.error(
-            `email to ${queuedEmail.email} permanently failed after ${queuedEmail.attempts} attempts.`
-          );
-        } else {
-          queuedEmail.status = 'pending';
-          queuedEmail.nextAttempt = getNextRetryTime(queuedEmail.attempts);
-          results.failed++;
-          log.info(
-            `email to ${queuedEmail.email} failed, retry scheduled for ${queuedEmail.nextAttempt}.`
-          );
-        }
-
-        await queuedEmail.save();
+      if (outcome === 'sent') results.succeeded++;
+      else if (outcome === 'retry') results.failed++;
+      else if (outcome === 'failed') results.permanentlyFailed++;
+      else {
+        results.deferred++;
+        break;
       }
+
+      await sleep(DELAY_BETWEEN_SENDS_MS);
     }
   } catch (error: unknown) {
     log.error('error processing email queue.', error);
   }
 
+  results.remaining = await countPending();
   return results;
+};
+
+/**
+ * Queues every recipient, then sends as many as the budget allows. Whatever
+ * is left drains through the scheduler and the admin "process queue" button.
+ */
+export const sendBulkEventNotification = async (
+  users: EmailRecipient[],
+  event: EventNotificationData,
+  customMessage = '',
+  options: QueueProcessOptions = { budgetMs: 15_000 }
+): Promise<BulkEmailResults> => {
+  const { queued, skipped, reopened } = await enqueueEventNotifications(
+    users,
+    event,
+    customMessage
+  );
+  log.info(
+    `event ${String(event._id)}: queued ${queued}, skipped ${skipped} existing, reopened ${reopened} failed.`
+  );
+
+  const processed = await processEmailQueue(options);
+
+  return {
+    queued,
+    skipped,
+    sent: processed.succeeded,
+    failed: processed.failed + processed.permanentlyFailed,
+    deferred: processed.deferred,
+    remaining: processed.remaining,
+  };
 };
 
 export const getQueueStats = async () => {
@@ -667,16 +807,18 @@ export const getQueueStats = async () => {
 };
 
 export const getQueueEntries = async (status: string | null = null, page = 1, limit = 20) => {
+  const safeLimit = Math.min(Math.max(Math.trunc(limit) || 20, 1), 100);
+  const safePage = Math.max(Math.trunc(page) || 1, 1);
   const query = status ? { status } : {};
-  const skip = (page - 1) * limit;
+  const skip = (safePage - 1) * safeLimit;
 
   const [entries, total] = await Promise.all([
     EmailQueue.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit)
+      .limit(safeLimit)
       .select(
-        'email fullName eventId eventSnapshot.title status attempts lastAttempt nextAttempt lastError createdAt'
+        'email fullName eventId eventSnapshot.title status attempts lastAttempt nextAttempt lastError completedAt createdAt'
       ),
     EmailQueue.countDocuments(query),
   ]);
@@ -684,27 +826,61 @@ export const getQueueEntries = async (status: string | null = null, page = 1, li
   return {
     entries,
     pagination: {
-      page,
-      limit,
+      page: safePage,
+      limit: safeLimit,
       total,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / safeLimit),
     },
   };
 };
 
+/**
+ * Sends one specific row right now, regardless of its retry schedule. Failed
+ * rows get a fresh attempt budget. A row another invocation is actively
+ * sending is left alone.
+ */
 export const retryFailedEmail = async (queueId: string): Promise<QueueProcessingResults> => {
-  const queuedEmail = await EmailQueue.findById(queueId);
-  if (!queuedEmail) {
+  const existing = await EmailQueue.findById(queueId).select('status');
+  if (!existing) {
     throw new Error('Queue entry not found');
   }
-
-  if (queuedEmail.status !== 'failed' && queuedEmail.status !== 'pending') {
-    throw new Error('Email is not in a retryable state');
+  if (existing.status === 'completed') {
+    throw new Error('Email was already sent');
   }
 
-  queuedEmail.status = 'pending';
-  queuedEmail.nextAttempt = new Date();
-  await queuedEmail.save();
+  const now = new Date();
+  const staleBefore = new Date(now.getTime() - STALE_PROCESSING_MS);
+  const claimed = await EmailQueue.findOneAndUpdate(
+    {
+      _id: queueId,
+      $or: [
+        { status: { $in: ['pending', 'failed'] } },
+        { status: 'processing', lastAttempt: { $lte: staleBefore } },
+      ],
+    },
+    [
+      {
+        $set: {
+          status: 'processing',
+          lastAttempt: now,
+          attempts: { $cond: [{ $eq: ['$status', 'failed'] }, 1, { $add: ['$attempts', 1] }] },
+        },
+      },
+    ],
+    { new: true }
+  );
 
-  return processEmailQueue(1);
+  if (!claimed) {
+    throw new Error('Email is being sent by another process right now');
+  }
+
+  const outcome = await deliverQueuedEmail(claimed);
+  return {
+    processed: 1,
+    succeeded: outcome === 'sent' ? 1 : 0,
+    failed: outcome === 'retry' ? 1 : 0,
+    deferred: outcome === 'deferred' ? 1 : 0,
+    permanentlyFailed: outcome === 'failed' ? 1 : 0,
+    remaining: await countPending(),
+  };
 };

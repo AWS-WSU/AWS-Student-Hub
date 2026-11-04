@@ -31,6 +31,51 @@ export interface EmailQueueEntry {
   createdAt?: string;
   updatedAt?: string;
   sentAt?: string;
+  completedAt?: string;
+  lastAttempt?: string;
+  nextAttempt?: string;
+  lastError?: string;
   error?: string;
   [key: string]: unknown;
+}
+
+export type BroadcastRunStatus = 'sending' | 'completed' | 'failed';
+
+export interface BroadcastCounts {
+  pending: number;
+  processing: number;
+  sent: number;
+  failed: number;
+  total: number;
+}
+
+export interface BroadcastRecord {
+  id: string;
+  key: string;
+  status: BroadcastRunStatus;
+  triggeredBy: string;
+  triggeredByEmail: string;
+  recipientCount: number;
+  sentCount: number;
+  failedCount: number;
+  startedAt: string;
+  completedAt?: string;
+  lastError?: string;
+}
+
+export interface BroadcastProcessResults {
+  processed: number;
+  sent: number;
+  failed: number;
+  permanentlyFailed: number;
+  remaining: number;
+}
+
+export interface BroadcastStatusResponse {
+  success: boolean;
+  definition: { key: string; title: string; subject: string };
+  broadcast: BroadcastRecord | null;
+  counts: BroadcastCounts;
+  eligibleRecipients: number;
+  results?: BroadcastProcessResults;
 }
