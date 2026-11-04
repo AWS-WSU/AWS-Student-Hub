@@ -301,13 +301,24 @@ export const sendEventNotification = async (req: Request, res: Response): Promis
       return;
     }
 
-    const results = await sendBulkEventNotification(users, event, customMessage);
+    // Queue everyone first, then send what fits before API Gateway's 30s cutoff.
+    // The scheduler and the admin queue page drain the rest.
+    const results = await sendBulkEventNotification(users, event, customMessage, {
+      budgetMs: 15_000,
+    });
 
     res.json({
       success: true,
-      message: 'Event notification sent successfully',
+      message:
+        results.remaining > 0
+          ? 'Event notification queued; remaining emails will send shortly'
+          : 'Event notification sent successfully',
+      emailsQueued: results.queued,
+      emailsSkipped: results.skipped,
       emailsSent: results.sent,
       emailsFailed: results.failed,
+      emailsDeferred: results.deferred,
+      emailsRemaining: results.remaining,
       totalRecipients: users.length,
     });
   } catch (error: unknown) {

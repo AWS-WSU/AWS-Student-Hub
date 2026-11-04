@@ -8,6 +8,7 @@ import User from '../models/User';
 import { builderWarsBroadcast } from './broadcasts/builderWarsEmail';
 import type { BroadcastDefinition } from './broadcasts/types';
 import { sendRawMail } from './emailService';
+import { classifyTransientSmtpError, transientDeferMs } from './smtpErrors';
 
 const log = logger.child({ module: 'broadcastService' });
 
@@ -18,7 +19,7 @@ const DEFINITIONS: Record<string, BroadcastDefinition> = {
 /** A `processing` row older than this is assumed orphaned by a dead invocation. */
 const STALE_PROCESSING_MS = 2 * 60 * 1000;
 const DELAY_BETWEEN_SENDS_MS = 100;
-const RETRY_DELAYS_SECONDS = [60, 300, 900, 3600];
+const RETRY_DELAYS_SECONDS = [60, 300, 900, 3600, 14400];
 
 export class BroadcastNotFoundError extends Error {
   constructor(key: string) {
@@ -60,6 +61,7 @@ export interface ProcessResults {
   processed: number;
   sent: number;
   failed: number;
+  deferred: number;
   permanentlyFailed: number;
   remaining: number;
 }
@@ -167,7 +169,7 @@ const claimNextDelivery = async (key: string): Promise<IBroadcastDeliveryDocumen
         { status: 'processing', lastAttempt: { $lte: staleBefore } },
       ],
     },
-    { $set: { status: 'processing', lastAttempt: now } },
+    { $set: { status: 'processing', lastAttempt: now }, $inc: { attempts: 1 } },
     { sort: { nextAttempt: 1 }, new: true }
   );
 };
@@ -202,6 +204,7 @@ export const processBroadcastDeliveries = async (
     processed: 0,
     sent: 0,
     failed: 0,
+    deferred: 0,
     permanentlyFailed: 0,
     remaining: 0,
   };
@@ -211,7 +214,6 @@ export const processBroadcastDeliveries = async (
     if (!delivery) break;
 
     results.processed++;
-    delivery.attempts += 1;
 
     try {
       await sendDelivery(definition, delivery);
@@ -221,6 +223,17 @@ export const processBroadcastDeliveries = async (
       results.sent++;
     } catch (error: unknown) {
       delivery.lastError = getErrorMessage(error);
+      const transient = classifyTransientSmtpError(error);
+      if (transient) {
+        // SMTP is throttling or unreachable: hand the attempt back, stop the batch.
+        delivery.status = 'pending';
+        delivery.attempts = Math.max(0, delivery.attempts - 1);
+        delivery.nextAttempt = new Date(Date.now() + transientDeferMs(transient));
+        results.deferred++;
+        log.warn(`broadcast ${key}: ${delivery.email} deferred (${transient}).`, error);
+        await delivery.save();
+        break;
+      }
       if (delivery.attempts >= delivery.maxAttempts) {
         delivery.status = 'failed';
         results.permanentlyFailed++;
@@ -240,6 +253,29 @@ export const processBroadcastDeliveries = async (
   const counts = await reconcileBroadcast(key);
   results.remaining = counts.pending + counts.processing;
   return results;
+};
+
+/**
+ * Gives every permanently failed delivery a fresh attempt budget and reopens
+ * the broadcast so the scheduler picks it up. Does not touch sent rows, so
+ * nobody is emailed twice.
+ */
+export const retryFailedDeliveries = async (key: string): Promise<{ reopened: number }> => {
+  getBroadcastDefinition(key);
+
+  const result = await BroadcastDelivery.updateMany(
+    { broadcastKey: key, status: 'failed' },
+    { $set: { status: 'pending', attempts: 0, nextAttempt: new Date() }, $unset: { lastError: '' } }
+  );
+
+  if (result.modifiedCount > 0) {
+    await Broadcast.updateOne(
+      { key },
+      { $set: { status: 'sending' }, $unset: { completedAt: '' } }
+    );
+  }
+
+  return { reopened: result.modifiedCount };
 };
 
 /** Runs a budgeted pass over every broadcast that still has work. Used by the scheduler. */

@@ -128,11 +128,15 @@ export const processEmailQueueHandler = async (
 
   try {
     await connectDB();
-    const result = await processEmailQueue(20);
+    // The function has a 60s timeout. Split it: event queue first, then give
+    // broadcasts whatever is actually left, minus headroom for the response.
+    const result = await processEmailQueue({ budgetMs: 25_000 });
     log.info('email queue processing completed.', result);
 
-    // The scheduled function has a 60s timeout; leave headroom after the event queue.
-    const broadcasts = await processAllBroadcasts({ budgetMs: 35_000 });
+    const headroomMs = 5_000;
+    const broadcastBudgetMs = Math.max(0, context.getRemainingTimeInMillis() - headroomMs);
+    const broadcasts =
+      broadcastBudgetMs > 0 ? await processAllBroadcasts({ budgetMs: broadcastBudgetMs }) : {};
     if (Object.keys(broadcasts).length > 0) {
       log.info('broadcast processing completed.', broadcasts);
     }

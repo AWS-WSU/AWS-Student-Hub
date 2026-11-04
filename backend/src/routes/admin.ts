@@ -22,6 +22,7 @@ router.post('/email-queue/process', requireAdmin, adminController.processQueue);
 router.get('/broadcasts/:key', requireAdmin, adminController.getBroadcast);
 router.post('/broadcasts/:key/send', requireAdmin, adminController.sendBroadcast);
 router.post('/broadcasts/:key/process', requireAdmin, adminController.processBroadcast);
+router.post('/broadcasts/:key/retry-failed', requireAdmin, adminController.retryBroadcastFailures);
 router.get('/challenges', requireAdmin, challengeAdminController.listChallenges);
 router.post('/challenges', requireAdmin, challengeAdminController.createChallenge);
 router.get('/challenges/:challengeId', requireAdmin, challengeAdminController.getChallenge);

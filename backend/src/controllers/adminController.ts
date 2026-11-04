@@ -15,6 +15,7 @@ import {
   BroadcastNotFoundError,
   getBroadcastStatus,
   processBroadcastDeliveries,
+  retryFailedDeliveries,
   startBroadcast,
 } from '../services/broadcastService';
 
@@ -391,8 +392,8 @@ export const retryQueuedEmail = async (req: Request, res: Response): Promise<voi
 
 export const processQueue = async (req: Request, res: Response): Promise<void> => {
   try {
-    const batchSize = parseInteger(req.query.batchSize, 10);
-    const result = await processEmailQueue(batchSize);
+    const batchSize = Math.min(Math.max(parseInteger(req.query.batchSize, 10), 1), 20);
+    const result = await processEmailQueue({ budgetMs: 15_000, maxEmails: batchSize });
     res.json({
       success: true,
       message: 'Queue processing completed',
@@ -461,5 +462,22 @@ export const processBroadcast = async (req: Request, res: Response): Promise<voi
     res.json({ success: true, ...status, results });
   } catch (error: unknown) {
     handleBroadcastError(res, error, 'Error processing broadcast');
+  }
+};
+
+/** Reopens permanently failed deliveries of an already-sent broadcast. */
+export const retryBroadcastFailures = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { reopened } = await retryFailedDeliveries(req.params.key);
+    const results =
+      reopened > 0
+        ? await processBroadcastDeliveries(req.params.key, {
+            budgetMs: BROADCAST_REQUEST_BUDGET_MS,
+          })
+        : undefined;
+    const status = await getBroadcastStatus(req.params.key);
+    res.json({ success: true, ...status, reopened, results });
+  } catch (error: unknown) {
+    handleBroadcastError(res, error, 'Error retrying broadcast failures');
   }
 };
