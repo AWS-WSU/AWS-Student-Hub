@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { authAPI } from '../utils/api';
+import { authAPI, refreshSession, SessionError } from '../utils/api';
 import type {
   AuthContextValue,
   AuthResponse,
@@ -145,6 +145,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         clearStoredItem('deviceId');
         localStorage.removeItem('rememberMe');
         sessionStorage.removeItem('auth0PolicyAcknowledged');
+        sessionStorage.removeItem('auth0RememberMe');
         setAuthError(null);
 
         // Clear refresh promise
@@ -177,42 +178,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       return refreshPromiseRef.current;
     }
 
-    const refreshToken = getStoredItem('refreshToken');
-    if (!refreshToken) {
-      logout();
-      return;
-    }
-
     refreshPromiseRef.current = (async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            refreshToken,
-            deviceId,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Token refresh failed');
-        }
-
-        const data = await response.json();
-
-        // Update stored tokens using appropriate storage
-        localStorage.setItem('rememberMe', data.rememberMe ? 'true' : 'false');
-        setStoredItem('accessToken', data.accessToken);
-        setStoredItem('refreshToken', data.refreshToken);
-        setStoredItem('cachedUser', JSON.stringify(data.user));
-
+        const data = await refreshSession();
         setUser(data.user);
         return data;
       } catch (error) {
-        console.error('token refresh failed.', error);
-        logout();
+        // Only a rejected refresh token ends the session. A network blip or a
+        // server hiccup keeps the tokens so the next attempt can succeed.
+        if (error instanceof SessionError && error.fatal) {
+          console.error('session ended.', error.message);
+          logout();
+        } else {
+          console.warn('token refresh failed, will retry.', error);
+        }
         throw error;
       } finally {
         refreshPromiseRef.current = null;
@@ -220,40 +199,92 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     })();
 
     return refreshPromiseRef.current;
-  }, [deviceId, logout]);
+  }, [logout]);
 
-  // Auto-refresh token before expiration
+  // Auto-refresh the access token a minute before it expires. A transient
+  // failure schedules a retry instead of giving up; waking a backgrounded tab
+  // re-checks immediately, since timers do not fire reliably while hidden.
   useEffect(() => {
-    const setupTokenRefresh = () => {
-      const accessToken = getStoredItem('accessToken');
-      if (!accessToken) return;
+    if (!user) return;
 
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+    const RETRY_MS = 30_000;
+    const LEAD_MS = 60_000;
+
+    const msUntilRefresh = (): number | null => {
+      const accessToken = getStoredItem('accessToken');
+      if (!accessToken) return null;
       try {
         const payload = JSON.parse(atob(accessToken.split('.')[1] || '')) as JwtPayload;
-        const expiresAt = payload.exp * 1000;
-        const now = Date.now();
-        const refreshTime = expiresAt - now - 60000; // Refresh 1 minute before expiry
-
-        if (refreshTime > 0) {
-          return setTimeout(() => {
-            refreshTokens();
-          }, refreshTime);
-        } else {
-          // Token already expired, try to refresh immediately
-          refreshTokens();
-        }
+        return payload.exp * 1000 - Date.now() - LEAD_MS;
       } catch (error) {
-        console.error('error setting up token refresh.', error);
+        console.error('could not read access token expiry.', error);
+        return null;
       }
     };
 
-    if (user) {
-      const timeoutId = setupTokenRefresh();
-      return () => {
-        if (timeoutId) clearTimeout(timeoutId);
-      };
+    const schedule = (delay: number) => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(run, Math.max(0, delay));
+    };
+
+    async function run() {
+      if (cancelled) return;
+      try {
+        await refreshTokens();
+        const next = msUntilRefresh();
+        if (next !== null) schedule(next);
+      } catch (error) {
+        if (error instanceof SessionError && error.fatal) return;
+        schedule(RETRY_MS);
+      }
     }
+
+    const initial = msUntilRefresh();
+    if (initial !== null) schedule(initial);
+
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const next = msUntilRefresh();
+      if (next !== null && next <= 0) schedule(0);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [user, refreshTokens]);
+
+  // Follow sign-in, sign-out, and token rotation performed in other tabs.
+  // Only localStorage fires cross-tab, which is exactly the remembered case.
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.storageArea !== localStorage) return;
+
+      if (event.key === 'cachedUser' && event.newValue) {
+        try {
+          setUser(JSON.parse(event.newValue) as User);
+        } catch {
+          // ignore malformed writes
+        }
+        return;
+      }
+
+      if (
+        event.key === 'refreshToken' &&
+        !event.newValue &&
+        !sessionStorage.getItem('refreshToken')
+      ) {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   useEffect(() => {
     const checkExistingSession = async () => {
@@ -278,8 +309,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               try {
                 await refreshTokens();
               } catch (refreshError) {
+                // refreshTokens already logged out if the token was rejected;
+                // anything else is transient and the timer will retry.
                 console.error('token refresh failed during verification.', refreshError);
-                logout();
               }
             } else if (
               !authError.message?.includes('ECONNREFUSED') &&
@@ -324,18 +356,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           throw new Error('Google did not return an identity token.');
         }
 
+        // The checkbox state is stashed before the redirect; default to
+        // remembering when it is missing (direct Auth0 returns, old sessions).
+        const rememberMe = sessionStorage.getItem('auth0RememberMe') !== 'false';
+
         const response = await authAPI.exchangeAuth0Identity({
           idToken: claims.__raw,
           deviceId,
-          rememberMe: true,
+          rememberMe,
           acceptedPolicies: sessionStorage.getItem('auth0PolicyAcknowledged') === 'true',
         });
 
-        localStorage.setItem('rememberMe', 'true');
-        setStoredItem('accessToken', response.accessToken, true);
-        setStoredItem('refreshToken', response.refreshToken, true);
-        setStoredItem('cachedUser', JSON.stringify(response.user), true);
+        localStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
+        setStoredItem('accessToken', response.accessToken, rememberMe);
+        setStoredItem('refreshToken', response.refreshToken, rememberMe);
+        setStoredItem('cachedUser', JSON.stringify(response.user), rememberMe);
         sessionStorage.removeItem('auth0PolicyAcknowledged');
+        sessionStorage.removeItem('auth0RememberMe');
         setUser(response.user);
       } catch (error) {
         clearStoredItem('accessToken');

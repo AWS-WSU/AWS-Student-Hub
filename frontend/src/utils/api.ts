@@ -188,11 +188,13 @@ const apiRequest = async <T = any>(endpoint: string, options: RequestOptions = {
       if (refreshToken) {
         try {
           await refreshTokens();
-        } catch {
-          clearStoredItem('accessToken');
-          clearStoredItem('refreshToken');
-          clearStoredItem('cachedUser');
-          throw new Error('Session expired. Please log in again.');
+        } catch (refreshError) {
+          if (refreshError instanceof SessionError && refreshError.fatal) {
+            clearSession();
+          }
+          throw refreshError instanceof Error
+            ? refreshError
+            : new Error('Session expired. Please log in again.');
         }
 
         // Retry the original request with the new token.
@@ -242,11 +244,13 @@ const apiBlobRequest = async (endpoint: string): Promise<Blob> => {
     if (response.status === 401 && getStoredItem('refreshToken')) {
       try {
         await refreshTokens();
-      } catch {
-        clearStoredItem('accessToken');
-        clearStoredItem('refreshToken');
-        clearStoredItem('cachedUser');
-        throw new Error('Session expired. Please log in again.');
+      } catch (refreshError) {
+        if (refreshError instanceof SessionError && refreshError.fatal) {
+          clearSession();
+        }
+        throw refreshError instanceof Error
+          ? refreshError
+          : new Error('Session expired. Please log in again.');
       }
       response = await request();
     }
@@ -285,34 +289,101 @@ const setStoredItem = (key: string, value: string): void => {
   storage.setItem(key, value);
 };
 
+/**
+ * Thrown when a session refresh fails. `fatal` means the server rejected the
+ * refresh token itself (401/403) and the session is really over. Anything else
+ * (network, 5xx, timeout) is a blip: keep the tokens and try again later.
+ */
+export class SessionError extends Error {
+  readonly fatal: boolean;
+  readonly status?: number;
+
+  constructor(message: string, fatal: boolean, status?: number) {
+    super(message);
+    this.name = 'SessionError';
+    this.fatal = fatal;
+    this.status = status;
+  }
+}
+
+const REFRESH_LOCK = 'aws-hub-session-refresh';
+
+/** Serialises refresh across tabs where the Web Locks API exists. */
+const withRefreshLock = <T>(task: () => Promise<T>): Promise<T> => {
+  const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
+  return locks ? (locks.request(REFRESH_LOCK, task) as Promise<T>) : task();
+};
+
+const readStoredSession = (): AuthResponse | null => {
+  const accessToken = getStoredItem('accessToken');
+  const refreshToken = getStoredItem('refreshToken');
+  const cachedUser = getStoredItem('cachedUser');
+  if (!accessToken || !refreshToken || !cachedUser) return null;
+  try {
+    return {
+      accessToken,
+      refreshToken,
+      deviceId: getStoredItem('deviceId') || '',
+      rememberMe: localStorage.getItem('rememberMe') === 'true',
+      user: JSON.parse(cachedUser) as AuthResponse['user'],
+    };
+  } catch {
+    return null;
+  }
+};
+
 let refreshPromise: Promise<AuthResponse> | null = null;
 
-const refreshTokens = async (): Promise<AuthResponse> => {
+/**
+ * Exchanges the stored refresh token for a new pair. Deduplicated within a
+ * tab and locked across tabs: if another tab refreshed while we waited for
+ * the lock, we adopt its tokens instead of spending ours.
+ */
+export const refreshSession = async (): Promise<AuthResponse> => {
   if (refreshPromise) {
     return refreshPromise;
   }
 
-  const refreshToken = getStoredItem('refreshToken');
+  const tokenBeforeLock = getStoredItem('refreshToken');
   const deviceId = getStoredItem('deviceId') || localStorage.getItem('deviceId');
 
-  if (!refreshToken || !deviceId) {
-    throw new Error('No refresh token available');
+  if (!tokenBeforeLock || !deviceId) {
+    throw new SessionError('No refresh token available', true);
   }
 
-  refreshPromise = (async () => {
-    const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        refreshToken,
-        deviceId,
-      }),
-    });
+  refreshPromise = withRefreshLock(async () => {
+    const currentToken = getStoredItem('refreshToken');
+    if (!currentToken) {
+      throw new SessionError('Signed out in another tab', true);
+    }
+    if (currentToken !== tokenBeforeLock) {
+      const adopted = readStoredSession();
+      if (adopted) return adopted;
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: currentToken, deviceId }),
+      });
+    } catch (error) {
+      throw new SessionError(
+        error instanceof Error ? error.message : 'Unable to reach the server',
+        false
+      );
+    }
 
     if (!response.ok) {
-      throw new Error('Token refresh failed');
+      const fatal = response.status === 401 || response.status === 403;
+      throw new SessionError(
+        fatal
+          ? 'Session expired. Please log in again.'
+          : `Token refresh failed (${response.status})`,
+        fatal,
+        response.status
+      );
     }
 
     const data = (await response.json()) as AuthResponse;
@@ -322,13 +393,20 @@ const refreshTokens = async (): Promise<AuthResponse> => {
     setStoredItem('cachedUser', JSON.stringify(data.user));
 
     return data;
-  })();
-
-  try {
-    return await refreshPromise;
-  } finally {
+  }).finally(() => {
     refreshPromise = null;
-  }
+  });
+
+  return refreshPromise;
+};
+
+/** Kept for existing call sites. */
+const refreshTokens = refreshSession;
+
+const clearSession = (): void => {
+  clearStoredItem('accessToken');
+  clearStoredItem('refreshToken');
+  clearStoredItem('cachedUser');
 };
 
 const appendPayloadToForm = (form: FormData, payload: EventFormPayload | JsonRecord): void => {
