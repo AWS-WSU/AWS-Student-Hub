@@ -67,6 +67,7 @@ export interface BroadcastProcessResults {
   processed: number;
   sent: number;
   failed: number;
+  deferred: number;
   permanentlyFailed: number;
   remaining: number;
 }
@@ -77,5 +78,8 @@ export interface BroadcastStatusResponse {
   broadcast: BroadcastRecord | null;
   counts: BroadcastCounts;
   eligibleRecipients: number;
+  lastError?: { message: string; at: string; email: string } | null;
+  nextAttemptAt?: string | null;
   results?: BroadcastProcessResults;
+  reopened?: number;
 }

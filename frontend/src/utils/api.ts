@@ -1202,6 +1202,10 @@ export const broadcastAPI = {
   /** Pushes an in-flight broadcast along by another batch. */
   process: async (key: string): Promise<BroadcastStatusResponse> =>
     apiRequest(`/admin/broadcasts/${encodeURIComponent(key)}/process`, { method: 'POST' }),
+
+  /** Reopens permanently failed deliveries without re-claiming the one-shot key. */
+  retryFailed: async (key: string): Promise<BroadcastStatusResponse> =>
+    apiRequest(`/admin/broadcasts/${encodeURIComponent(key)}/retry-failed`, { method: 'POST' }),
 };
 
 export const eventsAPI = {

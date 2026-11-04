@@ -1131,6 +1131,26 @@
   color: var(--bw-text);
 }
 
+.bw-admin__error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  font-family: var(--bw-mono);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #ffd1cf;
+  background: rgba(239, 99, 91, 0.1);
+  border: 1px solid rgba(239, 99, 91, 0.4);
+  overflow-wrap: anywhere;
+}
+
+.bw-admin__error svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
 .bw-admin__muted {
   display: flex;
   align-items: center;
