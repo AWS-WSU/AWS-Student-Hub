@@ -20,13 +20,44 @@ export const BUILDER_WARS = {
     { handle: '@aws_sbg_wsu', url: 'https://www.instagram.com/aws_sbg_wsu/' },
   ],
   sponsors: [
-    { name: 'AWS', note: 'Cloud' },
-    { name: 'FreeWili', note: 'Hardware' },
-    { name: 'Red Bull', note: 'Fuel' },
-    { name: 'Ford', note: 'Mobility' },
-    { name: 'Rezzy', note: 'Partner' },
-    { name: 'Newlab', note: 'Venue' },
-    { name: 'WSU Engineering Student Senate', note: 'Campus' },
+    { name: 'AWS', note: 'Cloud', logo: '/aws-light.svg', url: 'https://aws.amazon.com' },
+    {
+      name: 'FreeWili',
+      note: 'Hardware',
+      logo: '/sponsors/freewili.svg',
+      url: 'https://www.freewili.com',
+    },
+    {
+      name: 'Red Bull',
+      note: 'Fuel',
+      logo: '/sponsors/redbull.svg',
+      url: 'https://www.redbull.com',
+    },
+    { name: 'Ford', note: 'Mobility', logo: '/sponsors/ford.svg', url: 'https://www.ford.com' },
+    {
+      name: 'Rezzy',
+      note: 'Partner',
+      logo: '/sponsors/rezzy.svg',
+      url: 'https://www.rezzy.dev',
+      // Rezzy ships only the star mark; its wordmark is set in type.
+      wordmark: 'Rezzy',
+    },
+    {
+      name: 'Newlab',
+      note: 'Venue',
+      logo: '/sponsors/newlab.svg',
+      url: 'https://newlab.com',
+      // Only a black wordmark is published; flip it for the dark panel.
+      invert: true,
+    },
+    {
+      name: 'WSU Engineering Student Senate',
+      note: 'Campus',
+      logo: '/sponsors/wsu-ess.jpg',
+      url: 'https://getinvolved.wayne.edu/organization/ess',
+      // Round seal on a white square; crop to the circle.
+      round: true,
+    },
   ],
 } as const;
 

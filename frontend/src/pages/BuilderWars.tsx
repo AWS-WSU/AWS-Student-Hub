@@ -534,8 +534,25 @@ function BuilderWars() {
         <motion.ul className="bw-sponsors__grid" {...reveal}>
           {BUILDER_WARS.sponsors.map((sponsor) => (
             <li key={sponsor.name} className="bw-sponsor">
-              <span className="bw-sponsor__name">{sponsor.name}</span>
-              <span className="bw-sponsor__note">{sponsor.note}</span>
+              <a
+                className="bw-sponsor__link"
+                href={sponsor.url}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                aria-label={`${sponsor.name} (${sponsor.note})`}
+              >
+                <span
+                  className={`bw-sponsor__logo${'invert' in sponsor && sponsor.invert ? ' bw-sponsor__logo--invert' : ''}${'round' in sponsor && sponsor.round ? ' bw-sponsor__logo--round' : ''}`}
+                >
+                  <img src={sponsor.logo} alt="" loading="lazy" decoding="async" />
+                  {'wordmark' in sponsor && sponsor.wordmark && (
+                    <span className="bw-sponsor__wordmark" aria-hidden="true">
+                      {sponsor.wordmark}
+                    </span>
+                  )}
+                </span>
+                <span className="bw-sponsor__note">{sponsor.note}</span>
+              </a>
             </li>
           ))}
         </motion.ul>
