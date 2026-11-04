@@ -67,6 +67,23 @@ bun install --frozen-lockfile --production --os=linux --cpu=x64
 echo "building deployment package."
 sam build
 
+# sam's --parameter-overrides parser splits on whitespace, so a value with a
+# space (a Gmail app password pasted as "abcd efgh ijkl mnop") silently
+# truncates to its first word. Refuse to deploy rather than ship a broken secret.
+for pair in \
+  "SMTP_PASS=$SMTP_PASS" "SMTP_USER=$SMTP_USER" "MONGODB_URI=$MONGODB_URI" \
+  "JWT_SECRET=$JWT_SECRET" "ADMIN_TOKEN=$ADMIN_TOKEN" "S3_ACCESS_KEY_ID=$S3_ACCESS_KEY_ID" \
+  "S3_SECRET_ACCESS_KEY=$S3_SECRET_ACCESS_KEY" "AWS_ADMIN_ACCESS_KEY_ID=$AWS_ADMIN_ACCESS_KEY_ID" \
+  "AWS_ADMIN_SECRET_ACCESS_KEY=$AWS_ADMIN_SECRET_ACCESS_KEY" "DISCORD_BOT_TOKEN=$DISCORD_BOT_TOKEN" \
+  "AWS_CRED_ENCRYPTION_KEY=$AWS_CRED_ENCRYPTION_KEY"; do
+  name="${pair%%=*}"
+  value="${pair#*=}"
+  if [[ "$value" =~ [[:space:]] ]]; then
+    echo "error: $name contains whitespace; sam would truncate it. Remove the spaces from the secret." >&2
+    exit 1
+  fi
+done
+
 echo "deploying to aws."
 SAM_PARAMETERS=(
   "Environment=$ENVIRONMENT"
