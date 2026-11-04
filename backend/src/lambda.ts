@@ -9,6 +9,7 @@ import serverless from 'serverless-http';
 import app from './app';
 import connectDB from './config/database';
 import env from './config/env';
+import { processAllBroadcasts } from './services/broadcastService';
 import { processEmailQueue } from './services/emailService';
 import logger from './config/logger';
 
@@ -128,8 +129,13 @@ export const processEmailQueueHandler = async (
   try {
     await connectDB();
     const result = await processEmailQueue(20);
-
     log.info('email queue processing completed.', result);
+
+    // The scheduled function has a 60s timeout; leave headroom after the event queue.
+    const broadcasts = await processAllBroadcasts({ budgetMs: 35_000 });
+    if (Object.keys(broadcasts).length > 0) {
+      log.info('broadcast processing completed.', broadcasts);
+    }
 
     return {
       statusCode: 200,
@@ -137,6 +143,7 @@ export const processEmailQueueHandler = async (
         success: true,
         message: 'Email queue processed',
         result,
+        broadcasts,
       }),
     };
   } catch (error: unknown) {
