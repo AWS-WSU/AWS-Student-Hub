@@ -114,7 +114,7 @@ function Resources() {
                 advisory practice.
               </p>
               <div className="testimonial-author">
-                <img src="/mahdyya.jpeg" alt="Jane Doe" />
+                <img src="/mahdyya.jpeg" alt="Mahdyya Chowdury" />
                 <div>
                   <strong>Mahdyya Chowdury</strong>
                   <span>Finance, '25</span>

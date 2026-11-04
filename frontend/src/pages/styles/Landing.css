@@ -1654,36 +1654,34 @@ body.modal-open {
   box-shadow: 0 10px 30px var(--card-shadow);
 }
 
-.testimonial {
-  max-width: 600px;
+/* The slider is the card; the testimonial inside it is plain content.
+   (VisualRefresh gives .testimonial a card surface, so undo it here.) */
+.testimonials-slider .testimonial {
+  max-width: 640px;
   margin: 0 auto;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.testimonial::before {
+  display: block;
+  margin: 0 auto 0.4rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 4.5rem;
+  line-height: 0.6;
+  color: rgba(var(--accent-rgb), 0.45);
+  content: '\201C';
 }
 
 .testimonial p {
+  position: relative;
+  margin: 0 0 1.75rem;
   font-size: 1.2rem;
   font-style: italic;
-  margin-bottom: 2rem;
+  line-height: 1.65;
   color: var(--text-secondary);
-  line-height: 1.6;
-  position: relative;
-}
-
-.testimonial p::before,
-.testimonial p::after {
-  content: '"';
-  font-size: 3rem;
-  color: rgba(var(--accent-rgb), 0.2);
-  position: absolute;
-}
-
-.testimonial p::before {
-  top: -20px;
-  left: -15px;
-}
-
-.testimonial p::after {
-  bottom: -40px;
-  right: -15px;
 }
 
 .testimonial-author {
@@ -2096,7 +2094,7 @@ body.modal-open {
     font-size: 1.2rem;
   }
 
-  .testimonial {
+  .testimonials-slider {
     padding: 1.5rem;
   }
 
@@ -2218,7 +2216,7 @@ body.modal-open {
     font-size: 0.9rem;
   }
 
-  .testimonial {
+  .testimonials-slider {
     padding: 1.2rem;
   }
 
