@@ -10,6 +10,13 @@ import {
   retryFailedEmail,
 } from '../services/emailService';
 import { deletePrizeversityAccountData } from '../services/rewardIntegrationService';
+import {
+  BroadcastAlreadySentError,
+  BroadcastNotFoundError,
+  getBroadcastStatus,
+  processBroadcastDeliveries,
+  startBroadcast,
+} from '../services/broadcastService';
 
 const log = logger.child({ module: 'adminController' });
 
@@ -397,5 +404,62 @@ export const processQueue = async (req: Request, res: Response): Promise<void> =
       success: false,
       error: 'Error processing email queue',
     });
+  }
+};
+
+/** Budget for sending inside a request. API Gateway cuts us off at 30s. */
+const BROADCAST_REQUEST_BUDGET_MS = 15_000;
+
+const handleBroadcastError = (res: Response, error: unknown, fallback: string): void => {
+  if (error instanceof BroadcastNotFoundError) {
+    res.status(404).json({ success: false, error: error.message });
+    return;
+  }
+  if (error instanceof BroadcastAlreadySentError) {
+    res.status(409).json({ success: false, error: error.message });
+    return;
+  }
+  log.error(fallback, error);
+  res.status(500).json({ success: false, error: fallback });
+};
+
+export const getBroadcast = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const status = await getBroadcastStatus(req.params.key);
+    res.json({ success: true, ...status });
+  } catch (error: unknown) {
+    handleBroadcastError(res, error, 'Error fetching broadcast status');
+  }
+};
+
+export const sendBroadcast = async (req: Request, res: Response): Promise<void> => {
+  const admin = req.user;
+  if (!admin?.id || !admin.email) {
+    res.status(401).json({ success: false, error: 'Authentication required' });
+    return;
+  }
+
+  try {
+    const { status, results } = await startBroadcast(
+      req.params.key,
+      { id: admin.id, email: admin.email },
+      { budgetMs: BROADCAST_REQUEST_BUDGET_MS }
+    );
+    res.json({ success: true, ...status, results });
+  } catch (error: unknown) {
+    handleBroadcastError(res, error, 'Error sending broadcast');
+  }
+};
+
+/** Pushes a broadcast that is still `sending` along by another budgeted batch. */
+export const processBroadcast = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const results = await processBroadcastDeliveries(req.params.key, {
+      budgetMs: BROADCAST_REQUEST_BUDGET_MS,
+    });
+    const status = await getBroadcastStatus(req.params.key);
+    res.json({ success: true, ...status, results });
+  } catch (error: unknown) {
+    handleBroadcastError(res, error, 'Error processing broadcast');
   }
 };
