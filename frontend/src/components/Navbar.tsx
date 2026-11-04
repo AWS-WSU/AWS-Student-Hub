@@ -198,6 +198,16 @@ function Navbar({ theme, toggleTheme }: LayoutProps) {
           >
             <Link to="/challenges">Challenges</Link>
           </motion.li>
+          <motion.li
+            className={isActive('/builder-wars') ? 'active' : ''}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.6 }}
+          >
+            <Link to="/builder-wars" className="nav-link--bw">
+              Builder Wars
+            </Link>
+          </motion.li>
         </ul>
       </nav>
 
@@ -445,6 +455,15 @@ function Navbar({ theme, toggleTheme }: LayoutProps) {
               >
                 <Link to="/challenges" onClick={toggleMenu}>
                   Challenges
+                </Link>
+              </motion.li>
+              <motion.li
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.6 }}
+              >
+                <Link to="/builder-wars" onClick={toggleMenu} className="nav-link--bw">
+                  Builder Wars
                 </Link>
               </motion.li>
             </ul>
