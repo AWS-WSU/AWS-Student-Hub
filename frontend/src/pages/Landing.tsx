@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Search, Sparkles, UserPlus } from 'lucide-react';
 import SocialLinks from '../components/SocialLinks';
+import BuilderWarsTeaser from '../components/BuilderWarsTeaser';
 import CreateEventModal from '../components/CreateEventModal';
 import EventModal from '../components/EventModal';
 import { authAPI, eventsAPI } from '../utils/api';
@@ -321,6 +322,8 @@ function Landing({ theme: _theme }: ThemeProps) {
           <div className="shape shape-4"></div>
         </div>
       </section>
+
+      <BuilderWarsTeaser />
 
       <section id="welcome" className="welcome-section">
         <div className="section-header">
