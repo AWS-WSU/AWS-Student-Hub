@@ -92,8 +92,13 @@ interface EventMutationResponse {
 }
 
 interface EventNotificationResponse {
+  emailsQueued?: number;
+  emailsSkipped?: number;
   emailsSent?: number;
   emailsFailed?: number;
+  emailsDeferred?: number;
+  emailsRemaining?: number;
+  totalRecipients?: number;
   [key: string]: any;
 }
 

@@ -31,6 +31,10 @@ export interface EmailQueueEntry {
   createdAt?: string;
   updatedAt?: string;
   sentAt?: string;
+  completedAt?: string;
+  lastAttempt?: string;
+  nextAttempt?: string;
+  lastError?: string;
   error?: string;
   [key: string]: unknown;
 }
