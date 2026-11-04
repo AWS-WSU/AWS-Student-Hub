@@ -1,4 +1,4 @@
-import type { AdminStats, EmailQueueEntry } from '../types/admin';
+import type { AdminStats, BroadcastStatusResponse, EmailQueueEntry } from '../types/admin';
 import type { ApiResponse } from '../types/api';
 import type {
   Auth0ExchangePayload,
@@ -1106,6 +1106,19 @@ export const adminAPI = {
     });
     return apiRequest(`/admin/challenges/${challengeId}/progress?${params}`);
   },
+};
+
+export const broadcastAPI = {
+  getStatus: async (key: string): Promise<BroadcastStatusResponse> =>
+    apiRequest(`/admin/broadcasts/${encodeURIComponent(key)}`),
+
+  /** One-time send. The server answers 409 if the key was already claimed. */
+  send: async (key: string): Promise<BroadcastStatusResponse> =>
+    apiRequest(`/admin/broadcasts/${encodeURIComponent(key)}/send`, { method: 'POST' }),
+
+  /** Pushes an in-flight broadcast along by another batch. */
+  process: async (key: string): Promise<BroadcastStatusResponse> =>
+    apiRequest(`/admin/broadcasts/${encodeURIComponent(key)}/process`, { method: 'POST' }),
 };
 
 export const eventsAPI = {
